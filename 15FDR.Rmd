@@ -7,7 +7,7 @@ layout: page
 library(knitr)
 
 ```
-## Multiple testing: Procedures
+# Multiple testing: Procedures
  
 
 In the previous section we learned how p-values are no longer a useful quantity to interpret when dealing with high-dimensional data. This is because we are testing many _features_ at the same time. We refer to this as the _multiple comparison_ or _multiple testing_ or _multiplicity_ problem. The definition of a p-value does not provide a useful quantification here. Again, because when we test many hypotheses simultaneously, a list based simply on a small p-value cut-off of, say 0.01, can result in many false positives with high probability. Here we define terms that are more appropriate in the context of high-throughput data.
@@ -130,7 +130,7 @@ VandS <- replicate(B,{
 
 This motivates the definition of error rates. We can, for example, estimate probability that $V$ is larger than 0. This is interpreted as the probability of making at least one type I error among the 10,000 tests. In the simulation above, $V$ was much larger than 1 in every single simulation, so we suspect this probability is very practically 1. When $m=1$, this probability is equivalent to the p-value. When we have a multiple tests situation, we call it the Family Wise Error Rate (FWER) and it relates to a technique that is widely used: The Bonferroni Correction.
 
-### The Bonferroni Correction 
+## The Bonferroni Correction 
 
 Now that we have learned about the Family Wise Error Rate (FWER), we describe what we can actually do to control it.  In practice, we want to choose a _procedure_ that guarantees the FWER is smaller than a predetermined value such as 0.05. We can keep it general and instead of 0.05, use $\alpha$ in our derivations.
 
@@ -202,7 +202,7 @@ sum(pvals < 0.05/10000)
 are called significant after applying the Bonferroni procedure, despite having 1,000 diets that work. 
 
 
-### False Discovery Rate 
+## False Discovery Rate 
 
 There are many situations for which requiring an FWER of 0.05 does not make sense as it is much too strict. For example, consider the very common exercise of running a preliminary small study to determine a handful of candidate genes. This is referred to as a _discovery_ driven project or experiment. We may be in search of an unknown causative gene and more than willing to perform follow-up studies with many more samples on just the candidates. If we develop a procedure that produces, for example, a list of 10 genes of which 1 or 2 pan out as important, the experiment is a resounding success. With a small sample size, the only way to achieve a FWER $\leq$ 0.05 is with an empty list of genes. We already saw in the previous section that despite 1,000 diets being effective, we ended up with a list with just 2. Change the sample size to 6 and you very likely get 0:
 
@@ -222,7 +222,7 @@ sum(pvals < 0.05/10000)
 
 By requiring a FWER $\leq$ 0.05, we are practically assuring 0 power (sensitivity). In many applications, this specificity requirement is over-kill. A widely used alternative to the FWER is the false discovery rate (FDR). The idea behind FDR is to focus on the random variable $Q \equiv V/R$ with $Q=0$ when $R=0$ and $V=0$. Note that $R=0$ (nothing called significant) implies $V=0$ (no false positives). So $Q$ is a random variable that can take values between 0 and 1 and we can define a rate by considering the average of $Q$. To better understand this concept here, we compute $Q$ for the procedure: call everything p-value < 0.05 significant.
 
-## Vectorizing code
+### Vectorizing code
 
 Before running the simulation, we are going to _vectorize_ the code. This means that instead of using `sapply` to run `m` tests, we will create a matrix with all data in one call to sample. This code runs several times faster than the code above, which is necessary here due to the fact that we will be generating several simulations. Understanding this chunk of code and how it is equivalent to the code above using `sapply` will take a you long way in helping you code efficiently in R.
 
@@ -297,7 +297,7 @@ abline(h=m0/100)
 
 As we consider a lower and lower p-value cut-off, the number of features detected decreases (loss of sensitivity), but our FDR also decreases (gain of specificity). So how do we decide on this cut-off? One approach is to set a desired FDR level $\alpha$, and then develop procedures that control the error rate: FDR  $\leq \alpha$.
 
-### Benjamini-Hochberg (Advanced)
+## Benjamini-Hochberg (Advanced)
 
 We want to construct a procedure that guarantees the FDR to be below a certain level $\alpha$. For any given $\alpha$, the Benjamini-Hochberg (1995) procedure is very practical because it simply requires that we are able to compute p-values for each of the individual tests and this permits a procedure to be defined.
 
@@ -378,7 +378,7 @@ It is important to remember that these options offer not just different approach
 
 In summary, requiring that FDR $\leq$ 0.05 is a much more lenient requirement FWER $\leq$ 0.05. Although we will end up with more false positives, FDR gives us much more power. This makes it particularly appropriate for discovery phase experiments where we may accept FDR levels much higher than 0.05.
 
-### Direct Approach to FDR and q-values (Advanced)
+## Direct Approach to FDR and q-values (Advanced)
 
 Here we review the results described by John D. Storey in J. R. Statist. Soc. B (2002). One major distinction between Storey's approach and Benjamini and Hochberg's is that we are no longer going to set a $\alpha$ level a priori. Because in many high-throughput experiments we are interested in obtaining some list for validation, we can instead decide beforehand that we will consider all tests with p-values smaller than 0.01. We then want to attach an estimate of an error rate. Using this approach, we are guaranteed to have $R>0$. Note that in the FDR definition above we assigned $Q=0$ in the case that $R=V=0$. We were therefore computing: 
 

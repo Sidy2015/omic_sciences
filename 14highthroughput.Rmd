@@ -79,7 +79,8 @@ head(match(geneAnnotation$PROBEID,rownames(geneExpression)))
 ```
 The table also includes biological information about the features, namely chromosome location and the gene "name" used by biologists.
 
-###################################################################################################################################
+888888888888888888888888888888888888888888888888888888888888888888888
+
 ## Technical vs Biological Replicates
 
 In the following sections we will cover inference in the context of genomics experiments. We apply some of the concepts we have covered in previous sections including t-tests, multiple comparisons and standard deviation estimates from hierarchical models. Here we introduce a concept that is particularly important in the analysis of genomics data: the distinction between biological and technical variability. 
@@ -200,7 +201,9 @@ tt$p.value[j]
 Which of these two genes do we feel more confident reporting as being differentially expressed? If another investigator takes another random sample of mice and tries the same experiment, which one do you think will replicate? Measuring biological variability is essential if we want our conclusions to be about the strain of mice in general as opposed to the specific mice we have. 
 
 An analysis with biological replicates have as a population these two strains of mice. An analysis with technical replicates have as a population the twelve mice we selected and the variability is related to the measurement technology. In science we typically are concerned with populations. As a very practical example, note that if another lab performs this experiment they will have another set of twelve mice and thus inference about populations are more likely to replicate.
-#####################################################################################################################################
+
+888888888888888888888888888888888888888888888888888888888888888888888
+
 ## Multiple comparisons with genewise t-tests
 
 In the previous section, we focused on a pair of genes to

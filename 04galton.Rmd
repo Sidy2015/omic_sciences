@@ -16,7 +16,7 @@ suppressPackageStartupMessages({
   library(Biobase)
   library(UsingR)
 ```
-#Galton-Example:Father Son Heights
+# Galton-Example:Father Son Heights
 
 To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
 

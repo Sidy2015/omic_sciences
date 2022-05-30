@@ -5,7 +5,7 @@ title: "Some examples of integrative analysis"
 
 ```{r options, echo=FALSE}
 library(knitr)
-opts_chunk$set(fig.path=paste0("figure/", sub("(.*).Rmd","\\1",basename(knitr:::knit_concord$get('infile'))), "-"))
+
 ```
 ```{r getpacksa,echo=FALSE,results="hide"}
 suppressPackageStartupMessages({
@@ -22,7 +22,7 @@ library(yeastCC)
 })
 ```
 
-## Integrative analysis examples
+# Integrative analysis examples
 
 In this document we'll review a few approaches to using genome-scale data of different
 types to reason about certain focused questions.
@@ -268,3 +268,5 @@ We won't insist that you take the GEOmetadb.sqlite download/expansion,
 but if you do, variations on the query string constructed above
 can assist you with targeted identification of GEO datasets 
 for analysis and reinterpretation.
+
+# The END

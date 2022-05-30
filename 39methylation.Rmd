@@ -12,7 +12,7 @@ Fir the the last part of this section you will need the data available for downl
 
 <a href="https://github.com/genomicsclass/tcgaMethylationSubset/archive/master.zip" target="[object Object]">ZIP</a>
 http://genomicsclass.github.io/book/
-In this unit we will show an example of analyzing methylation data. We will use colon cancer data from TCGA. The data was created with the Illumina 450K array and we have already processed the raw data to create matrix with methylation measurements. The script that creates these ojects is here: https://github.com/genomicsclass/labs/blob/master/Rscripts/read_tcga_meth.R
+In this unit we will show an example of analyzing methylation data. We will use colon cancer data from TCGA. The data was created with the Illumina 450K array and we have already processed the raw data to create matrix with methylation measurements. The script that creates these objects is here: https://github.com/genomicsclass/labs/blob/master/Rscripts/read_tcga_meth.R
 
 Let's begin by loading the data
 ```{r,message=FALSE}

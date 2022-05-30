@@ -1,14 +1,14 @@
 ---
+title: "RNA-seq gene-level analysis"
 layout: page
-title: RNA-seq gene-level analysis
 ---
 
 ```{r options, echo=FALSE}
 library(knitr)
-opts_chunk$set(fig.path=paste0("figure/", sub("(.*).Rmd","\\1",basename(knitr:::knit_concord$get('infile'))), "-"))
+
 ```
 
-## Introduction
+# RNA-seq gene-level analysis
 
 RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
 
@@ -86,7 +86,7 @@ dds <- DESeqDataSet(airway, design= ~ cell + dex)
 We can also make a *DESeqDataSet* from a count matrix and column data.
 
 ```{r}
-dds.fc <- DESeqDataSetFromMatrix(assay(se),  
+dds.fc <- DESeqDataSetFromMatrix(assay(airway),  
                                  colData=sample.table, 
                                  design=~ cell + dex)
 ```

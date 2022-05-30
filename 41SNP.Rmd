@@ -5,9 +5,9 @@ title: Variant calling and annotation
 
 ```{r options, echo=FALSE}
 library(knitr)
-opts_chunk$set(fig.path=paste0("figure/", sub("(.*).Rmd","\\1",basename(knitr:::knit_concord$get('infile'))), "-"))
+
 ```
-#Variant calling and annotation
+# Variant calling and annotation
 We start by loading all the libraries we will need for calling and annotating single nucleotide variants (SNVs).
 
 ```{r}
