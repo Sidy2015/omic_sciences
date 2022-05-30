@@ -1,0 +1,69 @@
+---
+title: "Galton example"
+output: html_document
+---
+
+```{r load_hidden, echo=FALSE, results="hide", warning=FALSE}
+suppressPackageStartupMessages({
+  library(devtools)
+  library(Biobase)
+  library(UsingR)
+})
+```
+
+```{r load}
+  library(devtools)
+  library(Biobase)
+  library(UsingR)
+```
+#Galton-Example:Father Son Heights
+
+To install these packages you can use the code (or if you are compiling the document, remove the `eval=FALSE` from the chunk.)
+
+```{r install_packages, eval=FALSE}
+install.packages(c("devtools","UsingR"))
+
+```
+The galton data is a set of data with father son heights. Let's plot it.
+
+Load Galton Data
+
+```{r galton,fig.height=4,fig.width=8}
+data(galton)
+par(mfrow=c(1,2))
+hist(galton$child,col="blue",breaks=100)
+hist(galton$parent,col="blue",breaks=100)
+```
+
+## The distribution of child heights
+
+```{r, dependson="galton",fig.height=4,fig.width=4}
+hist(galton$child,col="blue",breaks=100)
+```
+
+Let's look at the mean child's height  - average height:
+
+```{r, dependson="galton",fig.height=4,fig.width=4}
+hist(galton$child,col="blue",breaks=100)
+meanChild <- mean(galton$child)
+lines(rep(meanChild,100),seq(0,150,length=100),col="red",lwd=5)
+```
+
+
+What if we plot child versus average parent
+
+```{r, dependson="galton",fig.height=4,fig.width=4}
+plot(galton$parent,galton$child,pch=19,col="blue")
+```
+
+Average parent = 65 inches tall
+
+```{r, dependson="galton",fig.height=4,fig.width=4}
+plot(galton$parent,galton$child,pch=19,col="blue")
+near65 <- galton[abs(galton$parent - 65)<1, ]
+points(near65$parent,near65$child,pch=19,col="red")
+lines(seq(64,66,length=100),rep(mean(near65$child),100),col="red",lwd=4)
+```
+## How would you predict the slope of the line for this data?
+
+$$y = mx + b$$

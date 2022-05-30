@@ -1,0 +1,87 @@
+---
+title: "RNA-seq gene-level analysis"
+layout: page
+---
+
+```{r options, echo=FALSE}
+library(knitr)
+```
+
+# Introduction to RNA-seq
+
+RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
+
+
+## NGS read counting
+The following lab will describe how to count NGS reads which fall into genomic features. We want to end up with a count matrix which has rows corresponding to genomic ranges and columns which correspond to different experiments or samples. As an example, we will a subset of the bam files we aligned previosly. However, the same functions can be used for DNA-Seq, ChIP-Seq, etc.
+
+We load a transcript database object. These are prebuilt in R for various well studied organisms, for example TxDb.Hsapiens.UCSC.hg19.knownGene. In addition the makeTranscriptDbFromGFF file can be used to import GFF or GTF gene models. We use the exonsBy function to get a GRangesList object of the exons for each gene.
+
+
+```{r messages=FALSE}
+library(airway)
+dir <- system.file("extdata", package="airway", mustWork=TRUE)
+csv.file <- file.path(dir, "sample_table.csv")
+sample.table <- read.csv(csv.file, row.names=1)
+
+```
+First, make variables for the different BAM files and GTF file. Use the `sample.table` to contruct the BAM file vector, so that the count matrix will be in the same order as the `sample.table`.
+
+```{r messages=FALSE}
+library(airway)
+dir <- system.file("extdata", package="airway", mustWork=TRUE)
+csv.file <- file.path(dir, "sample_table.csv")
+sample.table <- read.csv(csv.file, row.names=1)
+bam.files <- file.path(dir, paste0(sample.table$Run, "_subset.bam"))
+gtf.file <- file.path(dir, "Homo_sapiens.GRCh37.75_subset.gtf")
+```
+
+Next we create an *Rsamtools* variable which wraps our BAM files, and create a transcript database from the GTF file. We can ignore the warning about `matchCircularity`. Finally, we make a *GRangesList* which contains the exons for each gene.
+
+```{r messages=FALSE}
+library(Rsamtools)
+bam.list <- BamFileList(bam.files)
+library(GenomicFeatures)
+# for Bioc 3.0 use the commented out line
+# txdb <- makeTranscriptDbFromGFF(gtf.file, format="gtf")
+txdb <- makeTxDbFromGFF(gtf.file, format="gtf")
+exons.by.gene <- exonsBy(txdb, by="gene")
+```
+
+The following code chunk creates a *SummarizedExperiment* containing the counts for the reads in each BAM file (columns) for each gene in `exons.by.gene` (the rows). We add the `sample.table` as column data. Remember, we know the order is correct, because the `bam.list` was constructed from a column of `sample.table`.
+
+```{r cache=TRUE}
+library(GenomicAlignments)
+se <- summarizeOverlaps(exons.by.gene, bam.list,
+                        mode="Union",
+                        singleEnd=FALSE,
+                        ignore.strand=TRUE,
+                        fragments=TRUE)
+colData(se) <- DataFrame(sample.table)
+```
+
+A similar function in the *Rsubread* library can be used to construct a count matrix:
+
+```{r cache=TRUE}
+# not available for Windows - use above method instead
+library(Rsubread)
+fc <- featureCounts(bam.files, annot.ext=gtf.file,
+                    isGTFAnnotationFile=TRUE, 
+                    isPaired=TRUE)
+names(fc)
+unname(fc$counts) # hide the colnames
+```
+
+Plot the first column from each function against each other (after matching the rows of the *featureCounts* matrix to the one returned by *summarizeOverlaps*.
+
+```{r}
+plot(assay(se)[,1], 
+     fc$counts[match(rownames(se),rownames(fc$counts)),1])
+abline(0,1)
+```
+So we see that we get the same counts using either function.
+
+
+
+
+

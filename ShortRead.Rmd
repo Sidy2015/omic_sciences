@@ -1,0 +1,298 @@
+---
+title: "Rsamtools"
+author: "Kasper D. Hansen"
+---
+
+```{r front, child="front.Rmd", echo=FALSE}
+```
+
+## Dependencies
+
+This document has the following dependencies:
+
+```{r dependencies, warning=FALSE, message=FALSE}
+library(Rsamtools)
+```
+
+Use the following commands to install these packages in R.
+
+```{r biocLite, eval=FALSE}
+
+BiocManager::install(c("Rsamtools"))
+```
+
+## Overview
+
+The `r Biocpkg("Rsamtools")` packages contains functionality for reading and examining aligned reads in the BAM format.
+
+## Rsamtools
+
+The Rsamtools package is an interface to the widely used `samtools`/`htslib` library. The main functionality of the package is support for reading BAM files.
+
+## The FASTQ file format
+
+```{r fastq}
+library(Rsamtools)
+library(ShortRead)
+fastqDir <- system.file("extdata", "E-MTAB-1147", package = "ShortRead")
+fastqPath <- list.files(fastqDir, pattern = ".fastq.gz$", full = TRUE)[1]
+reads <- readFastq(fastqPath)
+reads
+```
+
+The `ShortReadQ` class is very similar to a `DNAStringSet` but it has two sets of strings: one for the read nucleotides and one for the base qualities.  They are accessed as
+```{r accessorFastq}
+sread(reads)[1:2]
+quality(reads)[1:2]
+id(reads)[1:2]
+```
+
+## A word on quality scores
+
+Note how the quality scores are listed as characters.  You can convert them into standard 0-40 integer quality scores by
+```{r convertQual}
+as(quality(reads), "matrix")[1:2,1:10]
+```
+these are "phred" scores that range from 1 to 40.A Phred Score of 20 indicates the likelihood of finding 1 incorrect base call among 100 bases. In other words, the precision of the base call is 99%. 
+A base call with a quality score of Q40 means one base call in 10,000 is predicted to be incorrect. 
+
+## The BAM / SAM file format
+
+The SAM format is a text based representation of alignments.  The BAM format is a binary version of SAM which is smaller and much faster.  In general, always work with BAM.
+
+The format is quite complicated, which means the R representation is also a bit complicated. This complication happens because of the following features of the file format
+
+- It may contain unaligned sequences.
+- Each sequence may be aligned to multiple locations.
+- It supports spliced (split) alignments.
+- It may contain reads from multiple samples.
+
+We will not attempt to fully understanding all the intricacies of this format.
+
+A BAM file can be sorted in multiple ways. If it is sorted according to genomic location and if it is also "indexed" it is possible to retrieve all reads mapping to a genomic location, something which can be very useful. In `r Biocpkg("Rsamtools")` this is done by the functions `sortBam()` and `indexBam()`.
+
+## scanBam
+
+How to read a BAM file goes conceptually like this
+
+1. A pointer to the file is created by the `BamFile()` constructor.
+2. (Optional) Parameters for which reads to report is constructed by `ScanBamParams()`.
+3. The file is being read according to these parameters by `scanBam()`.
+
+First we setup a `BamFile` object:
+
+```{r bamPath}	
+bamPath <- system.file("extdata", "ex1.bam", package="Rsamtools")
+bamFile <- BamFile(bamPath)
+bamFile
+```
+
+Some high-level information can be accessed here, like
+```{r bamFileInfo}
+seqinfo(bamFile)
+```
+(obviously, `seqinfo()` and `seqlevels()` etc. are supported as well).
+
+Now we read all the reads in the file using `scanBam()`, ignoring the possibility of selecting reads using `ScanBamParams()` (we will return to this below).
+
+```{r scanBam}
+aln <- scanBam(bamFile)
+length(aln)
+class(aln)
+```
+
+We get back a list of length 1; this is because `scanBam()` can return output from multiple genomic regions, and here we have only one (everything).  We therefore subset the output; this again gives us a list and we show the information from the first alignment
+```{r lookAtBam}
+aln <- aln[[1]]
+names(aln)
+lapply(aln, function(xx) xx[1])
+```
+Notice how the `scanBam()` function returns a basic R object, instead of an S4 class.  Representing the alignments as S4 object is done by the `r Biocpkg("GenomicAlignments")` package; this is especially useful for access to spliced alignments from RNA sequencing data.
+
+The names of the `aln` list are basically the names used in the BAM specification.  Here is a quick list of some important ones
+
+- `qname`: The name of the read.
+- `rname`: The name of the chromosome / sequence / contig it was aligned to.
+- `strand`: The strand of the alignment.
+- `pos`: The coordinate of the left-most part of the alignment.
+- `qwidth`: The length of the read.
+- `mapq`: The mapping quality of the alignment.
+- `seq`: The actual sequence of the alignment.
+- `qual`: The quality string of the alignment.
+- `cigar`: The CIGAR string (below).
+- `flag`: The flag (below).
+
+## Reading in parts of the file
+
+BAM files can be extremely big and it is there often necessary to read in parts of the file.  You can do this in different ways
+
+1. Read a set number of records (alignments).
+2. Only read alignments satisfying certain criteria.
+3. Only read alignments in certain genomic regions.
+
+Let us start with the first of this.  By specifying `yieldSize` when you use `BamFile()`, every invocation of `scanBam()` will only read `yieldSize` number of alignments.  You can then invoke `scanBam()` again to get the next set of alignments; this requires you to `open()` the file first (otherwise you will keep read the same alignments).
+
+```{r yieldSize}
+yieldSize(bamFile) <- 1
+open(bamFile)
+scanBam(bamFile)[[1]]$seq
+scanBam(bamFile)[[1]]$seq
+## Cleanup
+close(bamFile)
+yieldSize(bamFile) <- NA
+```
+
+The other two ways of reading in parts of a BAM file is to use `ScanBamParams()`, specifically the `what` and `which` arguments.
+
+```{r ScanBamParams}
+gr <- GRanges(seqnames = "seq2",
+              ranges = IRanges(start = c(100, 1000), end = c(1500,2000)))
+params <- ScanBamParam(which = gr, what = scanBamWhat())
+7
+names(aln)
+head(aln[[1]]$pos)
+```
+Notice how the `pos` is less than what is specified in the `which` argument; this is because the alignments overlap the `which` argument.  The `what=scanBamWhat()` tells the function to read everything.  Often, you may not be interested in the actual sequence of the read or its quality scores.  These takes up a lot of space so you may consider disabling reading this information.
+
+### The CIGAR string
+
+
+The "CIGAR" is how the BAM format represents spliced alignments.  For example, the format stored the left most coordinate of the alignment.  To get to the right coordinate, you have to parse the CIGAR string.  In this example "36M" means that it has been aligned with no insertions or deletions.  If you need to work with spliced alignments or alignments containing insertions or deletions, you should use the `r Biocpkg("GenomicAlignments")` package.
+
+### Flag
+
+An alignment may have a number of "flags" set or unset.  These flags provide information about the alignment.  The flag integer is a representation of multiple flags simultanously.  An example of a flag is indicating (for a paired end alignment) whether both pairs have been properly aligned.  For more information, see the BAM specification.
+
+In `r Biocpkg("Rsamtools")` there is a number of helper functions dealing with only reading certain flags; use these.
+
+## BAM summary
+
+Sometimes you want a quick summary of the alignments in a BAM file:
+
+```{r summary}
+quickBamFlagSummary(bamFile)
+```
+
+## Other functionality from Rsamtools
+
+### BamViews
+
+Instead of reading a single file, it is possible to construct something called a `BamViews`, a link to multiple files.  In many ways, it has the same `Views` functionality as other views.  A quick example should suffice, first we read everything;
+
+```{r BamViews}
+bamView <- BamViews(bamPath)
+aln <- scanBam(bamView)
+names(aln)
+```
+This gives us an extra list level on the return object; first level is files, second level is ranges.
+
+We can also set `bamRanges()` on the `BamViews` to specify that only certain ranges are read; this is similar to setting a `which` argument to `ScanBamParams()`.
+
+```{r BamViews2}
+bamRanges(bamView) <- gr
+aln <- scanBam(bamView)
+names(aln)
+names(aln[[1]])
+```
+
+### countBam
+
+Sometimes, all you want to do is count... use `countBam()` instead of `scanBam()`.
+
+## Other Resources
+
+- The vignettes from the [Rsamtools package](http://bioconductor.org/packages/Rsamtools).
+- For representing more complicated alignments (specifically spliced alignments from RNA-seq), see the `r Biocpkg("GenomicAlignments")` package.
+This appears to make little sense in this situation, but for really big files it makes sense to access them in chunks, see below for a BAM file example.
+
+The `ShortReadQ` class is very similar to a `DNAStringSet` but it has two sets of strings: one for the read nucleotides and one for the base qualities.  They are accessed as
+```{r accessorFastq}
+sread(reads)[1:2]
+quality(reads)[1:2]
+id(reads)[1:2]
+```
+
+## A word on quality scores
+
+Note how the quality scores are listed as characters.  You can convert them into standard 0-40 integer quality scores by
+```{r convertQual}
+as(quality(reads), "matrix")[1:2,1:10]
+```
+In this conversion, each letter is matched to an integer between 0 and 40.  This matching is known as the "encoding" of the quality scores and there has been different ways to do this encoding.  Unfortunately, it is not stored in the FASTQ file which encoding is used, so you have to know or guess the encoding.  The ShortRead package does this for you.
+
+These numbers are supposed to related to the probability that the reported base is different from the template fragment (ie. a sequence error).  One should be aware that this probabilistic interpretation is not always true; methods such as "quality-remapping" helps to ensure this.
+
+## Reading alignment files
+
+In the early days of next generation sequencing, there was no standardized alignment output format.  different aligners produced different output file, including Bowtie and MAQ. Later on, the SAM / BAM format was introduced and this is now the standard alignment output.  ShortRead contains tools for reading these older alignment formats through the `readAligned()` function (the `type` argument support options such as `type="Bowtie"` and `type="MAQMap"` and `type="MAQMapShort"`).
+
+The package has some very old support for parsing BAM files, but use `r Biocpkg("bam.files <- file.path(dir, paste0(sample.table$Run, "_subset.bam"))
+")` and `r Biocpkg("GenomicAlignments")` for this task instead.
+
+## Other Resources
+
+- The vignettes from the [ShortRead package](http://bioconductor.org/packages/ShortRead).
+
+
+Now that we've seen what a bam file looks like, we will use the bam files to construct an RNA count matrix. 
+
+RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered how to go from fastq files to aligned reads in bam files. Here we will see how we go from bam files to exon counts.  
+
+## Counting reads in genes
+
+In this lab we will examine 8 samples from the airway package, which are from the paper by [Himes et al](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057123/): "RNA-seq Transcriptome Profiling Identifies CRISPLD2 as a Glucocorticoid Responsive Gene that Modulates Cytokine Function in Airway Smooth Muscle Cells".
+
+This lab will focus on a summarized version of an RNA-seq experiment: a count matrix, which has genes along the rows and samples along the columns. The values in the matrix are the number of reads which could be uniquely aligned to the exons of a given gene for a given sample. We will demonstrate how to build a count matrix for a subset of reads from an experiment, and then use a pre-made count matrix, to avoid having students download the multi-gigabyte BAM files containing the aligned reads. A new pipeline for building count matrices, which skips the alignment step, is to use fast pseudoaligners such as Sailfish, Salmon and kallisto, followed by the [tximport](http://bioconductor.org/packages/tximport) package. See the package vignette for more details. Here, we will continue with the read counting pipeline.
+
+First, make variables for the different BAM files and GTF file. Use the `sample.table` to contruct the BAM file vector, so that the count matrix will be in the same order as the `sample.table`
+```{r messages=FALSE}
+library(airway)
+dir <- system.file("extdata", package="airway", mustWork=TRUE)
+csv.file <- file.path(dir, "sample_table.csv")
+sample.table <- read.csv(csv.file, row.names=1)
+bam.files <- file.path(dir, paste0(sample.table$Run, "_subset.bam"))
+gtf.file <- file.path(dir, "Homo_sapiens.GRCh37.75_subset.gtf")
+```
+
+Next we create an *Rsamtools* variable which wraps our BAM files, and create a transcript database from the GTF file. We can ignore the warning about `matchCircularity`. Finally, we make a *GRangesList* which contains the exons for each gene.
+
+```{r messages=FALSE}
+library(Rsamtools)
+bam.list <- BamFileList(bam.files)
+library(GenomicFeatures)
+
+txdb <- makeTxDbFromGFF(gtf.file, format="gtf")
+exons.by.gene <- exonsBy(txdb, by="gene")
+```
+
+The following code chunk creates a *SummarizedExperiment* containing the counts for the reads in each BAM file (columns) for each gene in `exons.by.gene` (the rows). We add the `sample.table` as column data. Remember, we know the order is correct, because the `bam.list` was constructed from a column of `sample.table`.
+
+```{r cache=TRUE}
+library(GenomicAlignments)
+se <- summarizeOverlaps(exons.by.gene, bam.list,
+                        mode="Union",
+                        singleEnd=FALSE,
+                        ignore.strand=TRUE,
+                        fragments=TRUE)
+colData(se) <- DataFrame(sample.table)
+```
+
+A similar function in the *Rsubread* library can be used to construct a count matrix:
+
+```{r cache=TRUE}
+# not available for Windows - use above method instead
+library(Rsubread)
+fc <- featureCounts(bam.files, annot.ext=gtf.file,
+                    isGTFAnnotationFile=TRUE, 
+                    isPaired=TRUE)
+names(fc)
+unname(fc$counts) # hide the colnames
+```
+
+Plot the first column from each function against each other (after matching the rows of the *featureCounts* matrix to the one returned by *summarizeOverlaps*.
+
+```{r}
+plot(assay(se)[,1], 
+     fc$counts[match(rownames(se),rownames(fc$counts)),1])
+abline(0,1)
+```

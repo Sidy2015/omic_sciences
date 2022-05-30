@@ -1,0 +1,313 @@
+---
+title: "Introduction to Highthroughput Data"
+author: "Rafa"
+date: "January 31, 2015"
+output: html_document
+layout: page
+---
+
+```{r options, echo=FALSE}
+library(knitr)
+
+```
+
+# Introduction to Highthroughput Data
+
+## The data 
+
+High-throughput technologies have changed basic biology and the biomedical sciences from data poor disciplines to data intensive ones. A specific example comes from research fields interested in understanding gene expression. Gene expression is the process in which DNA, the blueprint for life, is copied into RNA, the templates for the synthesis of proteins, the building blocks for life. In the 1990s, the analysis of gene expression data amounted to spotting black dots on a piece of paper or extracting a few numbers from standard curves. With high-throughput technologies, such as microarrays, this suddenly changed to sifting through tens of thousands of numbers. More recently, RNA sequencing has further increased data complexity. Biologists went from using their eyes or simple summaries to categorize results, to having thousands (and now millions) of measurements per sample to analyze. In this chapter, we will focus on statistical inference in the context of high-throughput measurements. Specifically, we focus on the problem of detecting differences in groups using statistical tests and quantifying uncertainty in a meaningful way. We also introduce exploratory data analysis techniques that should be used in conjunction with inference when analyzing high-throughput data. In later chapters, we will study the statistics behind clustering, machine learning, factor analysis and multi-level modeling. 
+
+Since there is a vast number of available public datasets, we use several gene expression examples. Nonetheless, the statistical techniques you will learn have also proven useful in other fields that make use of high-throughput technologies. Technologies such as microarrays, next generation sequencing, fMRI, and mass spectrometry all produce data to answer questions for which what we learn here will be indispensable. 
+
+<a name="threetables"></a>
+
+### Data packages
+Several of the  examples we are going to use in the following sections are best obtained through R packages. These are available from GitHub and can be installed using the `install_github` function from the `devtools` package. Microsoft Windows users might need to follow [these instructions](https://github.com/genomicsclass/windows) to properly install `devtools`. 
+
+Once `devtools` is installed, you can then install the data packages like this:
+
+```{r,eval=FALSE}
+library(devtools)
+install_github("genomicsclass/GSE5859Subset")
+```
+
+
+## The three tables
+
+Most of the data we use as examples in this book are created with high-throughput technologies. These technologies measure thousands of _features_. Examples of features are genes, single base locations of the genome, genomic regions, or image pixel intensities. Each specific measurement product is defined by a specific set of features. For example, a specific gene expression microarray product is defined by the set of genes that it measures. 
+
+A specific study will typically use one product to make measurements on several experimental units, such as individuals. The most common experimental unit will be the individual, but they can also be defined by other entities, for example different parts of a tumor. We often call the experimental units _samples_ following experimental jargon. It is important that these are not confused with samples as referred to in previous chapters, for example "random sample". 
+
+So a high-throughput experiment is usually defined by three tables: one with the high-throughput measurements and two tables with information about the columns and rows of this first table respectively.
+
+Because a dataset is typically defined by a set of experimental units and a product defines a fixed set of features, the high-throughput measurements can be stored in an $n \times m$ matrix, with $n$ the number of units and $m$ the number of features. In R, the convention has been to store the transpose of these matrices. 
+
+Here is an example from a gene expression dataset:
+
+```{r}
+library(GSE5859Subset)
+data(GSE5859Subset) ##this loads the three tables
+dim(geneExpression)
+```
+
+We have RNA expression measurements for 8793 genes from blood taken from 24 individuals (the experimental units). For most statistical analyses, we will also need information about the individuals. For example, in this case the data was originally collected to compare gene expression across ethnic groups. However, we have created a subset of this dataset for illustration and separated the data into two groups:
+
+
+```{r}
+dim(sampleInfo)
+head(sampleInfo)
+sampleInfo$group
+```
+
+One of the columns, filenames, permits us to connect the rows of this table to the columns of the measurement table.
+
+```{r}
+match(sampleInfo$filename,colnames(geneExpression))
+```
+
+
+Finally, we have a table describing the features:
+
+```{r}
+dim(geneAnnotation)
+head(geneAnnotation)
+```
+
+The table includes an ID that permits us to connect the rows of this table with the rows of the measurement table:
+```{r}
+head(match(geneAnnotation$PROBEID,rownames(geneExpression)))
+```
+The table also includes biological information about the features, namely chromosome location and the gene "name" used by biologists.
+
+###################################################################################################################################
+## Technical vs Biological Replicates
+
+In the following sections we will cover inference in the context of genomics experiments. We apply some of the concepts we have covered in previous sections including t-tests, multiple comparisons and standard deviation estimates from hierarchical models. Here we introduce a concept that is particularly important in the analysis of genomics data: the distinction between biological and technical variability. 
+ 
+In general, the variability we observe across biological units, such as individuals, within a population is referred to as _biological_. We refer to the variability we observe across measurements of the same biological unit, such a aliquots from the same biological sample, as technical. Because newly developed measurement technologies are common in genomics, technical replicates are many times to assess experimental data. By generating measurements from samples that are designed to be the same, we are able to measure and assess technical variability. We also use the terminology _biological replicates_ and _technical replicates_ to refer to samples from which we can measure biological and technical variability respectively.
+
+It is important not to confuse biological and technical variability when performing statistical inference as the interpretation is quite difference. For example, when analyzing data from technical replicates the population is just the one sample from which these come from as opposed to more general population such as healthy humans or control mice. Here we explore this concept with a experiment that was designed to include both technical and biological replicates.
+
+
+Pooling experiment data
+
+The dataset we will study includes data from gene expression arrays. In this experiment, RNA was extract from 12 randomly selected mice from two strain. All 24 samples were hybridized to micro arrays but we also formed pools, including two pools from with the RNA from all twelve mice from each of the two strains. Other pools were also created, as we will see below, but we will ignore these here.
+
+We will need the following library which you need to install if you have not done so already:
+```{r,eval=FALSE}
+library(devtools)
+install_github("genomicsclass/maPooling")
+```
+
+ We can see the experimental design using the `pData` function. Each row represents a sample and the column are the mice. A 1 in cell $i,j$ indicates that RNA from mouse $j$ was included in sample $i$. The strain can be identified from the row names (not a recommended approach)
+ 
+```{r,message=FALSE}
+library(Biobase)
+library(maPooling)
+data(maPooling)
+head(pData(maPooling))
+```
+
+Below we use create an image to illustrate which mice were included in which samples:
+```{r}
+library(rafalib)
+mypar()
+flipt <- function(m) t(m[nrow(m):1,])
+myimage <- function(m,...) {
+  image(flipt(m),xaxt="n",yaxt="n",...)
+  }
+
+myimage(as.matrix(pData(maPooling)),col=c("white","black"),
+        xlab="experiments",
+        ylab="individuals",
+        main="phenoData")
+```
+
+Note that ultimately we are interested in detecting genes that are differentially expressed between the two strains of mice which we will refer to as strain 0 and 1. We can apply tests to the technical replicates of  pooled samples or the data from 12 individual mice. We can identify these pooled samples because all mice from each strain were represented in these samples and thus the sum of the rows of experimental design matrix add up to 12:
+```{r}
+data(maPooling)
+pd=pData(maPooling)
+pooled=which(rowSums(pd)==12)
+```
+
+We can determine the strain from the column names:
+```{r}
+factor(as.numeric(grepl("b",names(pooled))))
+```
+
+If we compare the mean expression between groups for each gene we find several showing consistent differences. Here are two examples: 
+
+```{r, fig.height=3, fig.width=6}
+###look at 2 pre-selected samples for illustration
+i=11425;j=11878
+pooled_y=exprs(maPooling[,pooled])
+pooled_g=factor(as.numeric(grepl("b",names(pooled))))
+mypar(1,2)
+stripchart(split(pooled_y[i,],pooled_g),vertical=TRUE,method="jitter",col=c(1,2),main="Gene 1",xlab="Group",pch=15)
+stripchart(split(pooled_y[j,],pooled_g),vertical=TRUE,method="jitter",col=c(1,2),main="Gene 2",xlab="Group",pch=15)
+```
+
+Note that if we compute a t-test from these values we obtain highly significant results
+```{r}
+library(genefilter)
+pooled_tt=rowttests(pooled_y,pooled_g)
+pooled_tt$p.value[i]
+pooled_tt$p.value[j]
+```
+But would these results hold up if we selected another 24 mice? Note that the equation for the t-test we presented in the previous section include the population standard deviations. Are these quantities measured here? Note that it is being replicated here is the experimental protocol. We have created four _technical replicates_ for each pooled sample. Gene 1 may be a highly variable gene within strain of mice while  Gene 2 a stable one, but we have no way of seeing this. 
+
+We also have microarray data for each individual mice. For each strain we have 12 _biological replicates_. We can find them by looking for rows with just one 1.
+
+```{r}
+individuals=which(rowSums(pd)==1)
+```
+It turns out that some technical replicates were included for some individual mice so we remove them to illustrate an analysis with only biological replicates:
+
+```{r}
+##remove replicates
+individuals=individuals[-grep("tr",names(individuals))]
+y=exprs(maPooling)[,individuals]
+g=factor(as.numeric(grepl("b",names(individuals))))
+```
+
+We can compute the sample variance for each gene and compare to the standard deviation obtained with the technical replicates.
+```{r}
+technicalsd <- rowSds(pooled_y[,pooled_g==0])
+biologicalsd <- rowSds(y[,g==0])
+LIM=range(c(technicalsd,biologicalsd))
+mypar(1,1)
+boxplot(technicalsd,biologicalsd,names=c("technical","biological"),ylab="standard deviation")
+```
+
+Note the biological variance is much larger than the technical one. And also that the variability of variances is also for biological variance. Here are the two genes we showed above but now for each individual mouse 
+
+```{r, }
+mypar(1,2)
+stripchart(split(y[i,],g),vertical=TRUE,method="jitter",col=c(1,2),xlab="Gene 1",pch=15)
+points(c(1,2),tapply(y[i,],g,mean),pch=4,cex=1.5)
+stripchart(split(y[j,],g),vertical=TRUE,method="jitter",col=c(1,2),xlab="Gene 2",pch=15)
+points(c(1,2),tapply(y[j,],g,mean),pch=4,cex=1.5)
+```
+
+Note the p-value tell a different story
+```{r}
+library(genefilter)
+tt=rowttests(y,g)
+tt$p.value[i]
+tt$p.value[j]
+```
+
+Which of these two genes do we feel more confident reporting as being differentially expressed? If another investigator takes another random sample of mice and tries the same experiment, which one do you think will replicate? Measuring biological variability is essential if we want our conclusions to be about the strain of mice in general as opposed to the specific mice we have. 
+
+An analysis with biological replicates have as a population these two strains of mice. An analysis with technical replicates have as a population the twelve mice we selected and the variability is related to the measurement technology. In science we typically are concerned with populations. As a very practical example, note that if another lab performs this experiment they will have another set of twelve mice and thus inference about populations are more likely to replicate.
+#####################################################################################################################################
+## Multiple comparisons with genewise t-tests
+
+In the previous section, we focused on a pair of genes to
+illustrate two aspects of variation.  One of the genes appeared to
+have high between-mouse variation that was hidden in the act
+of pooling samples within strain.  When strains were compared on
+the basis of the pooled data, there was an appearance of a significant
+strain effect for this gene ($p < 10^{-6}$), but when individual-level data were used to
+perform the comparison, the strain effect was found to be very
+weak at best ($p = 0.089$).  The lesson is to recognize that the
+most scientifically compelling questions concern biological variation,
+which can only be directly measured with good experimental design.  Accurate
+interpretation of origin and size of biological variation requires
+appropriate statistical analysis.
+
+In this section we will cover inference in the context of genome-scale experiments.  There are several serious conceptual problems:
+
+- there are many tests, often at least one test for each one of tens of thousands of features
+- each feature (typically a gene) exhibits its own technical and biological variability
+- there may be unmeasured or unreported sources of biological variation (such as time of day)
+- many features are inherently interrelated, so the tests are not independent
+
+We will apply some of the concepts we have covered in previous 
+sections including t-tests and multiple comparisons; later we will
+compute standard deviation estimates from hierarchical models. 
+
+We start by loading the pooling experiment data 
+
+
+```{r,message=FALSE}
+library(Biobase)
+library(maPooling)
+data(maPooling)
+pd=pData(maPooling)
+individuals=which(rowSums(pd)==1)
+```
+
+And extracting the individual mice as well as their strain
+
+```{r}
+individuals=which(rowSums(pd)==1)
+individuals=individuals[-grep("tr",names(individuals))]
+y=exprs(maPooling)[,individuals]
+g=factor(as.numeric(grepl("b",names(individuals))))
+```
+
+<a name="rowWiseT"></a>
+
+# T-tests
+
+We can now apply a t-test to each gene using the `rowttest` function in the `genefilter` package
+
+```{r}
+library(genefilter)
+tt=rowttests(y,g)
+```
+
+<a name="naive"></a>
+Now which genes do we report as statistically significant? For somewhat arbitrary reasons, in science p-values of 0.01 and 0.05 are used as cutoff. In this particular example we get 
+
+```{r}
+NsigAt01 = sum(tt$p.value<0.01)
+NsigAt01
+NsigAt05 = sum(tt$p.value<0.05)
+NsigAt05
+```
+
+<a name="sham"></a>
+
+Multiple testing
+We described multiple testing in detail [in course 3](http://genomicsclass.github.io/book/pages/multiple_testing.html). Here we provide a quick summary.
+
+Do we report all the nominally significant
+genes identified above? Let's explore what happens if we split the first group into two, forcing the null hypothesis to be true
+
+```{r}
+set.seed(0)
+shuffledIndex <- factor(sample(c(0,1),sum(g==0),replace=TRUE ))
+nulltt <- rowttests(y[,g==0],shuffledIndex)
+NfalselySigAt01 = sum(nulltt$p.value<0.01)
+NfalselySigAt01 
+NfalselySigAt05 = sum(nulltt$p.value<0.05)
+NfalselySigAt05
+```
+
+<a name="adjusted"></a>
+
+If we use the 0.05 cutoff we will be reporting `r NfalselySigAt05` false positives. We have described several ways to adjust for this including the `qvalue` method available in the `r "qvalue"` package. After this adjustment we acquire 
+a smaller list of genes.
+
+```{r}
+library(qvalue)
+qvals = qvalue(tt$p.value)$qvalue
+sum(qvals<0.05)
+sum(qvals<0.01)
+```
+
+<a name="demo"></a>
+And now the null case generates no false positives:
+
+```{r}
+library(qvalue)
+nullqvals = qvalue(nulltt$p.value)$qvalue
+sum(nullqvals<0.05)
+sum(nullqvals<0.01)
+```
+
+This addresses in a fairly general way the problem of inflating
+significance claims when performing many hypothesis tests at
+a fixed nominal level of significance.
