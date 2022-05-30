@@ -1,0 +1,6 @@
+book_filename: omics
+new_session: yes
+rmd_files: ["index.Rmd", "01Introduction.Rmd", "02getting-started.Rmd", "03dplyr-tutorial.Rmd", "04galton.Rmd", "05random-variables.Rmd",
+  "06clt-tdistribution.Rmd", "07clt-practice.Rmd", "08power-calculations.Rmd","09matrix-notation.Rmd","12linear-models.Rmd",
+  "14highthroughput.Rmd","15FDR.Rmd", "16EDAhighthroughput.Rmd","17distance.Rmd","22clustering.Rmd","23confounding.Rmd","26biomotiv.Rmd","29align.Rmd","30fastq.md","31importNGS.Rmd",
+  "32NGScounting.Rmd","33annoOverview.Rmd","34igranges.Rmd","35GSEA.Rmd","36chipchip.Rmd"]
