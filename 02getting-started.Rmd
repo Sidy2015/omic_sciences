@@ -3,6 +3,10 @@ layout: page
 title: Getting Started
 ---
 
+```{r options, echo=FALSE}
+library(knitr)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
+```
 # Getting Started
 
 In this book we will be using the
@@ -21,9 +25,9 @@ the [Comprehensive R Archive Network](https://cran.r-project.org/)
 (CRAN). It is relatively straightforward, but if you need further help
 you can try the following resources: 
 
-* [Installing R on Windows](https://github.com/genomicsclass/windows#installing-r) 
+* [Installing R on Windows](https://cran.r-project.org/bin/windows/base/) 
 * [Installing R on Mac](http://youtu.be/Icawuhf0Yqo)
-* [Installing R on Ubuntu](http://cran.r-project.org/bin/linux/ubuntu/README)
+
 
 ## Installing RStudio
 
@@ -31,9 +35,7 @@ The next step is to install RStudio, a program for viewing and running
 R scripts. Technically you can run all the code shown here without
 installing RStudio, but we highly recommend this integrated
 development environment (IDE). Instructions are
-[here](http://www.rstudio.com/products/rstudio/download/) and for
-Windows we have special
-[instructions](https://github.com/genomicsclass/windows). 
+[here](http://www.rstudio.com/products/rstudio/download/). 
 
 ## Learn R Basics
 
@@ -49,7 +51,6 @@ library(swirl)
 swirl()
 ```
 
-Alternatively you can take the [try R](http://tryr.codeschool.com/) interactive class from Code School. 
 
 There are also many open and free resources and reference
 guides for R. Two examples are:
@@ -220,3 +221,12 @@ filename <- file.path(dir,"extdata/femaleMiceWeights.csv")
 dat <- read.csv(filename)
 ```
 
+Running R code
+
+```{r}
+1+2
+dat
+class(dat)
+dim(dat)
+names(dat)
+```

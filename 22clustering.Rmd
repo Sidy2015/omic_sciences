@@ -10,7 +10,7 @@ library(rafalib)
 library(dplyr)
 
 ```
-# Basic Machine Learning
+# Prediction & Clustering
 
 Machine learning is a very broad topic and a highly active research area. In the life sciences, much of what is described as "precision medicine" is an application of machine learning to biomedical data. The general idea is to predict or discover outcomes from measured predictors. Can we discover new types of cancer from gene expression profiles? Can we predict drug response from a series of genotypes? Here we give a very brief introduction to two major machine learning components: clustering and class prediction. There are many good resources to learn more about machine learning, for example the excellent textbook *The Elements of Statistical Learning: Data Mining, Inference, and
 Prediction*, by Trevor Hastie, Robert Tibshirani and Jerome Friedman.
@@ -217,7 +217,13 @@ library(tissuesGeneExpression)
 data(tissuesGeneExpression)
 
 ```
+So most of the time you'll be dealing with high-dimensional datasets. Exploratory analysis can help you figure out what you are dealing with before you do any real analysis. So we've been looking at this RNA-seq data, which has the following samples annotated only by tissue:
 
+```{r}
+table(tissue)
+pData = data.frame(sample = colnames(e),tissue = tissue,
+                   stringsAsFactors = F)
+```
 To illustrate the main application of clustering in the life sciences, let's pretend that we don't know these are different tissues and are interested in clustering. The first step is to compute the distance between each sample:
 
 ```{r, tissue}
@@ -372,4 +378,4 @@ heatmap.2(e[idx,], labCol=tissue,
 ```
 
 We did not use tissue information to create this heatmap, and we can quickly see, with just 40 genes, good separation across tissues.
-99999999
+

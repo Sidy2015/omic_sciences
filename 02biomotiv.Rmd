@@ -6,6 +6,7 @@ layout: page
 
 ```{r options, echo=FALSE}
 library(knitr)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 
 ```
 
@@ -42,13 +43,7 @@ library(ph525x)
 
 <a name="rlang"></a>
 
-# The R language and Bioconductor packages
-
-This course assumes a good working knowledge of the R language.
-The Rstudio environment is recommended.  If you are jumping
-directly to 5x, skipping 1x-4x, and want to
-work through a tutorial before proceeding, 
-[Try R](http://tryr.codeschool.com/) is very comprehensive.
+# R Bioconductor
 
 <a name="whyr"></a>
 
@@ -197,9 +192,9 @@ you can use to perform these and related tasks in your own
 research.
 88888888888888888888888888888888888888888888888888888888888
 
-## Installing Bioconductor and finding help
+## Installing Bioconductor
 
-### Installing Bioconductor
+Much of this Bioconductor section you'll only appreciate later in the course so don't worry if you don't grasp it all, and many of the sections we'll skim over and save for later.
 
 In order to install Bioconductor, copy the following two lines into your R console.
 
@@ -312,6 +307,8 @@ browseVignettes(package="Biobase")
 
 ## Bioconductor cheat sheet
 
+I am going to skip over most of this bit for now as it should serve as a reference for you as we get into more detail in the course. Thus the 'cheatsheet'. We won't cover all of the material covered in here either.
+
 Also useful are Kasper Daniel Hansen's [Bioconductor class notes](http://kasperdanielhansen.github.io/genbioconductor/).
 
 ### Install
@@ -361,14 +358,8 @@ packageVersion("foo") # what version of package
 
 Bioconductor support website: https://support.bioconductor.org
 
-If you use RStudio, then you already get nicely rendered documentation using `?` or `help`. If you are a command line person, then you can use this alias to pop up a help page in your web browser with `rhelp functionName packageName`.
-
-```
-alias rhelp="Rscript -e 'args <- commandArgs(TRUE); help(args[2], package=args[3], help_type=\"html\"); Sys.sleep(5)' --args"
-```
-
 ### debugging R
-
+You probably won't need this much as you won't be writing a lot of code and won't need it. Errors are often easier to debug without these tools.
 ```
 traceback() # what steps lead to an error
 # debug a function
@@ -395,12 +386,25 @@ in a specific package.
 
 ```
 intersect(sapply(strsplit(as.character(methods(class="DESeqDataSet")), ","), `[`, 1), ls("package:DESeq2"))
+
 sub("Function: (.*) \\(package .*\\)","\\1",grep("Function",showMethods(classes="DESeqDataSet", where=getNamespace("DESeq2"), printTo=FALSE), value=TRUE))
+```
+These are so useful -- especially for Bioconductor where R objects have a lot of structure -- that I turned them into functions --
+
+```{r}
+getPackageClass = function(package,class){
+int = intersect(sapply(strsplit(as.character(methods(class=class)), ","),
+`[`, 1), ls(paste("package",package,sep = ":")))
+int
+}
+getPackageMethods = function(package,class){
+func = sub("Function: (.*) \\(package .*\\)","\\1",grep("Function",showMethods(classes=class,
+where=getNamespace(package), printTo=FALSE), value=TRUE))
+func
+}
 ```
 
 ### Annotations
-
-**Edit (May 2017)**: the below needs to be updated to show off AnnotationHub.
 
 For AnnotationHub examples, see:
 

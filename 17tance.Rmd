@@ -1,25 +1,30 @@
 ---
+title: "Distance lecture"
 layout: page
-title: Distance lecture
+output:
+  pdf_document: default
+  html_document:
+    self_contained: no
 ---
 
 ```{r options, echo=FALSE}
 library(knitr)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 35), tidy = TRUE)
 
 ```
 
-# Distance and Dimension Reduction
+# Clustering and Dimension Reduction
 
 Introduction
 
 The concept of distance is quite intuitive. For example, when we cluster animals into subgroups, we are implicitly defining a distance that permits us to say what animals are "close" to each other.
 
-![Clustering of animals.](images/handmade/animals.png)
+![Clustering of animals.](figure/animals.png)
 
-Many of the analyses we perform with high-dimensional data relate directly or indirectly to distance. Many clustering and machine learning techniques rely on being able to define distance, using features or predictors. For example, to create _heatmaps_, which are widely used in genomics and other high-throughput fields, a distance is computed explicitly. 
+Many of the analyses we perform with high-dimensional data relate directly or indirectly to distance. Many clustering and machine learning techniques rely on being able to define distance, using features or predictors. For example, to create _heatmaps_, which are widely used in genomics and other high-throughput fields, a distance is computed explicitly.
+Image Source: Heatmap, Gaeddal, 01.28.2007 Wikimedia Commons
 
-![Example of heatmap. Image Source: Heatmap, Gaeddal, 01.28.2007 Wikimedia Commons](images/handmade/Heatmap.png)
-
+![Example of heatmap. Image Source: Heatmap, Gaeddal, 01.28.2007 Wikimedia Commons](figure/Heatmap.png)
 In these plots the measurements, which are stored in a matrix, are
 represented with colors after the columns and rows have been
 clustered. (A side note: red and green, a common color theme for heatmaps,
@@ -126,161 +131,267 @@ as.matrix(d)[1,87]
 ```
 
 It is important to remember that if we run `dist` on `e`, it will compute all pairwise distances between genes. This will try to create a $22215 \times 22215$ matrix that may crash your R sessions.
+88888888888888888888888888888888888888888888888888
 
-88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
+## Clustering 
+Clustering or cluster analysis is a technique for visualizing high dimensional objects by grouping similar objects together such that objects in the same group (or cluster) are more similar to each other than objects in different groups. Cluster analysis can be helpful in getting a sense of what’s going on in a very high dimensional data set. It's used in almost every genomics techique.
 
+We will use the tissue gene expression data to show the concepts and code needed to perform clustering analysis.
 
-## Dimension Reduction Motivation
+## Basic concepts
+Cluster analysis organizes objects into groups based on how close they are to each other.
 
-Visualizing data is one of the most, if not the most, important step in the analysis of high-throughput data. The right visualization method may reveal problems with the experimental data that can render the results from a standard analysis, although typically appropriate, completely useless. 
+How is close defiined?
 
-We have shown methods for visualizing global properties of the columns or rows, but plots that reveal relationships between columns or between rows are more complicated due to the high dimensionality of data. For example, to compare each of the 189 samples to each other, we would have to create, for example, 17,766 MA-plots. Creating one single scatterplot of the data is impossible since points are very high dimensional. 
+How are objects split into groups?
 
-We will describe powerful techniques for exploratory data analysis based on _dimension reduction_. The general idea is to reduce the dataset to have fewer dimensions, yet approximately preserve important properties, such as the distance between samples. If we are able to reduce down to, say, two dimensions, we can then easily make plots. The technique behind it all, the singular value decomposition (SVD), is also useful in other contexts. Before introducing the rather complicated mathematics behind the SVD, we will motivate the ideas behind it with a simple example.
+How do we visualize the groups?
 
-#### Example: Reducing two dimensions to one
+How do we interpret the groups?
 
-We consider an example with twin heights. Here we simulate 100 two dimensional points that represent the number of standard deviations each individual is from the mean height. Each point is a pair of twins:
+## Hierarchical clustering
 
-```{r simulate_twin_heights, fig.cap="Simulated twin pair heights.",echo=FALSE,message=FALSE}
-library(rafalib)
-library(MASS)
+Hierarchical clustering implies organizing your groups into some kind of hierarchy and is known as an 'agglomerative' approach with each object starting out as a single cluster. The algorithm is recursive and goes as follows:
 
-set.seed(1)
-n <- 100
-y=t(mvrnorm(n,c(0,0), matrix(c(1,0.95,0.95,1),2,2)))
+Calculate all pairwise distances between the clusters
 
-mypar()
-plot(y[1,], y[2,], xlab="Twin 1 (standardized height)", 
-     ylab="Twin 2 (standardized height)", xlim=c(-3,3), ylim=c(-3,3))
-points(y[1,1:2], y[2,1:2], col=2, pch=16)
+Find the two clusters with the minimum distance and merge them into a single cluster.
+
+Repeat until only a single cluster remains.
+
+How do we define distance?
+
+Classical definition of Euclidian distance: 
+
+$Distance = \sqrt{(X_1 - X_2)^2 + (Y_1 - Y_2)^2]}$
+
+One nice feature of Euclidean distance is that it's easily generalizable to higher dimensions. If instead of two dimensions you have 100 dimensions, you can easily take the differences between each of the 100 dimensions, square them, sum them together and then take the square root. So the Euclidean distance metric extends very naturally to very high dimensions problems.
+
+In general the formula for Euclidean distance between point
+
+$A = (A_1, A_2, \dots, A_n)$
+
+and 
+
+$B = (B_1, B_2, \dots, B_n)$
+
+is
+
+$Distance = \sqrt{(A_1-B_1)^2 + (A_2-B_2)^2 + \cdots + (A_n-B_n)^2}$
+
+Simple example:
+
+```{r,tidy=TRUE,fig.cap="Simulated clustered data"}
+set.seed(1234)
+x <- rnorm(12, rep(1:3,each=4), 0.2)
+y <- rnorm(12, rep(c(1,2,1),each=4), 0.2)
+plot(x,y,col="blue",pch=19,cex=2)
+text(x+0.05,y+0.05,labels=as.character(1:12))
 ```
+The first step in the basic clustering approach is to calculate the distance between every point with every other point. The result is a *distance matrix*, which can be computed with the `dist()` function in R. 
 
-To help with the illustration, think of this as high-throughput gene expression data with the twin pairs representing the $N$ samples and the two heights representing gene expression from two genes. 
-
-We are interested in the distance between any two samples. We can compute this using `dist`. For example, here is the distance between the two orange points in the figure above:
+Here is just a piece of the distance matrix associated with the figure above.
 
 ```{r}
-d=dist(t(y))
-as.matrix(d)[1,2]
+dataFrame <- data.frame(x=x, y=y)
+dist(dataFrame)
 ```
 
-What if making two dimensional plots was too complex and we were only able to make 1 dimensional plots. Can we, for example, reduce the data to a one dimensional matrix that preserves distances between points?
+The default distance metric used by the `dist()` function is Euclidean distance.
 
-If we look back at the plot, and visualize a line between any pair of points, the length of this line is the distance between the two points. These lines tend to go along the direction of the diagonal. We have seen before that we can "rotate" the plot so that the diagonal is in the x-axis by making a MA-plot instead:
+Note that usually you will *not* have to explicitly compute the distance matrix (unless you are inventing your own clustering method). Here I just print it out to show what's going on internally.
 
+First an agglomerative clustering approach attempts to find the two points that are closest together. In other words, we want to find the smallest non-zero entry in the distance matrix.
 
-```{r rotation, fig.cap="Twin height scatterplot (left) and MA-plot (right).",fig.width=10.5,fig.height=5.25}
-z1 = (y[1,]+y[2,])/2 #the sum 
-z2 = (y[1,]-y[2,])   #the difference
+```{r,tidy=TRUE}
+rdistxy <- as.matrix(dist(dataFrame))
+## Remove the diagonal from consideration
+diag(rdistxy) <- diag(rdistxy) + 1e5
+# Find the index of the points with minimum distance
+ind <- which(rdistxy == min(rdistxy),arr.ind=TRUE)
+ind
+```
 
-z = rbind( z1, z2) #matrix now same dimensions as y
+Now we can plot the points and show which two points are closest together according to our distance metric.
 
-thelim <- c(-3,3)
-mypar(1,2)
+```{r,tidy=TRUE,fig.cap="Two closest points"}
+plot(x,y,col="blue",pch=19,cex=2)
+text(x+0.05,y+0.05,labels=as.character(1:12))
+points(x[ind[1,]],y[ind[1,]],col="orange",pch=19,cex=2)
+```
 
-plot(y[1,],y[2,],xlab="Twin 1 (standardized height)",
-     ylab="Twin 2 (standardized height)",
-     xlim=thelim,ylim=thelim)
-points(y[1,1:2],y[2,1:2],col=2,pch=16)
+The next step for the algorithm is to start drawing the tree, the first step of which would be to "merge" these two points together.
 
-plot(z[1,],z[2,],xlim=thelim,ylim=thelim,xlab="Average height",ylab="Difference in height")
-points(z[1,1:2],z[2,1:2],col=2,pch=16)
+```{r,tidy=TRUE,fig.width=7,fig.height=4,warning=FALSE,message=FALSE,fig.cap="Merging of first two points"}
+par(mfrow = c(1, 2))
+plot(x,y,col="blue",pch=19,cex=2, main = "Data")
+text(x+0.05,y+0.05,labels=as.character(1:12))
+points(x[ind[1,]],y[ind[1,]],col="orange",pch=19,cex=2)
+# Make a cluster and cut it at the right height
+library(dplyr)
+hcluster <- dist(dataFrame) %>% hclust
+dendro <- as.dendrogram(hcluster)
+cutDendro <- cut(dendro,h=(hcluster$height[1]+0.00001) )
+plot(cutDendro$lower[[11]],yaxt="n",main="Begin building tree")
 ```
 
 
-Later, we will start using linear algebra to represent transformation of the data such as this. Here we can see that to get `z` we multiplied `y` by the matrix:
+Now that we've merged the first two "leaves" of this tree, we can turn the algorithm crank and continue to build the tree. Now, the two points we identified in the previous iteration will get "merged" into a single point, as depicted below.
 
-$$
-A = \,
-\begin{pmatrix}
-1/2&1/2\\
-1&-1\\
-\end{pmatrix}
-\implies
-z = A y
-$$
-
-Remember that we can transform back by simply multiplying by $A^{-1}$ as follows:
-
-$$
-A^{-1} = \,
-\begin{pmatrix}
-1&1/2\\
-1&-1/2\\
-\end{pmatrix}
-\implies
-y = A^{-1} z
-$$
-
-#### Rotations 
-
-In the plot above, the distance between the two orange points remains roughly the same, relative to the distance between other points. This is true for all pairs of points. A simple re-scaling of the transformation we performed above will actually make the distances exactly the same. What we will do is multiply by a scalar so that the standard deviations of each point is preserved. If you think of the columns of `y` as independent random variables with standard deviation $\sigma$, then note that the standard deviations of $M$ and $A$ are:
-
-$$
-\mbox{sd}[ Z_1 ] = \mbox{sd}[ (Y_1 + Y_2) / 2 ] = \frac{1}{\sqrt{2}} \sigma \mbox{ and } \mbox{sd}[ Z_2] = \mbox{sd}[ Y_1 - Y_2  ] = {\sqrt{2}} \sigma 
-$$
-
-This implies that if we change the transformation above to:
-
-$$
-A = \frac{1}{\sqrt{2}}
-\begin{pmatrix}
-1&1\\
-1&-1\\
-\end{pmatrix}
-$$
-
-then the SD of the columns of $Y$ are the same as the variance of the columns $Z$. Also, notice that $A^{-1}A=I$. We call matrices with these properties _orthogonal_ and it guarantees the SD-preserving properties described above. The distances are now exactly preserved:
-
-```{r rotation_preserves_dist, fig.cap="Distance computed from original data and after rotation is the same."}
-A <- 1/sqrt(2)*matrix(c(1,1,1,-1),2,2)
-z <- A%*%y
-d <- dist(t(y))
-d2 <- dist(t(z))
-mypar(1,1)
-plot(as.numeric(d),as.numeric(d2)) #as.numeric turns distances into long vector
-abline(0,1,col=2)
+```{r,echo=FALSE,fig.cap="First set of merged points/cluster"}
+rdistxy <- dist(dataFrame) %>% as.matrix
+diag(rdistxy) <- diag(rdistxy) + 1e5
+# Find the index of the points with minimum distance
+ind <- which(rdistxy == min(rdistxy),arr.ind=TRUE)
+# Plot the points with the minimum overlayed
+plot(x,y,col="blue",pch=19,cex=2)
+text(x+0.05,y+0.05,labels=as.character(1:12))
+points(x[ind[1,]],y[ind[1,]],col="orange",pch=19,cex=2)
+points(mean(x[ind[1,]]),mean(y[ind[1,]]),col="black",cex=3,lwd=3,pch=3)
+points(mean(x[ind[1,]]),mean(y[ind[1,]]),col="orange",cex=5,lwd=3,pch=1)
 ```
 
-We call this particular transformation a _rotation_ of `y`. 
 
-```{r rotation2, fig.cap="Twin height scatterplot (left) and after rotation (right).",fig.width=10.5,fig.height=5.25}
-mypar(1,2)
+We need to search the distance matrix for the *next* two closest points, ignoring the first two that we already merged.
 
-thelim <- c(-3,3)
-plot(y[1,],y[2,],xlab="Twin 1 (standardized height)",
-     ylab="Twin 2 (standardized height)",
-     xlim=thelim,ylim=thelim)
-points(y[1,1:2],y[2,1:2],col=2,pch=16)
-
-plot(z[1,],z[2,],xlim=thelim,ylim=thelim,xlab="Average height",ylab="Difference in height")
-points(z[1,1:2],z[2,1:2],col=2,pch=16)
+```{r}
+nextmin <- rdistxy[order(rdistxy)][3]
+ind <- which(rdistxy == nextmin,arr.ind=TRUE)
+ind
 ```
 
-The reason we applied this transformation in the first place was because we noticed that to compute the distances between points, we followed a direction along the diagonal in the original plot, which after the rotation falls on the horizontal, or the first dimension of `z`. So this rotation actually achieves what we originally wanted: we can preserve the distances between points with just one dimension. Let's remove the second dimension of `z` and recompute distances:
+Now we can plot the data with this next pair of points and the merged tree leaves.
 
-
-```{r approx_dist, fig.cap="Distance computed with just one dimension after rotation versus actual distance."}
-d3 = dist(z[1,]) ##distance computed using just first dimension
-mypar(1,1)
-plot(as.numeric(d),as.numeric(d3)) 
-abline(0,1)
+```{r,fig.width=7,fig.height=4,echo=FALSE,fig.cap="Second set of merged points"}
+par(mfrow=c(1,3))
+plot(x,y,col="blue",pch=19,cex=2)
+text(x+0.05,y+0.05,labels=as.character(1:12))
+points(x[c(5,6)],y[c(5,6)],col="orange",pch=19,cex=2)
+points(x[ind[1,]],y[ind[1,]],col="red",pch=19,cex=2)
+# Make dendogram plots
+distxy <- dist(dataFrame)
+hcluster <- hclust(distxy)
+dendro <- as.dendrogram(hcluster)
+cutDendro <- cut(dendro,h=(hcluster$height[2]) )
+plot(cutDendro$lower[[10]],yaxt="n")
+plot(cutDendro$lower[[5]],yaxt="n")
 ```
 
-The distance computed with just the one dimension provides a very good approximation to the actual distance and a very useful dimension reduction: from 2 dimensions to 1. This first dimension of the transformed data is actually the first _principal component_. This idea motivates the use of principal component analysis (PCA) and the singular value decomposition (SVD) to achieve dimension reduction more generally. 
+And on and on in this manner. If we were to continue in this fashion--identifying the two closest points and merging them, we'd end up with a *dendrogram* that looks like this one. Here, we call the `hclust()` do run the clustering algorithm.
 
-#### Important note on a difference to other explanations
+```{r,fig.cap="Full hierarchical clustering dendrogram"}
+hClustering <- data.frame(x=x,y=y) %>% dist %>% hclust
+plot(hClustering)
+```
 
-If you search the web for descriptions of PCA, you will notice a difference in notation to how we describe it here. This mainly stems from the fact that it is more common to have rows represent units. Hence, in the example shown here, $Y$ would be transposed to be an $N \times 2$ matrix. In statistics this is also the most common way to represent the data: individuals in the rows. However, for practical reasons, in genomics it is more common to represent units in the columns. For example, genes are rows and samples are columns. For this reason, in this book we explain PCA and all the math that goes with it in a slightly different way than it is usually done. As a result, many of the explanations you find for PCA start out with the sample covariance matrix usually denoted with
-$\mathbf{X}^\top\mathbf{X}$ and having cells representing covariance between two units. Yet for this to be the case, we need the rows of $\mathbf{X}$ to represents units. So in our notation above, you would have to compute, after scaling, $\mathbf{Y}\mathbf{Y}^\top$ instead.
+From the tree/dendrogram it's clear that there are three clusters each with four points. 
 
-Basically, if you want our explanations to match others you have to transpose the matrices we show here.
 
-88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
+## Prettier dendrograms
 
+It's possible to make slightly prettier dendrograms with some modification to the usual plotting method for the output of `hclust()`. Here's a function that takes the output of `hclust()` and color codes each of the cluster members by their cluster membership.
+
+```{r myplclust,tidy = TRUE, eval = FALSE}
+myplclust <- function (hclust, labels = hclust$labels, lab.col = rep(1, length(hclust$labels)), 
+    hang = 0.1, xlab = "", sub = "", ...) 
+{
+    y <- rep(hclust$height, 2)
+    x <- as.numeric(hclust$merge)
+    y <- y[which(x < 0)]
+    x <- x[which(x < 0)]
+    x <- abs(x)
+    y <- y[order(x)]
+    x <- x[order(x)]
+    plot(hclust, labels = FALSE, hang = hang, xlab = xlab, sub = sub, 
+        ...)
+    text(x = x, y = y[hclust$order] - (max(hclust$height) * hang), 
+        labels = labels[hclust$order], col = lab.col[hclust$order], 
+        srt = 90, adj = c(1, 0.5), xpd = NA, ...)
+}
+```
+
+And here's the output the function produces.
+
+```{r, fig.width=7,fig.height=4,tidy=TRUE, fig.cap="Prettier dendrogram"}
+hClustering <- data.frame(x=x,y=y) %>% dist %>% hclust
+myplclust(hClustering,lab=rep(1:3,each=4),
+          lab.col=rep(1:3,each=4))
+```
+88888888888888888888888888888888888888888888888888
+
+##Hiigh-dimensional data:clustering tissue data
+```{r tissue-data, echo = FALSE}
+library(tissuesGeneExpression)
+data(tissuesGeneExpression)
+
+```
+So most of the time you'll be dealing with high-dimensional datasets. Exploratory analysis can help you figure out what you are dealing with before you do any real analysis. So we've been looking at this RNA-seq data, which has the following samples annotated only by tissue:
+
+```{r}
+table(tissue)
+pData = data.frame(sample = colnames(e),tissue = tissue,
+                   stringsAsFactors = F)
+```
+To illustrate the main application of clustering in the life sciences, let's pretend that we don't know these are different tissues and are interested in clustering. The first step is to compute the distance between each sample:
+
+```{r, tissue}
+d <- dist( t(e) )
+```
+
+<a name="hierarchical"></a>
+
+With the distance between each pair of samples computed, we need clustering algorithms to join them into groups. Hierarchical clustering is one of the many clustering algorithms available to do this. Each sample is assigned to its own group and then the algorithm continues iteratively, joining the two most similar clusters at each step, and continuing until there is just one group. 
+```{r hc-tissue, fig.cap="Dendrogram showing hierarchical clustering of tissue gene expression data.",fig.width=10.5,fig.height=5.25}
+
+mypar()
+d <- dist( t(e) )
+hc <- hclust(d)
+hc
+plot(hc,labels=tissue,cex=0.5)
+```
+
+Does this technique "discover" the clusters defined by the different tissues? In this plot, it is not easy to see the different tissues so we add colors by using the `myplclust` function from the `rafalib` package. 
+ 
+```{r tissueclust, fig.cap="Dendrogram showing hierarchical clustering of tissue gene expression data with colors denoting tissues.",fig.width=10.5,fig.height=5.25}
+
+hc <- hclust(dist( t(e) ))
+myplclust(hc, labels=tissue, lab.col = as.fumeric(tissue), cex=0.5)
+```
+
+Visually, it does seem as if the clustering technique has discovered the tissues. However,  hierarchical clustering does not define specific clusters, but rather defines the dendrogram above. From the dendrogram we can decipher the distance between any two groups by looking at the height at which the two groups split into two. To define clusters, we need to "cut the tree" at some distance and group all samples that are within that distance into groups below. To visualize this, we draw a horizontal line at the height we wish to cut and this defines that line. We use 120 as an example:
+
+```{r plcluster, fig.cap="Dendrogram showing hierarchical clustering of tissue gene expression data with colors denoting tissues. Horizontal line defines actual clusters.",fig.width=10.5,fig.height=5.25}
+hc <- hclust(dist( t(e) ))
+myplclust(hc, labels=tissue, lab.col=as.fumeric(tissue),cex=0.5)
+abline(h=120)
+```
+
+If we use the line above to cut the tree into clusters, we can examine how the clusters overlap with the actual tissues:
+
+```{r, table}
+hc <- hclust(dist( t(e) ))
+hclusters <- cutree(hc, h=120)
+table(true=tissue, cluster=hclusters)
+```
+
+We can also ask `cutree` to give us back a given number of clusters. The function then automatically finds the height that results in the requested number of clusters:
+
+```{r, k}
+hc <- hclust(dist( t(e) ))
+hclusters <- cutree(hc, k=8)
+table(true=tissue, cluster=hclusters)
+```
+
+In both cases we do see that, with some exceptions, each tissue is uniquely represented by one of the clusters. In some instances, the one tissue is spread across two tissues, which is due to selecting too many clusters. Selecting the number of clusters is generally a challenging step in practice and an active area of research.
+
+88888888888888888888888888888888888888888888888888
+
+**Other exploratory analysis techniques** 
 ## Dimension Reduction: SVD
-Matrix data have some special statistical methods that can be applied to them. One category of statistical dimension reduction techniques is commonly called principal components analysis (PCA) or the singular value decomposition (SVD). These techniques generally are applied in situations where the rows of a matrix represent observations of some sort and the columns of the matrix represent features or variables (but this is by no means a requirement).
+
+The key aspect of matrix data, which is what we deal withh in genomics data, is that every element of the matrix is the same type and represents the same kind of measurement. This is in contrast to a data frame, where every column of a data frame can potentially be of a different class.
+
+Matrix data have some special statistical methods that can be applied to them. One category of statistical dimension reduction techniques is commonly called principal components analysis (PCA) or the singular value decomposition (SVD). These techniques generally are applied in situations where the rows of a matrix represent observations of some sort and the columns of the matrix represent features or variables (but this is by no means a requirement). All of our genomic datasets are in matrix format, where rows are genes and columns are samples, e.g. RNA-seq, Chip-chip.
 
 In an abstract sense, the SVD or PCA can be thought of as a way to approximate a high-dimensional matrix (i.e. a large number of columns) with a a few low-dimensional matrices. So there’s a bit of data compression angle to it. We’ll take a look at what’s going on in this chapter.
 
@@ -328,7 +439,7 @@ In general, with matrix data, there may be patterns that occur accross the rows 
  image(t(dataMatrixOrdered)[, nrow(dataMatrixOrdered):1])
  
  ## Show the row means
- plot(rowMeans(dataMatrixOrdered), 40:1, , xlab = "Row Mean", ylab = "Row", pch = 19)
+ plot(rowMeans(dataMatrixOrdered), 40:1, xlab = "Row Mean", ylab = "Row", pch = 19)
  
  ## Show the column means
  plot(colMeans(dataMatrixOrdered), xlab = "Column", ylab = "Column Mean", pch = 19)
@@ -476,14 +587,14 @@ round(sqrt(2) * s$u , 3)
 
 The plot we showed after the rotation was showing what we call the _principal components_: the second plotted against the first. To obtain the principal components from the SVD, we simply need the columns of the rotation $\mathbf{U}^\top\mathbf{Y}$ :
 
-```{r PCAplot, fig.cap="Second PC plotted against first PC for the twins height data."}
+```{r PCAplot, fig.cap="Second PC plotted against first PC for the twins height data.",fig.width=4,fig.height=4}
 PC1 = s$d[1]*s$v[,1]
 PC2 = s$d[2]*s$v[,2]
 plot(PC1,PC2,xlim=c(-3,3),ylim=c(-3,3))
 ```
 
 
-#### How is this useful?
+**How is this useful?**
 
 It is not immediately obvious how incredibly useful the SVD can be, so let's consider some examples. In this example, we will greatly reduce the dimension of $V$ and still be able to reconstruct $Y$.
 
@@ -514,7 +625,7 @@ max(abs(resid))
 
 If we look at the sum of squares of $\mathbf{UD}$, we see that the last few are quite close to 0 (perhaps we have some replicated columns).  
 
-```{r D_entries, fig.cap="Entries of the diagonal of D for gene expression data."}
+```{r D_entries, fig.width=4,fig.height=4,fig.cap="Entries of the diagonal of D for gene expression data."}
 plot(s$d)
 ```
 
@@ -531,19 +642,19 @@ The largest residual is practically 0, meaning that we `Yhat` is practically the
 
 By looking at $d$, we can see that, in this particular dataset, we can obtain a good approximation keeping only 94 columns. The following plots are useful for seeing how much of the variability is explained by each column:
 
-```{r percent_var_explained, fig.cap="Percent variance explained by each principal component of gene expression data."}
+```{r percent_var_explained, fig.cap="Percent variance explained by each principal component of gene expression data.",fig.width=4,fig.height=4}
 plot(s$d^2/sum(s$d^2)*100,ylab="Percent variability explained")
 ```
 
 We can also make a cumulative plot:
 
-```{r cum_variance_explained, fig.cap="Cumulative variance explained by principal components of gene expression data."}
+```{r cum_variance_explained, fig.cap="Cumulative variance explained by principal components of gene expression data.",  fig.width=4,fig.height=4}
 plot(cumsum(s$d^2)/sum(s$d^2)*100,ylab="Percent variability explained",ylim=c(0,100),type="l")
 ```
 
 Although we start with 189 dimensions, we can approximate $Y$ with just 95:
 
-```{r reconstruction_with_less_dimensions, fig.cap="Residuals from comparing a reconstructed gene expression table using 95 PCs to the original data with 189 dimensions."}
+```{r reconstruction_with_less_dimensions, fig.cap="Residuals from comparing a reconstructed gene expression table using 95 PCs to the original data with 189 dimensions.",fig.width=4,fig.height=4}
 k <- 95 ##out a possible 189
 Yhat <- U[,1:k] %*% D[1:k,1:k] %*% t(V[,1:k])
 resid <- Y - Yhat
@@ -597,92 +708,18 @@ d <- svd(Y)$d
 d[1]^2/sum(d^2)
 ```
 
-88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
+88888888888888888888888888888888888888888888888888
 
 ## PCA 
-In this unit, we will show how to perform principal component analysis (PCA) and singular value decomposition (SVD) in R, and how the two are related to each other. We will use the tissue gene expression dataset from the week 5 lectures and labs.
+As we mentioned above, the SVD has a close connection to principal components analysis (PCA). PCA can be applied to the data by calling the prcomp() function in R. Here, we show that the first right singular vector from the SVD is equal to the first principal component vector returned by PCA.
 
-```{r}
-# library(devtools)
-# install_github("dagdata","genomicsclass")
-library(tissuesGeneExpression)
-#library(dagdata)
-data(tissuesGeneExpression)
-library(rafalib)
-group <- as.fumeric(tissue)
+```{r,fig.width=4,fig.height=4}
+svd1 <- svd(scale(dataMatrixOrdered))
+pca1 <- prcomp(dataMatrixOrdered, scale = TRUE)
+plot(pca1$rotation[, 1], svd1$v[, 1], pch = 19, xlab = "Principal Component 1", ylab = "Right Singular Vector 1")
+abline(c(0, 1))
 ```
-
-
-First, the typical principal component analysis on the samples would be to transpose the data such that the samples are rows of the data matrix. The `prcomp` function can be used to return the principal components and other variables.
-
-```{r}
-x <- t(e)
-pc <- prcomp(x)
-# ?prcomp
-names(pc)
-plot(pc$x[,1], pc$x[,2], col=group, main="PCA", xlab="PC1", ylab="PC2")
-```
-
-This PCA is equivalent to performing the SVD on the centered data, where the centering occurs on the columns (here genes). We can use the `sweep` function to perform arbitrary operations on the rows and columns of a matrix. The second argument specifies we want to operate on the columns (1 would be used for rows), and the third and fourth arguments specify that we want to subtract the column means.
-
-```{r}
-cx <- sweep(x, 2, colMeans(x), "-")
-sv <- svd(cx)
-names(sv)
-plot(sv$u[,1], sv$u[,2], col=group, main="SVD", xlab="U1", ylab="U2")
-```
-
-So the columns of U from the SVD correspond to the principal components `x` in the PCA. Furthermore, the matrix V from the SVD is equivalent to the `rotation` matrix returned by `prcomp`.
-
-```{r}
-sv$v[1:5,1:5]
-pc$rotation[1:5,1:5]
-```
-
-The diagonal elements of D from the SVD are proportional to the standard deviations returned by PCA. The difference is that the standard deviations from `prcomp` are sample standard deviations (`prcomp` returns unbiased estimates of sample variance, so with the $n / (n - 1)$ correction). The elements of D are formed by taking the sum of the squares of the principal components but not dividing by the sample size.
-
-```{r}
-head(sv$d^2)
-head(pc$sdev^2)
-head(sv$d^2 / (ncol(e) - 1))
-```
-
-By dividing the variances by the sum, we get a plot of the ratio of variance explained by each principal component.
-
-```{r}
-plot(sv$d^2 / sum(sv$d^2), xlim=c(0,15), type="b", pch=16,
-     xlab="principal components", 
-     ylab="variance explained")
-plot(sv$d^2 / sum(sv$d^2), type="b", pch=16,
-     xlab="principal components", 
-     ylab="variance explained")
-```
-
-Note that, not centering the data before running `svd` results in a slightly different plot:
-
-```{r}
-svNoCenter <- svd(x)
-plot(pc$x[,1], pc$x[,2], col=group, main="PCA", xlab="PC1", ylab="PC2")
-points(0,0,pch=3,cex=4,lwd=4)
-plot(svNoCenter$u[,1], svNoCenter$u[,2], col=group, main="SVD not centered", xlab="U1", ylab="U2")
-```
-
-## SVD on (genes vs samples) and (samples vs genes)
-
-Finally, we show that the SVD on the data matrix where samples are columns -- as used in the Surrogate Variable Analysis SVA -- is equivalent to the SVD on the data matrix where the samples are rows, if no centering has been done. 
-
-
-```{r}
-sv2 <- svd(t(e))
-plot(sv2$u[,1], sv2$u[,2], col=group, main="samples vs genes (typical PCA)", xlab="U1", ylab="U2")
-sv1 <- svd(e)
-plot(sv1$v[,1], sv1$v[,2], col=group, main="genes vs samples (SVA)", xlab="V1", ylab="V2")
-```
-
-The question of which direction to center depends on what the focus of the analysis is. For comparing sample distances, as in the typical PCA plot, the rows are samples and the genes are centered. For finding genes which contribute to batch, as in the SVA model, the rows are genes and the samples are centered.
-
-88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
-
+Whether you call this procedure SVD or PCA really just depends on who you talk to. Statisticians and people with that kind of background will typically call it PCA while engineers and mathematicians will tend to call it SVD.
 
 ## Multi-Dimensional Scaling Plots
 
@@ -748,14 +785,10 @@ If we define the following two dimensional vector...
 
 ... then
 
-$$
-\begin{align*}
-(\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) &\approx \left\{ [\mathbf{U}_1 \mathbf{U}_2] (\mathbf{Z}_i-\mathbf{Z}_j) \right\}^\top \left\{[\mathbf{U}_1 \mathbf{U}_2]  (\mathbf{Z}_i-\mathbf{Z}_j)\right\}\\
-&= (\mathbf{Z}_i-\mathbf{Z}_j)^\top [\mathbf{U}_1 \mathbf{U}_2]^\top [\mathbf{U}_1 \mathbf{U}_2] (\mathbf{Z}_i-\mathbf{Z}_j) \\
-&=(\mathbf{Z}_i-\mathbf{Z}_j)^\top(\mathbf{Z}_i-\mathbf{Z}_j)\\
-&=(Z_{i,1}-Z_{j,1})^2 + (Z_{i,2}-Z_{j,2})^2
-\end{align*}
-$$
+
+$$(\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) \approx  \left\{[\mathbf{U}_1 \mathbf{U}_2] (\mathbf{Z}_i-\mathbf{Z}_j)\right\}^\top\left\{[\mathbf{U}_1 \mathbf{U}_2]  (\mathbf{Z}_i-\mathbf{Z}_j)\right\}$$
+$$(\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) =   (\mathbf{Z}_i-\mathbf{Z}_j)^\top[\mathbf{U}_1 \mathbf{U}_2]^\top[\mathbf{U}_1 \mathbf{U}_2](\mathbf{Z}_i-\mathbf{Z}_j)$$
+$$\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) =   (\mathbf{Z}_i-\mathbf{Z}_j)^\top(\mathbf{Z}_i-\mathbf{Z}_j)$$
 
 This derivation tells us that the distance between samples $i$ and $j$ is approximated by the distance between two dimensional points.
 
@@ -765,7 +798,7 @@ $$
 
 Because $Z$ is a two dimensional vector, we can visualize the distances between each sample by plotting $\mathbf{Z}_1$ versus $\mathbf{Z}_2$ and visually inspect the distance between points. Here is this plot for our example dataset:
 
-```{r MDS, fig.cap="Multi-dimensional scaling (MDS) plot for tissue gene expression data."}
+```{r MDS, fig.cap="Multi-dimensional scaling (MDS) plot for tissue gene expression data.",fig.width=6,fig.height=4}
 s <- svd(mat-rowMeans(mat))
 PC1 <- s$d[1]*s$v[,1]
 PC2 <- s$d[2]*s$v[,2]
@@ -776,13 +809,13 @@ legend("bottomright",levels(group),col=seq(along=levels(group)),pch=15,cex=1.5)
 
 Note that the points separate by tissue type as expected. Now the accuracy of the approximation above depends on the proportion of variance explained by the first two principal components. As we showed above, we can quickly see this by plotting the variance explained plot:
 
-```{r variance_explained, fig.cap="Variance explained for each principal component."}
+```{r variance_explained, fig.cap="Variance explained for each principal component.",fig.width=6,fig.height=4}
 plot(s$d^2/sum(s$d^2))
 ```
 
 Although the first two PCs explain over 50% of the variability, there is plenty of information that this plot does not show. However, it is an incredibly useful plot for obtaining, via visualization, a general idea of the distance between points. Also, notice that we can plot other dimensions as well to search for patterns. Here are the 3rd and 4th PCs:
 
-```{r PC_3_and_4, fig.cap="Third and fourth principal components."}
+```{r PC_3_and_4, fig.cap="Third and fourth principal components.",fig.width=6,fig.height=4}
 PC3 <- s$d[3]*s$v[,3]
 PC4 <- s$d[4]*s$v[,4]
 mypar(1,1)
@@ -794,11 +827,11 @@ Note that the 4th PC shows a strong separation within the kidney samples. Later 
 
 
 
-#### `cmdscale`
+## `cmdscale`
 
 Although we used the `svd` functions above, there is a special function that is specifically made for MDS plots. It takes a distance object as an argument and then uses principal component analysis to provide the best approximation to this distance that can be obtained with $k$ dimensions. This function is more efficient because one does not have to perform the full SVD, which can be time consuming. By default it returns two dimensions, but we can change that through the parameter `k` which defaults to 2.
 
-```{r mds2, fig.cap="MDS computed with cmdscale function."} 
+```{r mds2, fig.cap="MDS computed with cmdscale function.",fig.width=6,fig.height=4} 
 d <- dist(t(mat))
 mds <- cmdscale(d)
 mypar()
@@ -809,7 +842,7 @@ legend("bottomleft",levels(group),col=seq(along=levels(group)),pch=15)
 
 These two approaches are equivalent up to an arbitrary sign change.
 
-```{r mds_same_as_svd, fig.cap="Comparison of MDS first two PCs to SVD first two PCs.",fig.width=10.5,fig.height=5.25}
+```{r mds_same_as_svd, fig.cap="Comparison of MDS first two PCs to SVD first two PCs.",fig.width=6,fig.height=4}
 mypar(1,2)
 for(i in 1:2){
   plot(mds[,i],s$d[i]*s$v[,i],main=paste("PC",i))
@@ -819,25 +852,9 @@ for(i in 1:2){
 ```
 
 
-#### Why the arbitrary sign?
-The SVD is not unique because we can multiply any column of $\mathbf{V}$ by -1 as long as we multiply the sample column of $\mathbf{U}$ by -1. We can see this immediately by noting that:
 
-$$
-\mathbf{-1UD(-1)V}^\top = \mathbf{UDV}^\top
-$$
-
-
-#### Why we substract the mean
-
-In all calculations above we subtract the row means before we compute the singular value decomposition. If what we are trying to do is approximate the distance between columns, the distance between  $\mathbf{Y}_i$ and $\mathbf{Y}_j$ is the same as the distance between $\mathbf{Y}_i- \mathbf{\mu}$ and $\mathbf{Y}_j - \mathbf{\mu}$ since the $\mu$ cancels out when computing said distance:
-
-$$
-\left\{ ( \mathbf{Y}_i- \mathbf{\mu} ) - ( \mathbf{Y}_j - \mathbf{\mu} ) \right\}^\top \left\{ (\mathbf{Y}_i- \mathbf{\mu}) - (\mathbf{Y}_j - \mathbf{\mu} ) \right\} = \left\{  \mathbf{Y}_i-  \mathbf{Y}_j  \right\}^\top \left\{ \mathbf{Y}_i - \mathbf{Y}_j  \right\}
-$$
-
-Because removing the row averages reduces the total variation, it can only make the SVD approximation better.
-
-```{Comparing MDS to SVD to PCA}
+Why dimension reduction is useful; example: exploratory data analysis with the tissueGeneExpression dataset.
+```{r}
 library(rafalib)
 library(gplots) ##Available from CRAN
 library(RColorBrewer)
@@ -845,9 +862,9 @@ library(tissuesGeneExpression)
 data(tissuesGeneExpression)
 colind <- tissue%in%c("kidney","colon","liver")
 mat <- e[,colind]
-group <- factor(tissue[colind])
-cols <- palette(brewer.pal(8, "Dark2"))[as.fumeric(tissue)]
-
+group <- as.fumeric(tissue[colind])
+cols <- palette(brewer.pal(8, "Dark2"))[group]
+f=factor(tissue[colind])
 pc = prcomp(t(mat))
 s = svd(mat-rowMeans(mat))
 d <- dist(t(mat))
@@ -855,21 +872,27 @@ mds <- cmdscale(d)
 dv = diag(s$d)%*%t(s$v)
 dv = t(dv)
 par(pch=19)
-par(mfrow = c(1,2))
+mypar(1,2)
 
-plot(pc$x[,1],pc$x[,2],col=mycolors[group])
-plot(dv[,1],dv[,2],col=mycolors[group])
-plot(pc$x[,1],pc$x[,2],col=mycolors[group])
-plot(mds[,1],mds[,2],col=mycolors[group])
-plot(pc$x[,3],pc$x[,4],col=mycolors[group])
-plot(dv[,3],dv[,4],col=mycolors[group])
-plot(pc$x[,3],pc$x[,4],col=mycolors[group])
-plot(mds[,3],mds[,4],col=mycolors[group])
+plot(pc$x[,1],pc$x[,2],col=cols,main = "PCA",
+xlab="PC1",ylab="PC2")
+legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15)
+
+
+plot(dv[,1],dv[,2],col=cols,main = "SVD",
+xlab="PC1",ylab="PC2")
+legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15)
+
+plot(pc$x[,1],pc$x[,2],col=cols,main = "PCA",
+xlab="PC1",ylab="PC2")
+legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15)
+
+plot(mds[,1],mds[,2],col= cols,main = "MDS",
+xlab="First dimension",ylab="Second dimension")
+legend("bottomleft",levels(f),col=seq(along=levels(f)),pch=15)
 ```
+Little between PCA.SVD and MDS aside from sign flip.
 
-No difference between PCA and MDS aside from sign flip.
-
-Greater resolution with MDS? Needs further exploratory analysis...
 
 
 

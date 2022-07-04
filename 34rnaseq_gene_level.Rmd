@@ -9,7 +9,8 @@ library(knitr)
 ```
 
 # RNA-seq gene-level analysis
-
+http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
+https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
 RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
 
 In this lab, we will focus on comparing the expression levels of genes across different samples, by counting the number of reads which overlap the exons of genes defined by a known annotation. As described in the lecture, this analysis sets aside the task of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. One advantage of looking at these matrices of counts is that we can use statistical distributions to model how the variance of counts will change when the counts are low vs high. We will explore the relationship of the variance of counts to the mean later in this lab.
@@ -61,7 +62,7 @@ This code chunk is not necessary, but helps to make nicer plots below with large
 
 ```{r}
 # library(devtools)
-devtools::install_github("ririzarr/rafalib")
+#devtools::install_github("ririzarr/rafalib")
 library(rafalib)
 mypar()
 ```
@@ -151,16 +152,37 @@ Now we will use a more sophisticated transformation, which is similar to the var
 
 ```{r}
 rld <- rlog(dds)
-plot(assay(rld)[,1:2], cex=.1)
+
 ```
 
 Another transformation for stabilizing variance in the *DESeq2* package is `varianceStabilizingTransformation`. These two tranformations are similar, the *rlog* might perform a bit better when the size factors vary widely, and the *varianceStabilizingTransformation* is much faster when there are many samples.
 
 ```{r}
 vsd <- varianceStabilizingTransformation(dds)
-plot(assay(vsd)[,1:2], cex=.1)
+
 ```
 
+```{r}
+
+library("dplyr")
+library("ggplot2")
+
+dds <- estimateSizeFactors(dds)
+
+df <- bind_rows(
+  as_data_frame(log2(counts(dds, normalized=TRUE)[, 1:2]+1)) %>%
+         mutate(transformation = "log2(x + 1)"),
+  as_data_frame(assay(vsd)[, 1:2]) %>% mutate(transformation = "vst"),
+  as_data_frame(assay(rld)[, 1:2]) %>% mutate(transformation = "rlog"))
+
+colnames(df)[1:2] <- c("x", "y")  
+
+lvls <- c("log2(x + 1)", "vst", "rlog")
+df$transformation <- factor(df$transformation, levels=lvls)
+
+ggplot(df, aes(x = x, y = y)) + geom_hex(bins = 80) +
+  coord_fixed() + facet_grid( . ~ transformation)  + theme_bw()
+```
 We can examine the standard deviation of rows over the mean for the *log plus pseudocount* and the *rlog*. Note that the genes with high variance for the *log* come from the genes with lowest mean. If these genes were included in a distance calculation, the high variance at the low count range might overwhelm the signal at the higher count range.
 
 ```{r}
@@ -360,21 +382,23 @@ hist(res$pvalue[res$baseMean > 1],
 A sorted results table:
 
 ```{r}
-resSort <- res[order(res$padj),]
+resLFC <- lfcShrink(dds, coef="dex_trt_vs_untrt" , type="apeglm")
+
+resSort <- resLFC[order(resLFC$padj),]
 head(resSort)
 ```
 
 Examine the counts for the top gene, sorting by p-value:
 
 ```{r}
-plotCounts(dds, gene=which.min(res$padj), intgroup="dex")
+plotCounts(dds, gene=which.min(resLFC$padj), intgroup="dex")
 ```
 
 A more sophisticated plot of counts:
 
 ```{r}
 library(ggplot2)
-data <- plotCounts(dds, gene=which.min(res$padj), intgroup=c("dex","cell"), returnData=TRUE)
+data <- plotCounts(dds, gene=which.min(resLFC$padj), intgroup=c("dex","cell"), returnData=TRUE)
 ggplot(data, aes(x=dex, y=count, col=cell)) +
   geom_point(position=position_jitter(width=.1,height=0)) +
   scale_y_log10()
