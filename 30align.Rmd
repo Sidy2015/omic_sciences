@@ -15,7 +15,7 @@ opts_knit$set(progress=FALSE, verbose=FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
 
-# Next Generation Sequencing Pipeline
+# NGS Pipeline
 
 We are going to walk through the general steps of a Next Generation Sequencing pipeline, even though the analyical steps are beyond the scope of this course, for reasons mainlly due to the memory capacities of our laptops. We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for that reason, one of the more frequently used technologies in research, likely for this reasons.
 
@@ -75,12 +75,34 @@ Navigate to your FASTQ directory:
 
 fastqc --noextract SRR1039508_1.fastq SRR1039508_2.fastq --outdir=/Users/gurinina/Dropbox/Documents/Rprojects/2022_GENOMICS_COURSE/fastqc
 
+but we're going to use a truncated fastq file to save memory, navigate to the directory
+after moving it from here:
+
+
+
+```{r}
+library(ShortRead)
+
+## ----biocLite, eval=FALSE------------------------------------------------
+## source("http://www.bioconductor.org/biocLite.R")
+## biocLite(c("ShortRead"))
+
+## ----fastq1--------------------------------------------------------------
+fastqDir <- system.file("extdata", "E-MTAB-1147", package = "ShortRead")
+fastqPath <- list.files(fastqDir, pattern = ".fastq.gz$", full = TRUE)[1]
+reads <- readFastq(fastqPath)
+
+```
+fastqc --noextract ERR127302_1_subset.fastq 
+
+
+
 ```{r echo = FALSE,warning=FALSE, message = FALSE}
 
 library(fastqcr)
 library(Biostrings)
 qc.dir = paste(getwd(),"fastqc",sep = "/")
-qc <- qc_aggregate(qc.dir)
+qc <- qc_aggregate(qc.dir) ## if you have more than one file
 library(dplyr)
   tmp = qc %>%
     group_by(sample, module, status) %>%
@@ -103,7 +125,7 @@ qc_report(qc.path=qc.dir,
           result.file="reportFile", preview = TRUE)
 fastqc = list.files(qc.dir)
 fastqcfile = paste(qc.dir,fastqc,sep = "/")
-qc <- qc_read(fastqcfile[4])
+qc <- qc_read(fastqcfile[2])
 names(qc)
 qc_plot(qc, "Per sequence GC content")
 qc_plot(qc, "Per base sequence quality")
@@ -120,9 +142,9 @@ fastqFile = fastqcfile[3]
 fq = readFastq(fastqFile)
 fq
 #class: ShortReadQ
-#length: 20226211 reads; width: 63 cycles -- filtering removed 200,000 ##bases
+#length: 20000 reads; width: 72 cycles -- 
 #class: ShortReadQ
-#length: 22935521 reads; width: 63 cycles
+
 reads = sread(fq)[1:1000]
 reads[2]
 reverseComplement(reads[2])
@@ -132,14 +154,14 @@ ww = which(w!=0)
 strsplit(reads[ww],"GCTGGGCG")
 # get quality scores per base as a matrix
 # first milion reads
-qPerBase = as(quality(fq[1:1e+06]), "matrix")
+qPerBase = as(quality(fq), "matrix")
 qPerBase[1:3,]
 # get number of bases per read that have quality score below 20
 # we use this
 qcount = rowSums( qPerBase <= 20)
 # Number of reads where all Phred scores >= 20
 mean(qcount == 0)
-# 98% of the reads
+# 54% of the reads -- for the actual samples, this was 98%
 ```
 
 **~ 98 % of the reads have all 63 bp >= 20, is that enough?**

@@ -129,7 +129,7 @@ lets compare this to the output run by the GSEA desktop version of Cytoscape cov
 
 Here I am just reading in the supplementarty tables of the negative and positive GSEA results.
 ```{r}
-library(readxl)
+
 ppos = read.delim(file = "Supplementary_Table8_gsea_report_for_na_pos.txt" ,stringsAsFactors = F,
                   check.names = F)
 
@@ -208,12 +208,11 @@ ego2 <- enrichGO(gene  = names(rank)[1:100],
 ```
 Finally, I'm going to show you a GO enrichment tool that we developed in our lab:
 ```{r}
-# source("2022_March13_GORESP.R")
-# go_path = "2021_Decenber30_GOID_GOBP_SGD.txt"
-# bp_path = "2021_Decenber30_GO_BP.RDS"
-# d3 = as.matrix(read.delim("d3matrix.txt",stringsAsFactors = F,check.names = F))
-
-# goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(d3)[43], d3, 43, sig = 1, bp_path = bp_path,go_path = go_path)
+source("2022_March13_GORESP.R")
+go_path = "2021_Decenber30_GOID_GOBP_SGD.txt"
+bp_path = "2021_Decenber30_GO_BP.RDS"
+d3 = as.matrix(read.delim("d3matrix.txt",stringsAsFactors = F,check.names = F))
+goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(d3)[43], d3, 43, sig = 1, bp_path = bp_path,go_path = go_path)
 ```
 
 The GO enrichment itself is basically GSEA, so we don't need to go over that bit in detail.
@@ -256,39 +255,39 @@ x = 8	number of “marked” elements in the selection, i.e. number of query gen
      
      
      
-     # compSCORE <- function(mat,coln, sig = 1){
-     #    df = data.frame(score = mat[,coln],stringsAsFactors = F)
-     #    library(dplyr)
-     #    df$gene = rownames(mat)
-     #    rownames(df) = df$gene
-     #    df$index=0
-     #    wdf = which(df$score >= sig)
-     #    df$index[wdf]=1
-     #    df = df[,c('index','score','gene')]
-     #    df = df %>% arrange(desc(score))
-     #    df
-     #    }
-     #  # in order to find N, we need to find how many genes have a non-NA score in the relevant           column of interest
-     #  score = compSCORE(mat = d3, coln = 43, sig = 1)
-     #  ## k is length of queryset, nQuery
-     #  k = sum(score$index == 1) #querySet
-     #  ## N = universe, nrow in  matrix
-     #  N = sum(!is.na(score$score)) #universe
-     #  ##for ARGININE BIOSYNTHESIS
-     #  goresp$enrichInfo[3,]
-     #  ## m is the number of successes in population = geneSetsize ##success in population, nGenes
-     #  m = goresp$enrichInfo$nGenes[3]
-     #  
-     #  ## n = N - m number of “non-marked” elements, i.e. the number of genes that have some              annotation, but are not associated to the selected GO term (ARGININE BIOSYNTHETIC                        PROCESS)
-     #  n = N - m
-     #  ## number of “marked” elements in the selection, i.e. number of query genes overlapping the         geneSet AND associated with ARGININE BIOSYNTHETIC PROCESS in GO annotations.
-     #  x = goresp$enrichInfo$nOverlap[3]
-     #  ## q = length overlap-1 #successes in querySet, nOverlap
-     #  q = x -1
-     #  phyp = phyper(q = x-1,m,n,k,lower.tail = F)#probability that X os greater than overlap
-     #  signif(phyp,3)
-     #  goresp$enrichInfo$P[3]
-     #  
+     compSCORE <- function(mat,coln, sig = 1){
+        df = data.frame(score = mat[,coln],stringsAsFactors = F)
+        library(dplyr)
+        df$gene = rownames(mat)
+        rownames(df) = df$gene
+        df$index=0
+        wdf = which(df$score >= sig)
+        df$index[wdf]=1
+        df = df[,c('index','score','gene')]
+        df = df %>% arrange(desc(score))
+        df
+        }
+     #  # in order to find N, we need to find how many genes have a non-NA score in         the relevant column of interest
+      score = compSCORE(mat = d3, coln = 43, sig = 1)
+      ## k is length of queryset, nQuery
+      k = sum(score$index == 1) #querySet
+      ## N = universe, nrow in  matrix
+      N = sum(!is.na(score$score)) #universe
+      ##for ARGININE BIOSYNTHESIS
+      goresp$enrichInfo[3,]
+      ## m is the number of successes in population = geneSetsize ##success in population, nGenes
+      m = goresp$enrichInfo$nGenes[3]
+
+      ## n = N - m number of “non-marked” elements, i.e. the number of genes that have some              annotation, but are not associated to the selected GO term (ARGININE BIOSYNTHETIC                        PROCESS)
+      n = N - m
+      ## number of “marked” elements in the selection, i.e. number of query genes overlapping the         geneSet AND associated with ARGININE BIOSYNTHETIC PROCESS in GO annotations.
+      x = goresp$enrichInfo$nOverlap[3]
+      ## q = length overlap-1 #successes in querySet, nOverlap
+      q = x -1
+      phyp = phyper(q = x-1,m,n,k,lower.tail = F)#probability that X os greater than overlap
+      signif(phyp,3)
+      goresp$enrichInfo$P[3]
+
 ```
 
 This is equivalent to setting up a contingency table and doing a Fisher's exact test:
@@ -302,29 +301,29 @@ This is equivalent to setting up a contingency table and doing a Fisher's exact 
      ## k is length of queryset
      ## N = universe, nrow in  matrix
   ## Prepare a two-dimensional contingency table
-# contingency.table <- data.frame(matrix(nrow=2, ncol=2))
-# rownames(contingency.table) <- c("predicted.target", "non.predicted")
-# colnames(contingency.table) <- c("class.member", "non.member")
+contingency.table <- data.frame(matrix(nrow=2, ncol=2))
+rownames(contingency.table) <- c("predicted.target", "non.predicted")
+colnames(contingency.table) <- c("class.member", "non.member")
 # 
-# ## Assign the values one by one to make sure we put them in the right
-# ## place (this is not necessary, we could enter the 4 values in a
-# ## single instruction).
-# contingency.table["predicted.target", "class.member"] <- x ## Number of marked genes in the selection
-# contingency.table["predicted.target", "non.member"] <- k - x ## Number of non-marked genes in the selection
-# contingency.table["non.predicted", "class.member"] <- m - x ## Number of marked genes outside of the selection
-# contingency.table["non.predicted", "non.member"] <- n - (k - x) ## Number of non-marked genes in the selection
-# fish = fisher.test(contingency.table , alternative = "greater")
-#   (contingency.row.sum = apply(contingency.table, 1, sum))
-# fish$p.value
+## Assign the values one by one to make sure we put them in the right
+## place (this is not necessary, we could enter the 4 values in a
+## single instruction).
+contingency.table["predicted.target", "class.member"] <- x ## Number of marked genes in the selection
+contingency.table["predicted.target", "non.member"] <- k - x ## Number of non-marked genes in the selection
+contingency.table["non.predicted", "class.member"] <- m - x ## Number of marked genes outside of the selection
+contingency.table["non.predicted", "non.member"] <- n - (k - x) ## Number of non-marked genes in the selection
+fish = fisher.test(contingency.table , alternative = "greater")
+  (contingency.row.sum = apply(contingency.table, 1, sum))
+fish$p.value
 
 
-# (contingency.col.sum = apply(contingency.table, 2, sum))
-# ## Create a contingency table with marginal sums
-# exp.contingency.table <- cbind(contingency.table, contingency.row.sum)
-# exp.contingency.table <- rbind(exp.contingency.table, apply(exp.contingency.table, 2, sum))
-# names(exp.contingency.table) <- c(names(contingency.table), "total")
-# rownames(exp.contingency.table) <- c(rownames(contingency.table), "total")
-# print(exp.contingency.table)
+(contingency.col.sum = apply(contingency.table, 2, sum))
+## Create a contingency table with marginal sums
+exp.contingency.table <- cbind(contingency.table, contingency.row.sum)
+exp.contingency.table <- rbind(exp.contingency.table, apply(exp.contingency.table, 2, sum))
+names(exp.contingency.table) <- c(names(contingency.table), "total")
+rownames(exp.contingency.table) <- c(rownames(contingency.table), "total")
+print(exp.contingency.table)
 ```
 I find that this is a useful way to grasp the phyper function, where it's easy to get confused about what the balls are and what's marked and what's unmarked. This lays it out very clearly. Contingency tables also really shine at highlighting joint probabilities because each cell displays the number of times events occurred together. Those cell values are the joint events for the numerator. The grand total is the number of outcomes for the denominator.  
 
@@ -341,144 +340,149 @@ The other piece of the data that got generated in this "runGORESP" function was 
 not going to go through all the details here, you can go through the code on your own time, its pretty
 straight forward. Basically what it does is it takes all of the enriched geneSets and it walks throgh them
 systematically comparing all pairwise combinations to calculate the overlap coefficient between them. So here again is yet another method for simplifying the output and trying to minimize the rendundancy between
-terms. We saw it with the collapsePathways in fgsea, and the packages GOSemSim, DOSE, enrichplot and meshes have implemented a variety of tools based on semantic similarity of genes or gene products using Gene Ontology, Disease Ontology and Medical Subject Headings (https://yulab-smu.top/biomedical-knowledge-mining-book/index.html). The GO semanitic similarities are
+terms. We saw it with the collapsePathways in fgsea, and the packages GOSemSim, DOSE, enrichplot and meshes have implemented a variety of tools based on semantic similarity of genes or gene products using [Gene Ontology, Disease Ontology and Medical Subject Headings] (https://yulab-smu.top/biomedical-knowledge-mining-book/index.html). The GO semanitic similarities are
 similar to GO slim methods, where child GO terms are collapsed into more general terms, but as far as I can
 tell the data is not that easy to manage.
 
-visualization:
+Visualization:
 
 ```{r}
 ############
 # generates parameters for drawing GO enrichment networks
-# enrichInfo - dataframe with enrichment stats for gene sets (one per row), with the following columns:
-#             filename, term, geneSetFraction, FDR, overlapGenes, maxOverlapGeneScore
-#           - see documentation for the output of hyperG() for descriptions of these columns
-#           - rows with the same value, x, in the filename column specify enrichment results for
+# enrichInfo - dataframe with enrichment stats for gene sets 
+#               (one per row), with the following columns:
+#             filename, term, geneSetFraction, FDR, overlapGenes, 
+#               maxOverlapGeneScore
+#               - see documentation for the output of hyperG() for 
+#                 descriptions of these columns
+#           - rows with the same value, x, in the filename column specify 
+#               enrichment results for
 #             the set of query genes in queryGeneSets with name=x
-# edgeMat - dataframe of edge set info: id=gene set id, cluster=cluster id, es=enrichment score, fdr=FDR value
+# edgeMat - dataframe of edge set info: id=gene set id, 
+#               cluster=cluster id, es=enrichment score, fdr=FDR value
 #
-# ####
-# visSetup = function(enrichInfo, edgeMat, fontsize = 22, fontface = "Arial") {
-# 
-#   library(igraph)
-#   library(visNetwork)
-#   n = enrichInfo
-#   e = edgeMat
-# 
-#   w = which(names(n) == "id")
-#   coln = (1:ncol(n))[-w]
-#   n = n[, c(w, coln)]
-# 
-#   if (is.null(e) & !is.null(n)) {
-#     gr = make_empty_graph(nrow(enrichInfo))
-#     v = gr
-#     V(v)$color.background = n$cluster
-#     v = set_vertex_attr(v, "label", value = n$formattedLabel)
-# 
-#   }
-# 
-# 
-#   if (!is.null(e) & !is.null(n)) {
-#     w = which(names(e) == "label")
-#     let = graph_from_data_frame(e[, -w], vertices = n, directed = F)
-#     v = set_vertex_attr(let, "label", value = n$formattedLabel)
-#     V(v)$color.background = n$cluster
-#   }
-# 
-#   vis = toVisNetworkData(v)
-#   vis$nodes = data.frame(vis$nodes, stringsAsFactors = F)
-#   if (!is.null(vis$edges))
-#     vis$edges = data.frame(vis$edges, stringsAsFactors = F)
-#   m = match(vis$nodes$id, n$id)
-#   vis$nodes$label = n$formattedLabel[m]
-#   vis$nodes$FDR = n$FDR[m]
-#   vis$nodes$FDR = signif(vis$nodes$FDR, 5)
-# 
-# 
-#   w = which(duplicated(vis$nodes$FDR))
-#   if (length(w) > 0) {
-#     vis$nodes =  vis$nodes %>% group_by(FDR) %>% mutate(
-#       jitter = if (n() > 1)
-#         abs(jitter(FDR))
-#       else
-#         (FDR)
-#     )
-# 
-#     w = which(names(vis$nodes) == "FDR")
-#     vis$nodes = vis$nodes[, -w]
-#     w = which(names(vis$nodes) == "jitter")
-#     names(vis$nodes)[w] = "FDR"
-#     vis$nodes$FDR = signif(vis$nodes$FDR, 6)
-#   }
-# 
-#   w = which(duplicated(vis$nodes$FDR))
-# 
-# 
-# 
-#   vis$nodes$term = n$term[m]
-#   vis$nodes$nOverlap = n$nOverlap[m]
-#   vis$nodes$nQuery= n$nQuery[m]
-#   vis$nodes$nGenes = n$nGenes[m]
-#   vis$nodes$geneSetFraction = n$geneSetFraction[m]
-#   vis$nodes$querySetFraction = n$querySetFraction[m]
-#   vis$nodes$filename =  n$filename[m]
-# 
-#   vis$nodes$formattedLabel = n$formattedLabel[m]
-#   vis$nodes$overlapGenes = n$overlapGenes[m]
-#   vis$nodes$label = vis$nodes$formattedLabel
-#   vis$nodes$color.border = "black"
-#   vis$nodes = vis$nodes %>% arrange(label)
-#   if (nrow(vis$edges) > 0)
-#     vis$edges$color = "black"
-# 
-#   vis$nodes$borderWidthSelected	= 4
-#   w = which(names(vis$nodes) %in% c("fomattedLabel", "color", "cluster"))
-#   if (length(w) > 0)  vis$nodes = vis$nodes[, -w]
-#   vis$nodes$color.highlight.border = "#000066"
-#   vis$nodes$color.highlight.background = "#c0b3ff"
-#   vis$nodes$color.hover.background = "#000066"
-#   vis$nodes$color.hover.border = "#c0b3ff"
-#   vis$nodes$font.face = fontface
-#   vis$nodes$shape = "dot"
-#   vis$nodes$font.size = fontsize
-#   vis$nodes$font.bold = F
-#   vis$nodes$borderWidth = 2
-#   #vis$nodes$vadjust = "mono"
-#   vis$nodes$borderWidthSelected = 4
-#   vis$nodes$labelHighlightBold = T
-#   w = which.min(vis$nodes$FDR)
-#   if (length(w) > 0) {
-#     vis$nodes$font.size[w] = fontsize + 4
-#     vis$nodes$borderWidth[w] = 4
-#     vis$nodes$font.bold[w] = T
-#   }
-#   vis$nodes = vis$nodes %>% arrange(FDR)
-#   vis
-# 
-# }
-# ############
-# # generates a network based on node and edge parameters
-# ############
-# runNetwork <- function(nodes,edges){
-#   library(igraph)
-#   library(visNetwork)
-#   visNetwork(nodes,edges, width = "100%") %>%
-#     visNodes(shadow=list(enabled = T,size = 25)) %>%
-#     visOptions(
-#       highlightNearest = list(enabled = T, degree = 5, hover = T),
-#       nodesIdSelection = list(enabled = TRUE, values = names,
-#                               style = 'width: 250px;color: #000066;'),
-#       selectedBy = list(variable="FDR",
-#                         style = 'width: 250px;color: #000066;')) %>%
-#      
-#     visIgraphLayout(type = "full")
-#  
-#  
-# }
-# 
-# vis = visSetup(enrichInfo = goresp$enrichInfo,edgeMat = goresp$edgeMat, fontsize = 14)
-# 
-# runNetwork(nodes = vis$nodes,edges=vis$edges)
+#####
+visSetup = function(enrichInfo, edgeMat, fontsize = 22, fontface = "Arial") {
+
+  library(igraph)
+  library(visNetwork)
+  n = enrichInfo
+  e = edgeMat
+
+  w = which(names(n) == "id")
+  coln = (1:ncol(n))[-w]
+  n = n[, c(w, coln)]
+
+  if (is.null(e) & !is.null(n)) {
+    gr = make_empty_graph(nrow(enrichInfo))
+    v = gr
+    V(v)$color.background = n$cluster
+    v = set_vertex_attr(v, "label", value = n$formattedLabel)
+
+  }
+
+
+  if (!is.null(e) & !is.null(n)) {
+    w = which(names(e) == "label")
+    let = graph_from_data_frame(e[, -w], vertices = n, directed = F)
+    v = set_vertex_attr(let, "label", value = n$formattedLabel)
+    V(v)$color.background = n$cluster
+  }
+
+  vis = toVisNetworkData(v)
+  vis$nodes = data.frame(vis$nodes, stringsAsFactors = F)
+  if (!is.null(vis$edges))
+    vis$edges = data.frame(vis$edges, stringsAsFactors = F)
+  m = match(vis$nodes$id, n$id)
+  vis$nodes$label = n$formattedLabel[m]
+  vis$nodes$FDR = n$FDR[m]
+  vis$nodes$FDR = signif(vis$nodes$FDR, 5)
+
+
+  w = which(duplicated(vis$nodes$FDR))
+  if (length(w) > 0) {
+    vis$nodes =  vis$nodes %>% group_by(FDR) %>% mutate(
+      jitter = if (n() > 1)
+        abs(jitter(FDR))
+      else
+        (FDR)
+    )
+
+    w = which(names(vis$nodes) == "FDR")
+    vis$nodes = vis$nodes[, -w]
+    w = which(names(vis$nodes) == "jitter")
+    names(vis$nodes)[w] = "FDR"
+    vis$nodes$FDR = signif(vis$nodes$FDR, 6)
+  }
+
+  w = which(duplicated(vis$nodes$FDR))
+
+
+
+  vis$nodes$term = n$term[m]
+  vis$nodes$nOverlap = n$nOverlap[m]
+  vis$nodes$nQuery= n$nQuery[m]
+  vis$nodes$nGenes = n$nGenes[m]
+  vis$nodes$geneSetFraction = n$geneSetFraction[m]
+  vis$nodes$querySetFraction = n$querySetFraction[m]
+  vis$nodes$filename =  n$filename[m]
+
+  vis$nodes$formattedLabel = n$formattedLabel[m]
+  vis$nodes$overlapGenes = n$overlapGenes[m]
+  vis$nodes$label = vis$nodes$formattedLabel
+  vis$nodes$color.border = "black"
+  vis$nodes = vis$nodes %>% arrange(label)
+  if (nrow(vis$edges) > 0)
+    vis$edges$color = "black"
+
+  vis$nodes$borderWidthSelected	= 4
+  w = which(names(vis$nodes) %in% c("fomattedLabel", "color", "cluster"))
+  if (length(w) > 0)  vis$nodes = vis$nodes[, -w]
+  vis$nodes$color.highlight.border = "#000066"
+  vis$nodes$color.highlight.background = "#c0b3ff"
+  vis$nodes$color.hover.background = "#000066"
+  vis$nodes$color.hover.border = "#c0b3ff"
+  vis$nodes$font.face = fontface
+  vis$nodes$shape = "dot"
+  vis$nodes$font.size = fontsize
+  vis$nodes$font.bold = F
+  vis$nodes$borderWidth = 2
+  #vis$nodes$vadjust = "mono"
+  vis$nodes$borderWidthSelected = 4
+  vis$nodes$labelHighlightBold = T
+  w = which.min(vis$nodes$FDR)
+  if (length(w) > 0) {
+    vis$nodes$font.size[w] = fontsize + 4
+    vis$nodes$borderWidth[w] = 4
+    vis$nodes$font.bold[w] = T
+  }
+  vis$nodes = vis$nodes %>% arrange(FDR)
+  vis
+
+}
+############
+# generates a network based on node and edge parameters
+############
+runNetwork <- function(nodes,edges){
+  library(igraph)
+  library(visNetwork)
+  visNetwork(nodes,edges, width = "100%") %>%
+    visNodes(shadow=list(enabled = T,size = 25)) %>%
+    visOptions(
+      highlightNearest = list(enabled = T, degree = 5, hover = T),
+      nodesIdSelection = list(enabled = TRUE, values = names,
+                              style = 'width: 250px;color: #000066;'),
+      selectedBy = list(variable="FDR",
+                        style = 'width: 250px;color: #000066;')) %>%
+
+    visIgraphLayout(type = "full")
+
+
+}
+
+vis = visSetup(enrichInfo = goresp$enrichInfo,edgeMat = goresp$edgeMat, fontsize = 14)
+
+runNetwork(nodes = vis$nodes,edges=vis$edges)
 ```
 enrichGO, gseGO, enricher, goana, go_enrich, gost etc.
 Over representation analysis: goprofiler2, clusterProfiler, GOfuncR, limma, goseq, topGO 

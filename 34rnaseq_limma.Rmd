@@ -2,7 +2,7 @@
 title: "RNA-seq with edgeR and limma"
 output: html_notebook
 ---
-## RNA-seq with edgeR and limma
+# RNA-seq with edgeR and limma
 RNA-seq analysis is easy as 1-2-3 with limma, Glimma and edgeR
 Charity Law^1, Monther Alhamdoosh^2, Shian Su^3, Xueyi Dong^3, Luyi Tian^1, Gordon K. Smyth^4 and Matthew E. Ritchie^5
 
@@ -437,7 +437,7 @@ barcodeplot(efit$t[,3], index=idx$LIM_MAMMARY_LUMINAL_MATURE_UP,
             index2=idx$LIM_MAMMARY_LUMINAL_MATURE_DN, main="LPvsML")
 ```
 
-Barcode plot of `LIM_MAMMARY_LUMINAL_MATURE_UP` (red bars, top of plot) and `LIM_MAMMARY_LUMINAL_MATURE_DN` (blue bars, bottom of plot) gene sets in the LP versus ML contrast. For each set, an enrichment line that shows the relative enrichment of the vertical bars in each part of the plot is displayed. The experiment of Lim *et al.* [@Lim:BreastCancerRes:2010] is very similar to the current one, with the same sorting strategy used to obtain the different cell populations, except that microarrays were used instead of RNA-seq to profile gene expression. Note that the inverse correlation (the up gene set is down and the down gene set is up) is a result of the way the contrast has been set up (LP versus ML) -- if reversed, the directionality would agree.
+Barcode plot of `LIM_MAMMARY_LUMINAL_MATURE_UP` (red bars, top of plot) and `LIM_MAMMARY_LUMINAL_MATURE_DN` (blue bars, bottom of plot) gene sets in the LP versus ML contrast. For each set, an enrichment line that shows the relative enrichment of the vertical bars in each part of the plot is displayed. The experiment of Lim et al. (Lim et al. 2010) is very similar to the current one, with the same sorting strategy used to obtain the different cell populations, except that microarrays were used instead of RNA-seq to profile gene expression. Note that the inverse correlation (the up gene set is down and the down gene set is up) is a result of the way the contrast has been set up (LP versus ML) -- if reversed, the directionality would agree.
 
 Figure 7: Barcode plot of LIM_MAMMARY_LUMINAL_MATURE_UP (red bars, top of plot) and LIM_MAMMARY_LUMINAL_MATURE_DN (blue bars, bottom of plot) gene sets in the LP versus ML contrast
 
