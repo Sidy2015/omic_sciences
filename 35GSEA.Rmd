@@ -4,63 +4,80 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
-```
-
-# Gene Set Enrichment Analysis
-
-To begin learning aobuto GO set enrichmet analysis and the different methods that can be utiliazed to preform these analysis a good jumping off start point is this Natural Protocols paper:
-
-As a change a pace I thought we would go through this very helpful paper written...
-
-Pathway enrichment analysis and visualization of omics data using g:Profiler, GSEA, Cytoscape and EnrichmentMap 
-
-Jüri Reimand1,2,8, Ruth Isserlin 3,8, Veronique Voisin3, Mike Kucera3, Christian Tannus-Lopes3, Asha Rostamianfar3, Lina Wadi1, Mona Meyer1, Jeff Wong3, Changjiang Xu3, Daniele Merico 4,5 and Gary D. Bader 3,6,7* Pathway enrichment analysis helps researchers gain mechanistic insight into gene lists generated from genome-scale (omics) experiments. This method identifies biological pathways that are enriched in a gene list more than would be expected by chance. We explain the procedures of pathway enrichment analysis and present a practical step-by-step guide to help interpret gene lists resulting from RNA-seq and genome-sequencing experiments. The protocol comprises three major steps: definition of a gene list from omics data, determination of statistically enriched pathways, and visualization and interpretation of the results. We describe how to use this protocol with published examples of differentially expressed genes and mutated cancer genes; however, the principles can be applied to diverse types of omics data. The protocol describes innovative visualization techniques, provides comprehensive background and troubleshooting guidelines, and uses freely available and frequently updated software, including g:Profiler, Gene Set Enrichment Analysis (GSEA), Cytoscape and EnrichmentMap. The complete protocol can be performed in ~4.5 h and is designed for use by biologists with no prior bioinformatics training.
-
-Comprehensive quantification of DNA, RNA and proteins in biological samples is now routine. The resulting data are growing exponentially, and their analysis helps researchers discover novel biological functions, genotype–phenotype relationships and disease mechanisms1,2. However, analysis and interpretation of these data represent a major challenge for many researchers. Analyses often result in long lists of genes that require an impractically large amount of manual literature searching to interpret. A standard approach to addressing this problem is pathway enrichment analysis, which summarizes the large gene list as a smaller list of more easily interpretable pathways. Pathways are statistically tested for over-representation in the experimental gene list relative to what is expected by chance, using several common statistical tests that consider the number of genes detected in the experiment, their relative ranking and the number of genes annotated to a pathway of interest. For instance, experimental data containing 40% cell cycle genes are surprisingly enriched, given that only 8% of human protein-coding genes are involved in this process. In a recent example, we used pathway enrichment analysis to help identify histone and DNA methylation by the polycomb repressive complex (PRC2) as the first rational therapeutic target for ependymoma, one of the most prevalent childhood brain cancers3. This pathway is targetable by available drugs such as 5-azacytidine, which was used on a compassionate basis in a terminally ill patient and stopped rapid metastatic tumor growth3. In another example, we analyzed rare copynumber variants (CNVs) in autism and identified several significant pathways affected by gene deletions, whereas few significant hits were identified with case–control association tests of single genes or loci4,5. These examples illustrate the useful insights into biological mechanisms that can be achieved using pathway enrichment analysis.
-
-
-**Application to diverse omics data** This protocol uses RNA-seq data7 and somatic mutation data6 as examples because these data types are frequently encountered. However, the general concepts of pathway enrichment analysis that we present are applicable to many types of experiments that can generate lists of genes, such as single-cell transcriptomics, CNVs5, proteomics63, phosphoproteomics64, DNA methylation65 and metabolomics. Most data types require protocol modifications, which we only briefly discuss here. With certain data types, specialized computational methods are required to produce a gene list that is appropriate for pathway enrichment analysis, whereas with other data types, a specialized pathway enrichment analysis technique is required. Issues specific to data types and experimental methods must be considered, including: 
-● Different gene identifiers are recommended for certain data types. We recommend UniProt accession numbers for proteins (e.g., Q00987 for MDM2) and Human Metabolome Database IDs for metabolites (e.g., ATP is denoted as HMDB00538). 
-● Certain types of omics experiments by design capture only a subset of genes or proteins. To address this limited coverage, pathway enrichment analysis must define a custom background gene set of the genes that can be measured in the experiment. For example, phosphoproteomics experiments measure only proteins with one or more phosphorylation sites and thus must use the set of genes encoding phosphoproteins as the custom background gene set. Otherwise, pathway enrichment analysis would reveal inflated P values for general processes such as kinase signaling and protein phosphorylation. 
-● Pathway enrichment analysis of short non-coding genomic regions such as transcription factor binding sites from ChIP-seq experiments need additional consideration. Genomic regions must be mapped to protein-coding genes and corrected for biases such as increased signal in longer genes. Tools such as GREAT(67) automatically perform both tasks. 
-● Large genomic intervals that span multiple genes (e.g., from genome-wide associations, CNV and differentially methylated regions) require specialized enrichment tests such as the PLINK CNV gene set burden test68 or INRICH69. Standard enrichment tests often reveal genes clustered in the genome whose signals are strongly statistically inflated because each gene is incorrectly counted as an independent signal. Gene types that are correlated with genomic position include olfactory receptors, histones, major histocompatibility complex (MHC) members and homeobox transcription factors. A simple solution to address genomic clustering of genes in a pathway involves selecting only one representative gene from each functionally homogeneous genomic cluster before enrichment analysis. 
-● For rare genetic variants, case–control pathway ‘burden’ tests are the most appropriate pathway enrichment analysis method.
-
-**Pathway enrichment analysis methods** This protocol recommends the use of g:Profiler and GSEA software for pathway enrichment analysis. g:Profiler analyzes gene lists using Fisher’s exact test and ordered gene lists using a modified Fisher’s test. It provides a graphical web interface and access via R and Python programming languages. The software is frequently updated, and the gene set database can be downloaded as a GMT file (http://biit.cs.ut.ee/gprofiler). GSEA analyzes ranked gene lists using a permutation-based test. The software typically runs as a desktop application (http://software.broadinstitute.org/gsea). Hundreds of pathway enrichment analysis tools exist (reviewed in ref. Khatri, P., Sirota, M. & Butte, A. J. Ten years of pathway analysis: current approaches and outstanding challenges. PLoS Comput. Biol. 8, e1002375 (2012)), although many rely on out-of-date pathway databases or lack unique features as compared to the most commonly used tools; as such, we do not cover them here. The following are alternative free pathway enrichment analysis software tools. Although we do not cover these tools in our protocol, we recommend the following, on 
-
-**Comparison to alternative methods** Pathway enrichment analysis methods This protocol recommends the use of g:Profiler and GSEA software for pathway enrichment analysis. g:Profiler13,39 analyzes gene lists using Fisher’s exact test and ordered gene lists using a modified Fisher’s test. It provides a graphical web interface and access via R and Python programming languages. The software is frequently updated, and the gene set database can be downloaded as a GMT file (http://biit.cs.ut.ee/gprofiler). GSEA14 analyzes ranked gene lists using a permutation-based test. The software typically runs as a desktop application (http://software.broadinstitute.org/gsea). Hundreds of pathway enrichment analysis tools exist (reviewed in ref. Khatri, P., Sirota, M. & Butte, A. J. Ten years of pathway analysis: current approaches and outstanding challenges. PLoS Comput. Biol. 8, e1002375 (2012)), although many rely on outof-date pathway databases or lack unique features as compared to the most commonly used tools; as such, we do not cover them here. The following are alternative free pathway enrichment analysis software tools. Although we do not cover these tools in our protocol, we recommend the following, on the basis of their ease of use, unique features or advanced programming features.
-
-(See paper for referenes)
-● Enrichr(37): This is a web-based enrichment analysis tool for non-ranked gene lists that is based on Fisher’s exact test. It is easy to use, has rich interactive reporting features, and includes >100 gene set databases (called libraries), including >180,000 gene sets in multiple categories. Functionality is similar to that of the g:Profiler web server described in this protocol. 
-● Camera(71): This R Bioconductor package analyzes gene lists and corrects for inter-gene correlations such as those apparent in gene co-expression data. The software is available as part of the limma package in Bioconductor (https://bioconductor.org/packages/release/bioc/html/limma.html; this is an advanced tool that requires programming expertise; Supplementary Protocol 3). 
-(similar to moast and roast)
-● GOseq(72): This R Bioconductor package analyzes gene lists from RNA-seq experiments by correcting for user-selected covariates such as gene length (https://bioconductor.org/packages/release/bioc/html/ goseq.html; this is an advanced tool that requires programming expertise). 
-● Genomic Regions Enrichment of Annotations Tool (GREAT)(67): In contrast to common methods that analyze gene lists, GREAT analyzes genomic regions such as DNA binding sites and links these to nearby genes for pathway enrichment analysis (http://bejerano.stanford.edu/great/public/html/). See ‘Application to diverse omics data’ section. PROTOCOL NATURE PROTOCOLS 492 NATURE PROTOCOLS | VOL 14 | FEBRUARY 2019 | 482–517 | www.nature.com/npro
-
-Visualization tools This protocol recommends the use of EnrichmentMap for pathway enrichment analysis visualization to aid interpretation. EnrichmentMap(16) is a Cytoscape15 application that visualizes the results from pathway enrichment analysis and eases interpretation by displaying pathways as a network in which overlapping pathways are clustered together to identify major biological themes in the results (http:// www.baderlab.org/Software/EnrichmentMap). Two alternative useful visualization tools are: 
-● ClueGO(40): This Cytoscape application is conceptually similar to EnrichmentMap and provides a network-based visualization to reduce redundancy of results from pathway enrichment analysis. It also includes a pathway enrichment analysis feature for analysis of GO annotations using Fisher’s exact tests. However, it currently supports only GO gene sets. 
-● PathVisio(49): This desktop application provides a complementary visualization approach to those of EnrichmentMap and ClueGO. PathVisio enables the user to visually interpret omics data in the context of gene and protein interactions in a pathway of interest. PathVisio colors pathway genes according to user-provided omics data (https://www.pathvisio.org). This is the main advantage of PathVisio as compared to EnrichmentMap and ClueGO.
-
-Topology-aware pathway analysis methods Most pathway enrichment analysis methods treat all genes in a pathway uniformly and ignore gene interactions. By contrast, topology-aware methods explicitly model the interactions between genes. CePa(73), GANPA(74) and THINK-Back(75) use physical gene interactions or co-expression networks to assign a weight to each gene in each pathway. Weights can be derived from measures of the gene importance in the network such as degree, the number of gene connections and betweenness centrality, and can be integrated into a traditional pathway enrichment analysis method such as GSEA. Methods such as SPIA(76), Pathway-Express(77) and EnrichNet(78() generate an ES for the entire pathway that considers pathway regulatory interactions such as activation and inhibition. Although useful and potentially more accurate, regulatory and biochemical gene interactions are available for fewer genes and pathways as compared to physical interactions networks and co-expression. We anticipate that these methods will become more useful as more gene interactions in pathways are characterized in detailed molecular experiments. However collecting and curating high-quality and biochemically detailed pathway data from the literature is currently complex and expensive. Therefore, pathway enrichment analysis methods described in this protocol will probably remain the most widely used approaches for the foreseeable future. Future perspectives Current pathway enrichment analysis methods provide a useful high-level overview of the pathways active in a genomics experiment. However, these methods consider a simplified pathway view that involves only gene sets. Next-generation pathway analysis methods will integrate more biological pathway details, build pathway models based on multiple types of genomics data measured across many samples, and consider positive and negative regulatory relationships in the data. For instance, qualitative mathematical modeling parameterized with single-cell RNA-seq data may one day enable accurate predictions of drug combinations capable of treating a given disease under study.
-
-
-**Development of the protocol** This protocol covers pathway enrichment analysis of large gene lists typically derived from genomescale (omics) technology. The protocol is intended for experimental biologists who are interested in interpreting their omics data. It requires only an ability to learn and use  R programming language and 'point-and-click' computer software, although advanced users can benefit from the automatic analysis scripts we provide as Supplementary Protocols 1–4. We analyze previously published human gene expression and somatic mutation data as examples 6–8; however, our conceptual framework is applicable to analysis of lists of genes or biomolecules from any organism derived from large-scale data, including proteomics, genomics, epigenomics and gene-regulation studies. We extensively use pathway enrichment analysis for many projects and have evaluated numerous available tools9–12. The software packages we cover here have been selected for their ease of use, free access, advanced features, extensive documentation and up-to-date databases, and they are ones we use daily in our research and recommend to collaborators and students. In addition, we have provided feedback to the developers of these tools, allowing them to implement features we have needed in published analyses. These tools are g:Profiler(13), GSEA(14), Cytoscape(15) and EnrichmentMap(16), all freely available online: 
-● g:Profiler (https://biit.cs.ut.ee/gprofiler/) 
-● GSEA (http://software.broadinstitute.org/gsea/) 
-● Cytoscape (http://www.cytoscape.org/) ● EnrichmentMap (http://www.baderlab.org/Software/EnrichmentMap) Overview of the procedure This section outlines the major stages of pathway enrichment analysis. A detailed step-by-step protocol is provided in the Procedure below. Pathway enrichment analysis involves three major stages (Fig. 1; see Box 1 for basic definitions). 1 Definition of a gene list of interest using omics data. An omics experiment comprehensively measures the activity of genes in an experimental context. The resulting raw dataset generally requires computational processing, such as normalization and scoring, to identify genes of interest,
-
-
-```{r}
+knitr::opts_chunk$set(warning = FALSE, 
+        message = FALSE, echo = FALSE)
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), 
+                      tidy = TRUE)
+suppressPackageStartupMessages({
 library(clusterProfiler)
 library(fgsea)
 library(enrichplot)
 library(annotate)
 library(ggplot2)
-library(org.Hs.eg.db)
-
+library(dplyr)
+library(org.Hs.eg.db)})
 ```
+
+# Gene Set Enrichment Analysis
+
+The .Rmd file for this chapter can be found [here](https://github.com/gurinina/omic_sciences/blob/main/35GSEA.Rmd). To begin learning aobuto GO set enrichmet analysis and the different methods that can be utiliazed to preform these analysis a good jumping off start point is this Natural Protocols paper:
+
+As a change a pace I thought we would go through this very helpful paper written...
+
+Pathway enrichment analysis and visualization of omics data using g:Profiler, GSEA, Cytoscape and EnrichmentMap 
+
+Jüri Reimand, Ruth Isserlin, Veronique Voisin, Mike Kucera, Christian Tannus-Lopes, Asha Rostamianfar, Lina Wadi, Mona Meyer, Jeff Wong, Changjiang Xu, Daniele Merico and Gary D. Bader. Pathway enrichment analysis helps researchers gain mechanistic insight into gene lists generated from genome-scale (omics) experiments. This method identifies biological pathways that are enriched in a gene list more than would be expected by chance. We explain the procedures of pathway enrichment analysis and present a practical step-by-step guide to help interpret gene lists resulting from RNA-seq and genome-sequencing experiments. The protocol comprises three major steps: definition of a gene list from omics data, determination of statistically enriched pathways, and visualization and interpretation of the results. We describe how to use this protocol with published examples of differentially expressed genes and mutated cancer genes; however, the principles can be applied to diverse types of omics data. The protocol describes innovative visualization techniques, provides comprehensive background and troubleshooting guidelines, and uses freely available and frequently updated software, including g:Profiler, Gene Set Enrichment Analysis (GSEA), Cytoscape and EnrichmentMap. The complete protocol can be performed in ~4.5 h and is designed for use by biologists with no prior bioinformatics training.
+
+Comprehensive quantification of DNA, RNA and proteins in biological samples is now routine. The resulting data are growing exponentially, and their analysis helps researchers discover novel biological functions, genotype–phenotype relationships and disease mechanisms1,2. However, analysis and interpretation of these data represent a major challenge for many researchers. Analyses often result in long lists of genes that require an impractically large amount of manual literature searching to interpret. A standard approach to addressing this problem is pathway enrichment analysis, which summarizes the large gene list as a smaller list of more easily interpretable pathways. Pathways are statistically tested for over-representation in the experimental gene list relative to what is expected by chance, using several common statistical tests that consider the number of genes detected in the experiment, their relative ranking and the number of genes annotated to a pathway of interest. For instance, experimental data containing 40% cell cycle genes are surprisingly enriched, given that only 8% of human protein-coding genes are involved in this process. In a recent example, we used pathway enrichment analysis to help identify histone and DNA methylation by the polycomb repressive complex (PRC2) as the first rational therapeutic target for ependymoma, one of the most prevalent childhood brain cancers3. This pathway is targetable by available drugs such as 5-azacytidine, which was used on a compassionate basis in a terminally ill patient and stopped rapid metastatic tumor growth3. In another example, we analyzed rare copynumber variants (CNVs) in autism and identified several significant pathways affected by gene deletions, whereas few significant hits were identified with case–control association tests of single genes or loci4,5. These examples illustrate the useful insights into biological mechanisms that can be achieved using pathway enrichment analysis.
+
+
+## Application to diverse omics data
+This protocol uses RNA-seq data7 and somatic mutation data6 as examples because these data types are frequently encountered. However, the general concepts of pathway enrichment analysis that we present are applicable to many types of experiments that can generate lists of genes, such as single-cell transcriptomics, CNVs5, proteomics63, phosphoproteomics64, DNA methylation65 and metabolomics. Most data types require protocol modifications, which we only briefly discuss here. With certain data types, specialized computational methods are required to produce a gene list that is appropriate for pathway enrichment analysis, whereas with other data types, a specialized pathway enrichment analysis technique is required. Issues specific to data types and experimental methods must be considered, including: 
+
+**Different gene identifiers are recommended for certain data types.** We recommend UniProt accession numbers for proteins (e.g., Q00987 for MDM2) and Human Metabolome Database IDs for metabolites (e.g., ATP is denoted as HMDB00538). 
+
+**Certain types of omics experiments by design capture only a subset of genes or proteins.** To address this limited coverage, pathway enrichment analysis must define a custom background gene set of the genes that can be measured in the experiment. For example, phosphoproteomics experiments measure only proteins with one or more phosphorylation sites and thus must use the set of genes encoding phosphoproteins as the custom background gene set. Otherwise, pathway enrichment analysis would reveal inflated P values for general processes such as kinase signaling and protein phosphorylation. 
+
+**Pathway enrichment analysis of short non-coding genomic regions such as transcription factor binding sites from ChIP-seq experiments need additional consideration.** Genomic regions must be mapped to protein-coding genes and corrected for biases such as increased signal in longer genes. Tools such as GREAT(67) automatically perform both tasks. 
+
+**Large genomic intervals that span multiple genes (e.g., from genome-wide associations, CNV and differentially methylated regions) require specialized enrichment tests such as the PLINK CNV gene set burden test68 or INRICH69.** Standard enrichment tests often reveal genes clustered in the genome whose signals are strongly statistically inflated because each gene is incorrectly counted as an independent signal. Gene types that are correlated with genomic position include olfactory receptors, histones, major histocompatibility complex (MHC) members and homeobox transcription factors. A simple solution to address genomic clustering of genes in a pathway involves selecting only one representative gene from each functionally homogeneous genomic cluster before enrichment analysis. 
+
+**For rare genetic variants, case–control pathway ‘burden’ tests are the most appropriate pathway enrichment analysis method.**
+
+## Pathway enrichment analysis methods
+This protocol recommends the use of g:Profiler and GSEA software for pathway enrichment analysis. g:Profiler13,39 analyzes gene lists using Fisher’s exact test and ordered gene lists using a modified Fisher’s test. It provides a graphical web interface and access via R and Python programming languages. The software is frequently updated, and the gene set database can be downloaded as a GMT file (http://biit.cs.ut.ee/gprofiler). GSEA14 analyzes ranked gene lists using a permutation-based test. The software typically runs as a desktop application (http://software.broadinstitute.org/gsea). Hundreds of pathway enrichment analysis tools exist (reviewed in ref. Khatri, P., Sirota, M. & Butte, A. J. Ten years of pathway analysis: current approaches and outstanding challenges. PLoS Comput. Biol. 8, e1002375 (2012)), although many rely on outof-date pathway databases or lack unique features as compared to the most commonly used tools; as such, we do not cover them here. The following are alternative free pathway enrichment analysis software tools. Although we do not cover these tools in our protocol, we recommend the following, on the basis of their ease of use, unique features or advanced programming features.
+
+## Comparison to alternative methods 
+(See paper for referenes)
+Enrichr(37): This is a web-based enrichment analysis tool for non-ranked gene lists that is based on Fisher’s exact test. It is easy to use, has rich interactive reporting features, and includes >100 gene set databases (called libraries), including >180,000 gene sets in multiple categories. Functionality is similar to that of the g:Profiler web server described in this protocol. 
+
+[Camera(71)](https://bioconductor.org/packages/release/bioc/html/limma.html): This R Bioconductor package analyzes gene lists and corrects for inter-gene correlations such as those apparent in gene co-expression data. The software is available as part of the limma package in Bioconductor; (this is an advanced tool that requires programming expertise; Supplementary Protocol 3). 
+(similar to moast and roast)
+
+[GOseq(72)](https://bioconductor.org/packages/release/bioc/html): This R Bioconductor package analyzes gene lists from RNA-seq experiments by correcting for user-selected covariates such as gene length; this is an advanced tool that requires programming expertise). 
+
+[Genomic Regions Enrichment of Annotations Tool (GREAT)(67)](http://bejerano.stanford.edu/great/public/html/): In contrast to common methods that analyze gene lists, GREAT analyzes genomic regions such as DNA binding sites and links these to nearby genes for pathway enrichment analysis . See ‘Application to diverse omics data’ section. PROTOCOL NATURE PROTOCOLS 492 NATURE PROTOCOLS | VOL 14 | FEBRUARY 2019 | 482–517 | www.nature.com/npro
+
+## Visualization tools 
+This protocol recommends the use of EnrichmentMap for pathway enrichment analysis visualization to aid interpretation. EnrichmentMap(16) is a Cytoscape15 application that visualizes the results from pathway enrichment analysis and eases interpretation by displaying pathways as a network in which overlapping pathways are clustered together to identify major biological themes in the results (http:// www.baderlab.org/Software/EnrichmentMap). Two alternative useful visualization tools are: 
+
+ClueGO(40): This Cytoscape application is conceptually similar to EnrichmentMap and provides a network-based visualization to reduce redundancy of results from pathway enrichment analysis. It also includes a pathway enrichment analysis feature for analysis of GO annotations using Fisher’s exact tests. However, it currently supports only GO gene sets. 
+
+PathVisio(49): This desktop application provides a complementary visualization approach to those of EnrichmentMap and ClueGO. PathVisio enables the user to visually interpret omics data in the context of gene and protein interactions in a pathway of interest. [PathVisio](https://www.pathvisio.org) colors pathway genes according to user-provided omics data . This is the main advantage of PathVisio as compared to EnrichmentMap and ClueGO.
+
+Topology-aware pathway analysis methods Most pathway enrichment analysis methods treat all genes in a pathway uniformly and ignore gene interactions. By contrast, topology-aware methods explicitly model the interactions between genes. CePa(73), GANPA(74) and THINK-Back(75) use physical gene interactions or co-expression networks to assign a weight to each gene in each pathway. Weights can be derived from measures of the gene importance in the network such as degree, the number of gene connections and betweenness centrality, and can be integrated into a traditional pathway enrichment analysis method such as GSEA. Methods such as SPIA(76), Pathway-Express(77) and EnrichNet(78() generate an ES for the entire pathway that considers pathway regulatory interactions such as activation and inhibition. Although useful and potentially more accurate, regulatory and biochemical gene interactions are available for fewer genes and pathways as compared to physical interactions networks and co-expression. We anticipate that these methods will become more useful as more gene interactions in pathways are characterized in detailed molecular experiments. However collecting and curating high-quality and biochemically detailed pathway data from the literature is currently complex and expensive. Therefore, pathway enrichment analysis methods described in this protocol will probably remain the most widely used approaches for the foreseeable future. Future perspectives Current pathway enrichment analysis methods provide a useful high-level overview of the pathways active in a genomics experiment. However, these methods consider a simplified pathway view that involves only gene sets. Next-generation pathway analysis methods will integrate more biological pathway details, build pathway models based on multiple types of genomics data measured across many samples, and consider positive and negative regulatory relationships in the data. For instance, qualitative mathematical modeling parameterized with single-cell RNA-seq data may one day enable accurate predictions of drug combinations capable of treating a given disease under study.
+
+
+## Development of the protocol
+This protocol covers pathway enrichment analysis of large gene lists typically derived from genomescale (omics) technology. The protocol is intended for experimental biologists who are interested in interpreting their omics data. It requires only an ability to learn and use  R programming language and 'point-and-click' computer software, although advanced users can benefit from the automatic analysis scripts we provide as Supplementary Protocols 1–4. We analyze previously published human gene expression and somatic mutation data as examples 6–8; however, our conceptual framework is applicable to analysis of lists of genes or biomolecules from any organism derived from large-scale data, including proteomics, genomics, epigenomics and gene-regulation studies. We extensively use pathway enrichment analysis for many projects and have evaluated numerous available tools9–12. The software packages we cover here have been selected for their ease of use, free access, advanced features, extensive documentation and up-to-date databases, and they are ones we use daily in our research and recommend to collaborators and students. In addition, we have provided feedback to the developers of these tools, allowing them to implement features we have needed in published analyses. These tools are g:Profiler(13), GSEA(14), Cytoscape(15) and EnrichmentMap(16), all freely available online: 
+
+[g:Profiler](https://biit.cs.ut.ee/gprofiler/) 
+[GSEA](http://software.broadinstitute.org/gsea/) 
+[Cytoscape](http://www.cytoscape.org/)
+[EnrichmentMap](http://www.baderlab.org/Software/EnrichmentMap) 
+
+## Overview of the procedure 
+This section outlines the major stages of pathway enrichment analysis. A detailed step-by-step protocol is provided in the Procedure below. Pathway enrichment analysis involves three major stages (Fig. 1; see Box 1 for basic definitions). 1 Definition of a gene list of interest using omics data. An omics experiment comprehensively measures the activity of genes in an experimental context. The resulting raw dataset generally requires computational processing, such as normalization and scoring, to identify genes of interest,
 
 Now we have our ranked file and our gmt file; ahd they are in the correct format to run 
 fgsea:
@@ -75,8 +92,8 @@ or alternatively GO terms and gene set members.
 
 
 ```{r ranked list}
-prank = read.delim("Supplementary_Table2_MesenvsImmuno_RNASeq_ranks.rnk",stringsAsFactors = F,check.names = F)
-pathways = gmtPathways(gmt.file = "Supplementary_Table3_Human_GOBP_AllPathways_no_GO_iea_July_01_2017_fixed_symbol.gmt")
+prank = read.delim("STable2_MesenvsImmuno_RNASeq_ranks.rnk",stringsAsFactors = F,check.names = F)
+pathways = gmtPathways(gmt.file = "STable3_hGOBP_no_iea_July012017_gene.gmt")
 
 ranks = prank$rank
 names(ranks) = prank$GeneName
@@ -109,7 +126,7 @@ GSEA unfriendly outputs:
 
 ```{r GSEA sort and tidy output}
 mygseatidy = function(result){
-library(dplyr)
+
 nam=names(data.frame(result))
 wnam = which(nam== "enrichmentScore")
 if(length(wnam)>0) nam[wnam]="ES"
@@ -130,10 +147,10 @@ lets compare this to the output run by the GSEA desktop version of Cytoscape cov
 Here I am just reading in the supplementarty tables of the negative and positive GSEA results.
 ```{r}
 
-ppos = read.delim(file = "Supplementary_Table8_gsea_report_for_na_pos.txt" ,stringsAsFactors = F,
+ppos = read.delim(file = "STable8_gsea_report_for_na_pos.txt" ,stringsAsFactors = F,
                   check.names = F)
 
-pneg = read.delim(file = "Supplementary_Table9_gsea_report_for_na_neg.txt" ,stringsAsFactors = F,
+pneg = read.delim(file = "STable9_gsea_report_for_na_neg.txt" ,stringsAsFactors = F,
                   check.names = F)
 ppos = ppos %>% arrange(desc(ES),`FDR Q-VAL`)
 pneg = pneg %>% arrange(ES,`FDR Q-VAL`)
@@ -145,7 +162,7 @@ intersect(fnegsea$pathway[1:10],pneg$TERM[1:10])
 
 
 term2go <- AnnotationDbi::select(GO.db,keys = keys(GO.db),
-                columns=c("GOID","TERM","DEFINITION"), 
+columns=c("GOID","TERM","DEFINITION"), 
                 keytype="GOID")
                 
 Quick annotation brushup:
@@ -176,33 +193,31 @@ gene.df <- bitr(gene, fromType = "SYMBOL",
         OrgDb = org.Hs.eg.db)
 ```{r}        
 ego2 <- enrichGO(gene  = names(rank)[1:100],
-                OrgDb         = org.Hs.eg.db,
-                keyType       = 'SYMBOL',
-                ont           = "BP",
-                pAdjustMethod = "BH",
-                pvalueCutoff  = 0.01,
-                qvalueCutoff  = 0.05)
-                               
-
+        OrgDb         = org.Hs.eg.db,
+        keyType       = 'SYMBOL',
+        ont           = "BP",
+        pAdjustMethod = "BH",
+        pvalueCutoff  = 0.01,
+        qvalueCutoff  = 0.05)
 ```
 
 ```{r}
-# gse <- gseGO(geneList=rank, 
-#              ont ="BP", 
-#              keyType = "SYMBOL",
-#              eps = 0,
-#              minGSSize = 15, 
-#              maxGSSize = 200, 
-#              pvalueCutoff = 0.05, 
-#              verbose = TRUE, 
-#              OrgDb = org.Hs.eg.db, 
-#              pAdjustMethod = "BH",by = "DOSE")
-#              
-#              x2 = pairwise_termsim(gse)
-#              emapplot(x2, showCategory = 20)
-#              dotplot(gse, showCategory=3, split=".sign") + facet_grid(.~.sign)
-
-
+# gse <- gseGO(geneList=rank,
+#         ont ="BP",
+#         keyType = "SYMBOL",
+#         eps = 0,
+#         minGSSize = 15,
+#         maxGSSize = 200,
+#         pvalueCutoff = 0.05,
+#         verbose = TRUE,
+#         OrgDb = org.Hs.eg.db,
+#         pAdjustMethod = "BH",by = "DOSE")
+# 
+#         x2 = pairwise_termsim(gse)
+#         emapplot(x2, showCategory = 20)
+#         dotplot(gse, showCategory=3, split=".sign") +         facet_grid(.~.sign)
+# 
+# 
 
 
 ```
@@ -250,43 +265,40 @@ x = 8	number of “marked” elements in the selection, i.e. number of query gen
 
 
 ```{r 2 x 2 table}
-      
-     
-     
-     
-     
-     compSCORE <- function(mat,coln, sig = 1){
-        df = data.frame(score = mat[,coln],stringsAsFactors = F)
-        library(dplyr)
-        df$gene = rownames(mat)
-        rownames(df) = df$gene
-        df$index=0
-        wdf = which(df$score >= sig)
-        df$index[wdf]=1
-        df = df[,c('index','score','gene')]
-        df = df %>% arrange(desc(score))
-        df
-        }
-     #  # in order to find N, we need to find how many genes have a non-NA score in         the relevant column of interest
-      score = compSCORE(mat = d3, coln = 43, sig = 1)
-      ## k is length of queryset, nQuery
-      k = sum(score$index == 1) #querySet
-      ## N = universe, nrow in  matrix
-      N = sum(!is.na(score$score)) #universe
-      ##for ARGININE BIOSYNTHESIS
-      goresp$enrichInfo[3,]
-      ## m is the number of successes in population = geneSetsize ##success in population, nGenes
-      m = goresp$enrichInfo$nGenes[3]
+compSCORE <- function(mat,coln, sig = 1){
+   df = data.frame(score = mat[,coln],stringsAsFactors = F)
+   library(dplyr)
+   df$gene = rownames(mat)
+   rownames(df) = df$gene
+   df$index=0
+   wdf = which(df$score >= sig)
+   df$index[wdf]=1
+   df = df[,c('index','score','gene')]
+   df = df %>% arrange(desc(score))
+   df
+   }
+# in order to find N, we need to find how many genes have a non-NA score in the relevant column of interest
+score = compSCORE(mat = d3, coln = 43, sig = 1)
+## k is length of queryset, nQuery
+k = sum(score$index == 1) #querySet
+## N = universe, nrow in  matrix
+N = sum(!is.na(score$score)) #universe
+##for ARGININE BIOSYNTHESIS
+goresp$enrichInfo[3,]
+## m is the number of successes in population = geneSetsize ##success in population, nGenes
+m = goresp$enrichInfo$nGenes[3]
 
-      ## n = N - m number of “non-marked” elements, i.e. the number of genes that have some              annotation, but are not associated to the selected GO term (ARGININE BIOSYNTHETIC                        PROCESS)
-      n = N - m
-      ## number of “marked” elements in the selection, i.e. number of query genes overlapping the         geneSet AND associated with ARGININE BIOSYNTHETIC PROCESS in GO annotations.
-      x = goresp$enrichInfo$nOverlap[3]
-      ## q = length overlap-1 #successes in querySet, nOverlap
-      q = x -1
-      phyp = phyper(q = x-1,m,n,k,lower.tail = F)#probability that X os greater than overlap
-      signif(phyp,3)
-      goresp$enrichInfo$P[3]
+## n = N - m number of “non-marked” elements, 
+## i.e. the number of genes that have some              annotation, but are not associated to the selected GO term (ARGININE BIOSYNTHETIC PROCESS)
+n = N - m
+## number of “marked” elements in the selection, i.e. number of query genes overlapping the geneSet AND associated with ARGININE BIOSYNTHETIC PROCESS in GO annotations.
+x = goresp$enrichInfo$nOverlap[3]
+## q = length overlap-1 #successes in querySet, nOverlap
+q = x -1
+phyp = phyper(q = x-1,m,n,k,lower.tail = F)
+#probability that X os greater than overlap
+signif(phyp,3)
+goresp$enrichInfo$P[3]
 
 ```
 
@@ -295,22 +307,25 @@ This is equivalent to setting up a contingency table and doing a Fisher's exact 
 ```{r contingency}
 
   
-     ## q = length overlap-1 #successes in querySet
-     ## m is the number of successes in population = geneSetsize ##success in population
-     ## n = N - m
-     ## k is length of queryset
-     ## N = universe, nrow in  matrix
-  ## Prepare a two-dimensional contingency table
+## q = length overlap-1 #successes in querySet
+## m is the number of successes in population = geneSetsize 
+## success in population
+## n = N - m
+## k is length of queryset
+## N = universe, nrow in  matrix
+## Prepare a two-dimensional contingency table
 contingency.table <- data.frame(matrix(nrow=2, ncol=2))
 rownames(contingency.table) <- c("predicted.target", "non.predicted")
 colnames(contingency.table) <- c("class.member", "non.member")
-# 
+ 
 ## Assign the values one by one to make sure we put them in the right
-## place (this is not necessary, we could enter the 4 values in a
-## single instruction).
-contingency.table["predicted.target", "class.member"] <- x ## Number of marked genes in the selection
-contingency.table["predicted.target", "non.member"] <- k - x ## Number of non-marked genes in the selection
-contingency.table["non.predicted", "class.member"] <- m - x ## Number of marked genes outside of the selection
+## place (this is not necessary, we could enter the 4 values in a single instruction).
+contingency.table["predicted.target", "class.member"] <- x 
+## Number of marked genes in the selection
+contingency.table["predicted.target", "non.member"] <- k - x 
+## Number of non-marked genes in the selection
+contingency.table["non.predicted", "class.member"] <- m - x 
+## Number of marked genes outside of the selection
 contingency.table["non.predicted", "non.member"] <- n - (k - x) ## Number of non-marked genes in the selection
 fish = fisher.test(contingency.table , alternative = "greater")
   (contingency.row.sum = apply(contingency.table, 1, sum))
@@ -350,16 +365,16 @@ Visualization:
 ############
 # generates parameters for drawing GO enrichment networks
 # enrichInfo - dataframe with enrichment stats for gene sets 
-#               (one per row), with the following columns:
-#             filename, term, geneSetFraction, FDR, overlapGenes, 
-#               maxOverlapGeneScore
-#               - see documentation for the output of hyperG() for 
-#                 descriptions of these columns
-#           - rows with the same value, x, in the filename column specify 
-#               enrichment results for
-#             the set of query genes in queryGeneSets with name=x
+# (one per row), with the following columns:
+# filename, term, geneSetFraction, FDR, overlapGenes, 
+# maxOverlapGeneScore
+# -- see documentation for the output of hyperG() for 
+# descriptions of these columns
+# -- rows with the same value, x, in the filename column specify
+# enrichment results for the set of query genes in 
+# queryGeneSets with name = x
 # edgeMat - dataframe of edge set info: id=gene set id, 
-#               cluster=cluster id, es=enrichment score, fdr=FDR value
+# cluster=cluster id, es=enrichment score, fdr=FDR value
 #
 #####
 visSetup = function(enrichInfo, edgeMat, fontsize = 22, fontface = "Arial") {
