@@ -267,7 +267,7 @@ x = 8	number of “marked” elements in the selection, i.e. number of query gen
 ```{r 2 x 2 table}
 compSCORE <- function(mat,coln, sig = 1){
    df = data.frame(score = mat[,coln],stringsAsFactors = F)
-   library(dplyr)
+   suppressPackageStartupMessages({library(dplyr)})
    df$gene = rownames(mat)
    rownames(df) = df$gene
    df$index=0
@@ -379,8 +379,8 @@ Visualization:
 #####
 visSetup = function(enrichInfo, edgeMat, fontsize = 22, fontface = "Arial") {
 
-  library(igraph)
-  library(visNetwork)
+  suppressPackageStartupMessages({library(igraph)
+  library(visNetwork)})
   n = enrichInfo
   e = edgeMat
 
@@ -479,8 +479,8 @@ visSetup = function(enrichInfo, edgeMat, fontsize = 22, fontface = "Arial") {
 # generates a network based on node and edge parameters
 ############
 runNetwork <- function(nodes,edges){
-  library(igraph)
-  library(visNetwork)
+  suppressPackageStartupMessages({library(igraph)
+  library(visNetwork)})
   visNetwork(nodes,edges, width = "100%") %>%
     visNodes(shadow=list(enabled = T,size = 25)) %>%
     visOptions(
