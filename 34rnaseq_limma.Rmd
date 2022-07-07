@@ -417,6 +417,7 @@ Expression across each gene (or row) have been scaled so that mean expression is
 
 We finish off this analysis with some gene set testing by applying the camera method (Wu and Smyth 2012) to the c2 gene signatures from Broad Institute’s MSigDB c2 collection (Subramanian et al. 2005) that have been adapted for mouse and are available as Rdata objects from http://bioinf.wehi.edu.au/software/MSigDB/. Other useful gene sets derived from MSigDB for both human and mouse, such as the hallmark gene sets, are also available from this site. C2 gene sets have been curated from online databases, publications and domain experts, and hallmark gene sets are selected from MSigDB to have well-defined biological states or processes.
 ```{r}
+library(RNAseq123)
 load(system.file("extdata", "mouse_c2_v5p1.rda", package = "RNAseq123"))
 idx <- ids2indices(Mm.c2,id=rownames(v))
 cam.BasalvsLP <- camera(v,idx,design,contrast=contr.matrix[,1])

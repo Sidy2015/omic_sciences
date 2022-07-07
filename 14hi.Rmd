@@ -278,7 +278,7 @@ model.matrix(~ group)
 
 or by providing the levels explicitly in the `factor` call:
 ```{r}
-group <- factor(group, levels=c("1","2"))
+group <- factor(group, levels = c("1","2"))
 model.matrix(~ group)
 ```
 888888888888888888888888888888888888888888888888888888
@@ -315,7 +315,7 @@ Scatter Plot
 Scatter plots can help visualize any linear relationships between the dependent (response) variable and independent (predictor) variables. Ideally, if you are having multiple predictor variables, a scatter plot is drawn for each one of them against the response, along with the line of best as seen below.
 
 ```{r}
-scatter.smooth(x=cars$speed, y=cars$dist, main="Dist ~ Speed")  # scatterplot
+scatter.smooth(x = cars$speed, y = cars$dist, main = "Dist ~ Speed")  # scatterplot
 ```
 
 The scatter plot along with the smoothing line above suggests a linearly increasing relationship between the ‘dist’ and ‘speed’ variables. This is a good thing, because, one of the underlying assumptions in linear regression is that the relationship between the response and predictor variables is linear and additive.
@@ -324,9 +324,9 @@ BoxPlot – Check for outliers
 Generally, any datapoint that lies outside the 1.5 * interquartile-range (1.5 * IQR) is considered an outlier, where, IQR is calculated as the distance between the 25th percentile and 75th percentile values for that variable.
 
 ```{r}
-par(mfrow=c(1, 2))  # divide graph area in 2 columns
-boxplot(cars$speed, main="Speed", sub=paste("Outlier rows: ", boxplot.stats(cars$speed)$out))  # box plot for 'speed'
-boxplot(cars$dist, main="Distance", sub=paste("Outlier rows: ", boxplot.stats(cars$dist)$out))  # box plot for 'distance'
+par(mfrow = c(1, 2))  # divide graph area in 2 columns
+boxplot(cars$speed, main = "Speed", sub = paste("Outlier rows: ", boxplot.stats(cars$speed)$out))  # box plot for 'speed'
+boxplot(cars$dist, main = "Distance", sub = paste("Outlier rows: ", boxplot.stats(cars$dist)$out))  # box plot for 'distance'
 ```
 Check if the response variable is close to normality
 Normal Q-Q plots take your sample data, sort it in ascending order, and then plot them versus quantiles calculated from a theoretical normal distribution. The number of quantiles is selected to match the size of your sample data. In R this can be done using the `qnorm` and `qline` functions. `qnorm` plots your data agaist the theoretical normal distribution, and `qline` plots the normal distribution against itself for comparison.  
@@ -357,13 +357,13 @@ Build Linear Model
 Now that we have seen the linear relationship pictorially in the scatter plot and by computing the correlation, lets see the syntax for building the linear model. The function used for building linear models is lm(). The lm() function takes in two main arguments, namely: 1. Formula 2. Data. The data is typically a data.frame and the formula is a object of class formula. But the most common convention is to write out the formula directly in place of the argument as written below.
 
 ```{r}
-linearMod <- lm(dist ~ speed, data=cars)  # build linear regression model on full data
+linearMod <- lm(dist ~ speed, data = cars)  # build linear regression model on full data
 print(linearMod)
 ```
 
 Now that we have built the linear model, we also have established the relationship between the predictor and response in the form of a mathematical formula for Distance (dist) as a function for speed. For the above output, you can notice the ‘Coefficients’ part having two components: Intercept: -17.579, speed: 3.932 These are also called the beta coefficients. In other words,
 
-$$ dist = Intercept + ({\beta} * speed) => dist = −17.579 + 3.932∗speed$$
+$$ dist = Intercept + ({\beta} * speed) => dist = −17.579 + 3.932∗speed $$
 
 
 
@@ -397,16 +397,18 @@ How to calculate the t Statistic and p-Values?
 When the model co-efficients and standard error are known, the formula for calculating t Statistic and p-Value is as follows:
 
 $$t−Statistic = \frac{{\beta}−coefficient}{Std.Error} $$
+
+
 ```{r}
 modelSummary <- summary(linearMod)  # capture model summary as an object
 modelCoeffs <- modelSummary$coefficients  # model coefficients
 beta.estimate <- modelCoeffs["speed", "Estimate"]  # get beta estimate for speed
 std.error <- modelCoeffs["speed", "Std. Error"]  # get std.error for speed
 t_value <- beta.estimate/std.error  # calc t statistic
-p_value <- 2*pt(-abs(t_value), df=nrow(cars)-ncol(cars))  # calc p Value
+p_value <- 2*pt(-abs(t_value), df = nrow(cars)-ncol(cars))  # calc p Value
 f_statistic <- linearMod$fstatistic[1]  # fstatistic
 f <- summary(linearMod)$fstatistic  # parameters for model p-value calc
-model_p <- pf(f[1], f[2], f[3], lower=FALSE)
+model_p <- pf(f[1], f[2], f[3], lower.tail = FALSE)
 ```
 
 R-Squared 
