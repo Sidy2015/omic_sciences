@@ -220,10 +220,10 @@ Using the VST:
 plotPCA(vsd, intgroup="dex")
 ```
 
-We can make this plot even nicer using custom code from the *ggplot2* library:
+We can make this plot even nicer using custom code from the `ggplot2` library:
 
 ```{r}
-library(ggplot2)
+
 (data <- plotPCA(rld, intgroup=c("dex","cell"), returnData=TRUE))
 (percentVar =100*round(attr(data, "percentVar"),2))
 ```
@@ -397,7 +397,7 @@ plotCounts(dds, gene=which.min(resLFC$padj), intgroup="dex")
 A more sophisticated plot of counts:
 
 ```{r}
-library(ggplot2)
+
 data <- plotCounts(dds, gene=which.min(resLFC$padj), intgroup=c("dex","cell"), returnData=TRUE)
 ggplot(data, aes(x=dex, y=count, col=cell)) +
   geom_point(position=position_jitter(width=.1,height=0)) +

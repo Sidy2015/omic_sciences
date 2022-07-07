@@ -216,6 +216,66 @@ More information on installing and updating Bioconductor packages can be found a
 
 http://bioconductor.org/install/
 
+88888888888888888888888888888888888888888888888888888888888
+
+## Required packages
+
+The one script I will ask you to run once you've installed Bioconductor 
+is called listPackages.R. This is an R script that includes the following:
+
+```{r}
+library(dplyr, warn.conflicts = FALSE)
+pkgs <- local({
+        files <- dir(pattern = glob2rx("*.Rmd"))
+        code <- lapply(files, readLines) %>% unlist
+        r <- regexec("^library\\((.*?)\\)", code, perl = TRUE)
+        m <- regmatches(code, r)
+        u <- sapply(m, length) > 0
+        sapply(m[u], function(x) x[2]) %>% unique
+})
+writeLines(pkgs, "_R_package_list.txt")
+```
+This little script runs through all the .Rmd files in your directory and just
+looks for the word library, grabs and and pulls it out. It doesn't do a 
+perfect job, but does pretty good. So first, these are all the pkgs that 
+you will need for the course. There are many.This next line of code compares 
+this to the all the packages youo already have installed to see what packages 
+you need. This will be different for each person. I've also made 
+
+```{r}
+int <- installed.packages()[, 1]
+need <- setdiff(pkgs, int)
+bioc = readLines("_R_package_list.txt")
+git= readLines("_R_package_github.txt")
+```
+The required packages come in two flavors: those that are available through
+Bioconductor, and those that are available through a github website.
+I've written these out into two different textfiles: R_packages_github.txt and
+_R_package_list.txt. You will need to take your need list and split it into 
+those that fall into the github list and those that fall into the R package 
+list (meaning they are available through Bioconductor). For those that fall 
+into the respective lists install as follows:
+
+```{r}
+
+# installing the R packages required for class after
+# installing the latest versions of R, Rstudio 
+# and Bioconductor
+
+bioc = readLines("_R_package_list.txt")
+# bioc = setdiff(bioc, need) optional, it won't install it if you don't need it
+BiocManager::install(bioc)
+
+git = readLines("_R_package_github.txt")
+# git = setdiff(git, need) optional, it won't install it if you don't need it
+git = paste0("genomicsclass/",git)
+
+devtools::install_github(git)
+```
+p.s. All of your needs should be met by bioc and git, i.e., you should have no "needs"
+leftover! The `::` is a shortcut when you want to avoid loading a library, or when
+you have a potential function conflict with another library that is loaded. This shortened version of the script is in requireed_packages.R...so that's all you need to run.
+
 ### Finding help
 
 There are many ways to find help directly from within R. Typically, every function will have its own manual page which is accessible by typing a question mark ?, followed by the function name and hitting return.

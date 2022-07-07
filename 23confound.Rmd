@@ -119,7 +119,7 @@ To illustrate the confounding, we will pick some genes to show in a heatmap plot
 ```{r image_of_subset, fig.cap="Image of gene expression data for genes selected to show difference in group as well as the batch effect, along with some randomly chosen genes.", message=FALSE, echo=FALSE}
 library(rafalib)
 library(RColorBrewer)
-library(genefilter)
+
 
 batch <- factor(format(sampleInfo$date,"%m"))
 
@@ -343,11 +343,9 @@ cat("Total genes with q-value < 0.1: ",length(index),"\n",
 suppressMessages({
 suppressWarnings({
 suppressPackageStartupMessages({
-  library(devtools)
+  
   library(Biobase)
-  library(sva)
   library(bladderbatch)
-  library(snpStats)
 })
 })
 })

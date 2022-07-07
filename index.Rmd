@@ -1,37 +1,40 @@
 --- 
-title: "Omics Science"
+title: "Omic Sciences"
 author: "Guri Giaever"
 date: "`r Sys.Date()`"
-site: bookdown::bookdown_site
-documentclass: book
-bibliography: [book.bib, packages.bib]
-# url: your book url like https://bookdown.org/yihui/bookdown
-# cover-image: path to the social sharing image like images/cover.jpg
-description: |
-  This is a minimal example of using the bookdown package to write a book.
-  The HTML output format for this example is bookdown::gitbook,
-  set in the _output.yml file.
+knit: "bookdown::render_book"
+bibliography:
+- book.bib
+- packages.bib
+cover-image: "koos1.png"
+description: A better understanding of biology and human health can create breakthroughs in disease treatment and introduces the prospect of personalized medicine. This course will begin with an introduction and review of the general principals of genomics and molecular biology. You will then explore in detail the key genomic technologies and computational approaches that are driving advances in prognostics, diagnostics, and treatment. Learn how scientists sequence, assemble, and analyze the function and structure of genomes. Explore methods for determining the heritability of traits & diseases by studying the larger population, and learn how gene identification can help identify targets for therapeutic intervention. Explore how you could use personal genomics to manage your health.  
 link-citations: yes
-github-repo: rstudio/bookdown-demo
+github-repo: gurinina/omic_sciences
+url: https\://bookdown.org/ggiaever/omic_sciences/
+site: bookdown::bookdown_site
 ---
 
-# Omic Sciences
+# Welcome to Omic Sciences!
+
+![](figure/koos1.png)
 
 This course will cover several of the statistical concepts and data
 analytic skills needed to succeed in data-driven life science
-research as it relates to Omic Sciences. 
+research as it relates to genomics and the omic sciences.
 
 We start with one of the most important topics in statistics and in
 the life sciences: statistical inference. Inference is the use of
-probability to learn population characteristics from data. A typical example
-is deciphering if two groups (for example, cases versus controls) are
-different on average. Specific topics covered include the t-test,
+probability to learn population characteristics from data to predict outcomes. 
+A typical example is deciphering if two groups (for example, cases versus controls) 
+are different on average. Specific topics covered include the t-test,
 confidence intervals, association tests, and statistical power. 
 We make use of the Central Limit and we will learn how to compute p-values 
-and implement basic data analyses. Throughout the book we will describe
-visualization techniques in the statistical computer language *R* that
-are useful for exploring new datasets. For example, we will use these
-to learn when to apply robust statistical techniques.
+and implement basic data analyses. This will form the foundation
+for the analytic techniques discussed throughout the course. 
+Throughout the course we will describe visualization techniques 
+in the statistical computer language *R* that
+are useful for exploring new high throughput datasets. For example, we will use 
+these to learn when to apply robust statistical techniques.
 
 We will then move on to an introduction to linear models and matrix
 algebra. We will explain why it is beneficial to use linear models to
@@ -43,12 +46,12 @@ algebra to linear models. We will learn how to fit linear models in R,
 how to test the significance of differences, and how the standard
 errors for differences are estimated. 
 
-In the third part of the course we cover topics related to
+For the bulk of the course we cover topics related to genomics and
 high-dimensional data. Specifically, we describe multiple testing,
 error rate controlling procedures, exploratory data analysis for
 high-throughput data, p-value corrections and the false discovery
 rate. Here we will cover experimental techniques used in genomics including
-RNA-seq, Chip-chip and DNA-methylation analysis. 
+RNA-seq, Chip-chip, variant and DNA-methylation analysis. 
 
 We will cover the concepts of distance and dimension reduction. We
 will introduce the mathematical definition of distance and use this to

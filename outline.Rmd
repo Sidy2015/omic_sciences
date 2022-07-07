@@ -5,7 +5,127 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+Module 2: ‘Omics data analysis methods
+    
+Lectire 1  What Is Genomic Data Science?
+        
+•	Getting started; install R 02getting-started
+•	Hands-on with R and Bioconductor packages 02biomotiv
+•	Introduction to R 03dplyr-tutorial
+•	Inference 05Ierence	
+
+Lecture 2       
+
+•        Linear regressions in R: 09matrix-notation
+•        High throughput data: 14highthroughput -- 3 tables
+•	 Volcano plots, histograms, boxplots, MA plots 14high lose                                            multiple testing, modeling, linear regression
+•	 Dimension Reduction: 17tance	(includes clustering)
+
+
+Lecture 3 Next Generation Sequencing 
+      
+•	NGS pipelines: Fastq, short read mapping & alignment, BAM files: 30align
+•	NGS read counting, importing NGS data with Bioconductor
+•	Working with general genomic features using GenomicRanges 
+•	Annotation overview: 36anno
+•       RNA-Seq
+•       Variant Discovery and Genotyping
+•       Chip-seq and data analysis
+•       Epigenomics: DNA Methylation Arrays and analysis
+
+Lec†ure 4
+
+•       RNA-seq at the gene-level: 34rnaseq_gene_level
+•       Clustering and heatmaps: Hierarchical & Kmeans moved to Dimension Reduction: 
+• 	Confounding effects: Combart& SVA: 23confound
+
+Lecture 5 GO ontology Enrichment Analysis
+
+•	Gene Set Enrichment Analysis: 35GSEA
+•	Gene Sets Analysis
+
+3 hr	Lab Session: GO enrichment exercise
+	Giaever and Nislow datasets
+
+
 Module 2 Omic data analysis (9 Topics)
+
+Module 2 Omic data analysis 
+1.	Introduction to R programming: 
+  a.	Getting started
+  b.	DPLYR
+
+2.	Inference
+  a.	Central limit theorem
+  b.  t-tests
+  c.	P-values, power & confidence intervals 
+  
+3.  Linear Algebra
+  a. Matrix notation
+  b. Matrix operations
+  c. Matrix algebra
+  
+3.	Linear regression
+  a.	Solving linear models with matrices
+  b.	Linear Models: Expressing design formula
+  c.	Solving linear models with lm
+  d.	Regressions in R
+  e.  Expressing design formulas
+  f.	Interactions and contrasts 
+
+4.	Introduction to high-throughput data: 
+  a.  3 tables in genomics
+  b. 	Technical vs biological replicates
+  c.	Multiple comparisons with genewise t-tests
+
+Exploratory data analysis for high-throughput data
+a.	Volcano plots, histograms, boxplots, MA plots
+b.	Dimension Reduction: Distance, PCA, SVD, MDS
+
+5.	Practical Machine Learning
+a.	Clustering and heatmaps: Hierarchical & Kmeans
+b.	Confounding effects: Combar & SVA
+
+6.	Interlude: Working with general genomic features using GenomicRanges 
+a.	IRanges & GRanges
+b.	Calculating overlaps
+
+7.	    Next Generation Sequencing Corey talk NGS
+a.	Introduction to Bioconductor
+b.	Installing bioconductor and motivaltion; Cheatsheet
+c.	NGS pipeline:Fastq, short read mapping & alignment, BAM files
+d.	NGS read counting, importing NGS data with Bioconductor
+e.	Data structure and management for genome scale experiments 
+
+CN introduces RNA-seq
+a.	RNA-seq at the gene-level:
+b.	EDA, DE and SVA 
+c.	Differential exon usage
+d.	Exploring plots of isoform-level expression
+e.	scRNA-seq 
+f.	CN introduces Chip-seq     
+ChIP-seq data analysis
+
+8.	CN introduces GO enrichment      
+a.	Gene Set Enrichment Analysis
+b.	Gene Sets Analysis in R
+
+9.	CN introduces genotyping 
+Variant Discovery and Genotyping
+  
+10.	CN introduces epigenomics; DNA Methylation Arrays  
+a.	DNA Methylation Arrays
+b.	Data analysis DNA Methylation Arrays
+c.	Reading 450K idat files with the minfi package
+d.	Interactive visualization of DNA methylation data analysis
+e.	Inference for DNA methylation
+f.	ATAC-seq 
+
+11.	CN introduces merging datasets  
+Multomic analysis
+ 
+
 1.	Introduction to R programming: 
         a.	Getting started
         b.	Installing Bioconductor

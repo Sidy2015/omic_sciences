@@ -11,12 +11,17 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 # Brief Introduction to `dplyr`
 
 The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English and we are therefore going to introduce two simple functions: one is used to subset and the other to select columns.
-
+```{r,echo=FALSE}
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv"
+library(downloader)
+if (!file.exists(filename)) download(url, filename)
+```
 
 Take a look at the dataset we read in:
 ```{r}
 filename <- "femaleMiceWeights.csv"
-dat <- read.csv(filename)
+dat <- read.csv(filename) ## previously downloaded  
 head(dat) #In R Studio use View(dat)
 ```
 
