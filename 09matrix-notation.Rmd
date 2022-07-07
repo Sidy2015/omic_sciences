@@ -690,7 +690,7 @@ We have shown how to write linear models using linear algebra. We are going to d
 <a name="introduction"></a>
 
 
-## Introduction 
+## Introduction: the process of reaching a conclusion from known facts. 
 
 ```{r,results=FALSE,echo=FALSE}
 set.seed(1) #so that we get same results
@@ -721,7 +721,7 @@ library(downloader) ##use install.packages to install
 dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/"
 filename <- "femaleMiceWeights.csv"
 url <- paste0(dir, filename)
-if (!file.exists(filename)) download(url, destfile=filename)
+if (!file.exists(filename)) download(url, destfile = filename)
 ```
 
 ```{r}
@@ -737,7 +737,7 @@ url <- paste0(dir, filename)
 dat <- read.csv(url)
 ```
 
-### Our first look at data
+** Our first look at data **
 
 We are interested in determining if following a given diet makes mice
 heavier after several weeks. This data was produced by ordering 24
@@ -763,8 +763,8 @@ averages. So let's look at the average of each group:
 
 ```{r,message=FALSE}
 library(dplyr)
-control <- filter(dat,Diet=="chow") %>% select(Bodyweight) %>% unlist
-treatment <- filter(dat,Diet=="hf") %>% select(Bodyweight) %>% unlist
+control <- filter(dat,Diet == "chow") %>% select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet == "hf") %>% select(Bodyweight) %>% unlist
 print( mean(treatment) )
 print( mean(control) )
 obsdiff <- mean(treatment) - mean(control)
@@ -776,8 +776,8 @@ So the hf diet mice are about 10% heavier. Are we done? Why do we need p-values 
 If we repeat the experiment, we obtain 24 new mice from The Jackson Laboratory and, after randomly assigning them to each diet, we get a different mean. Every time we repeat this experiment, we get a different value. We call this type of quantity a *random variable*. 
 
 <a name="random_variable"></a>
-
-## we can use a t.test to ask if there is a difference between the treatment and the control
+## T.tests
+** We can use a t.test to ask if there is a difference between the treatment and the control **
 ```{r}
 t.test(treatment, control)
 ```

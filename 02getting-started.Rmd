@@ -179,7 +179,7 @@ library(downloader) ##use install.packages to install
 dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/"
 filename <- "femaleMiceWeights.csv" 
 url <- paste0(dir, filename)
-if (!file.exists(filename)) download(url, destfile=filename)
+if (!file.exists(filename)) download(url, destfile = filename)
 ```
 
 We can then proceed as in option 2:
@@ -209,7 +209,7 @@ install_github("genomicsclass/dagdata")
 The file we are working with is actually included in this package. Once you install the package, the file is on your computer. However, finding it requires advanced knowledge. Here are the lines of code:
 
 ```{r}
-dir <- system.file(package="dagdata") #extracts the location of package
+dir <- system.file(package = "dagdata") #extracts the location of package
 list.files(dir)
 list.files(file.path(dir,"extdata")) #external data is in this directory
 ```
@@ -224,9 +224,12 @@ dat <- read.csv(filename)
 Running R code
 
 ```{r}
-1+2
+1 + 2
 dat
 class(dat)
 dim(dat)
 names(dat)
 ```
+There is an excellent introductory R book for graduate students here: [Guide-to-R-Book](https://bookdown.org/yih_huynh/Guide-to-R-Book/). 
+I highly recommend going through to ground yourself, it will really
+help as we will dive into thihgs pretty quickly.

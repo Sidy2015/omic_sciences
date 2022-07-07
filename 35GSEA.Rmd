@@ -1,5 +1,5 @@
 ---
-title: "Omic Sciences for Drug Discovery and Development"
+title: "Gene_Set_Enrichment_Analysis.Rmd"
 output: html_document
 ---
 
@@ -267,13 +267,14 @@ x = 8	number of “marked” elements in the selection, i.e. number of query gen
 ```{r 2 x 2 table}
 compSCORE <- function(mat,coln, sig = 1){
    df = data.frame(score = mat[,coln],stringsAsFactors = F)
+   suppressPackageStartupMessages({library(dplyr)})
    df$gene = rownames(mat)
    rownames(df) = df$gene
    df$index=0
    wdf = which(df$score >= sig)
    df$index[wdf]=1
    df = df[,c('index','score','gene')]
-   df = df %>% dplyr::arrange(desc(score))
+   df = df %>% arrange(desc(score))
    df
    }
 # in order to find N, we need to find how many genes have a non-NA score in the relevant column of interest
@@ -505,17 +506,16 @@ A word about genesets:
 ```{r}]
 library(org.Sc.sgd.db)
 ego <- enrichGO(gene = gene,
-       universe = universe,
-       OrgDb  = org.Sc.sgd.db,
-       keyType = 'GENENAME',
-       ont = "BP",
-       minGSSize = 5,
-       maxGSSize = 300,
-       pAdjustMethod = "BH",
-       pvalueCutoff  = 0.01,
-       qvalueCutoff  = 0.05,
-       readable = FALSE)
-
+                universe = universe,
+                OrgDb         = org.Sc.sgd.db,
+                keyType       = 'GENENAME',
+                ont           = "BP",
+                minGSSize = 5,
+                maxGSSize = 300,
+                pAdjustMethod = "BH",
+                pvalueCutoff  = 0.01,
+                qvalueCutoff  = 0.05,
+                readable = FALSE)
 dotplot(ego, showCategory=10)
 ```
 One of the most important things to remember about geneset analysis
@@ -547,19 +547,15 @@ anno <- select(org.Hs.eg.db, keys=topgenes,
 anno <- select(orgdatabase, keys=selectheserecords,
                columns=c(retrievetheserecords), 
                keytype=keytypeofrecord)
-
-mapIds(Orgdb, keys = selectheserecords, 
-        column = retrievetheserecords,
-        keytype=keytypeofrecord)            
-
+mapIds(Orgdb, keys = selectheserecords, column = retrievetheserecords,keytype=keytypeofrecord)            
 AnnotationDbi::select(org.Hs.eg.db, tbl$ENTREZID, "GOALL", "ENTREZID") 
 
 
 dplyr::select(GOID = GOALL, Ont = ONTOLOGYALL, ENTREZID) %>%
-        distinct() %>% arrange(Ont, GOID)               
-
-mapIds(org.Hs.eg.db, ENSEMBL, "ENTREZID", "ENSEMBL")              
-
-mapIds(Orgdb, keys = selectheserecords, column = retrievetheserecords,                             keytype = keytypeofrecord)
+distinct() %>%
+arrange(Ont, GOID)               
+               
+ mapIds(org.Hs.eg.db, ENSEMBL, "ENTREZID", "ENSEMBL")              
+ mapIds(Orgdb, keys = selectheserecords, column = retrievetheserecords, keytype=keytypeofrecord)
  
 
