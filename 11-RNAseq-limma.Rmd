@@ -1,8 +1,5 @@
----
-title: "RNA-seq with edgeR and limma"
-output: html_notebook
----
 # RNA-seq with edgeR and limma
+
 RNA-seq analysis is easy as 1-2-3 with limma, Glimma and edgeR
 Charity Law^1, Monther Alhamdoosh^2, Shian Su^3, Xueyi Dong^3, Luyi Tian^1, Gordon K. Smyth^4 and Matthew E. Ritchie^5
 

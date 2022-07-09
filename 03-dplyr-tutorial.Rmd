@@ -1,30 +1,25 @@
----
-layout: page
-title: dplyr tutorial
----
+# Brief Introduction to `dplyr`
 
 ```{r, echo=FALSE}
 library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 
 ```
-# Brief Introduction to `dplyr`
-
 The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English and we are therefore going to introduce two simple functions: one is used to subset and the other to select columns.
+
 ```{r,echo=FALSE}
 url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
 filename <- "femaleMiceWeights.csv"
 library(downloader)
 if (!file.exists(filename)) download(url, filename)
 ```
-
 Take a look at the dataset we read in:
+
 ```{r}
 filename <- "femaleMiceWeights.csv"
 dat <- read.csv(filename) ## previously downloaded  
 head(dat) #In R Studio use View(dat)
 ```
-
 There are two types of diets, which are denoted in the first column. If we want just the weights, we only need the second column. So if we want the weights for mice on the `chow` diet, we subset and filter like this:
 
 ```{r,message=FALSE}

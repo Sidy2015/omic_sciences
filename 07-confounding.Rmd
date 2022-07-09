@@ -1,21 +1,11 @@
----
-title: "Confounding"
-layout: page
-output:
-  html_document:
-    theme: united
-    toc_depth: 3
-    highlight: tango
----
+
+# Confounding
 
 ```{r, echo=FALSE}
 library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 
 ```
-
-# Confounding
-
 Batch effects have the most devastating effects when they are _confounded_ with outcomes of interest. Here we describe confounding and how it relates to data interpretation.
 
 "Correlation is not causation" is one of the most important lessons you should take from this or any other data analysis course. A common example for why this statement is so often true is confounding. Simply stated confounding occurs when we observe a correlation or association between $X$ and $Y$, but  this is strictly the result of both $X$ and $Y$ depending on an extraneous variable $Z$. Here we describe Simpson's paradox, a phenomenon in probability and statistics in which a trend appears in several groups of data but disappears or reverses when the groups are combined due. 

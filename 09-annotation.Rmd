@@ -1,16 +1,5 @@
----
-title: 'Genomic annotation in Bioconductor'
-author: "Vince"
-date: "March 19, 2015"
-output:
-  pdf_document: default
-  html_document: default
-layout: page
-toc: yes
-toc_depth: 2
----
+# Annotation resources
 
-# Annotation resources 
 ```{r, echo=FALSE}
 library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)

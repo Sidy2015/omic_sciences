@@ -1,14 +1,9 @@
----
-title: "RNA-seq gene-level analysis"
-layout: page
----
+# RNA-seq gene-level analysis
 
 ```{r, echo=FALSE}
 library(knitr)
-
 ```
 
-# RNA-seq gene-level analysis
 http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
 https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
 RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).

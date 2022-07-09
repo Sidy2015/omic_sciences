@@ -1,12 +1,5 @@
----
-title: "NGS pipeline"
-layout: page
-output:
-  html_document:
-    theme: united
-    toc_depth: 3
-    highlight: tango
----
+
+# NGS Pipeline
 
 ```{r, echo=FALSE}
 library(knitr)
@@ -14,9 +7,6 @@ knitr::opts_chunk$set(echo=FALSE)
 opts_knit$set(progress=FALSE, verbose=FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
-
-# NGS Pipeline
-
 We are going to walk through the general steps of a Next Generation Sequencing pipeline, even though the analyical steps are beyond the scope of this course, for reasons mainlly due to the memory capacities of our laptops. We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for that reason, one of the more frequently used technologies in research, likely for this reasons.
 
 Ok, so our first files that we encounter are FASTQ...

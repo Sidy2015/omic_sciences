@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.Rproj
+.DS_Store
+/book
+/bookdown
+/pdr
+/epub
+/bs4

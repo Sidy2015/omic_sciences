@@ -1,17 +1,9 @@
----
-title: "Linear Algebra"
-author: "Rafa"
-date: "January 31, 2015"
-output: html_document
-layout: page
-
----
+# Linear Algebra
 
 ```{r, echo=FALSE}
 library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
-# Linear Algebra
 ## Matrix Notation
 
 Here we introduce the basics of matrix notation. Initially this may seem over-complicated, but once we discuss examples, you will appreciate the power of using this notation to both explain and derive solutions, as well as implement them as R code. 

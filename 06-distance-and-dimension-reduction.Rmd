@@ -1,20 +1,10 @@
----
-title: "Distance lecture"
-layout: page
-output:
-  pdf_document: default
-  html_document:
-    self_contained: no
----
+# Clustering and Dimension Reduction
 
 ```{r, echo=FALSE}
 library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 35), tidy = TRUE)
 
 ```
-
-# Clustering and Dimension Reduction
-
 Introduction
 
 The concept of distance is quite intuitive. For example, when we cluster animals into subgroups, we are implicitly defining a distance that permits us to say what animals are "close" to each other.
