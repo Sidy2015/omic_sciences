@@ -1,10 +1,9 @@
-book_filename: Omics
+book_filename: omic_sciences
 new_session: yes
-rmd_files: ["index.Rmd", "02getting-started.Rmd","02biomotiv.Rmd", "03dplyr-tutorial.Rmd",
-  "09matrix-notation.Rmd",
-  "14hi.Rmd","17tance.Rmd","23confound.Rmd",
-   "30align.Rmd" ,"36anno.Rmd","34rnaseq_gene_level.Rmd",
-   "34rnaseq_limma.Rmd",
-   "35GSEA.Rmd" ]
-  
-            
+rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconducter.Rmd",
+"03-dplyr-tutorial.Rmd","04-linear-algebra.Rmd","05-linear-modeling-genomics.Rmd",
+  "06-distance-and-dimension-reduction.Rmd",
+"07-confounding.Rmd","08-NGS-pipeline.Rmd","09-annotation.Rmd",
+"10-RNA-seq_DESeq2.RMD","11-RNAseq-limma.Rmd",
+"12-GSEA.Rmd"]
+

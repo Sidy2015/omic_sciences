@@ -1,30 +1,18 @@
 bookdown::gitbook:
   css: style.css
-  split_by: section
   config:
     toc:
-      collapse: none
       before: |
-        <li><a href="./">Omic Sciences</a></li>
+        <li><a href="./">A Minimal Book Example</a></li>
       after: |
         <li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
-    edit:
-      link: https://github.com/gurinina/omic_sciences/edit/bookdown/%s
-    download: [pdf, epub, mobi]
-    sharing:
-      github: yes
-      facebook: no
-    search:
-      engine: fuse
-bookdown::html_chapters:
-  css: [css/style.css, css/toc.css]
+    edit: https://github.com/rstudio/bookdown-demo/edit/master/%s
+    download: ["pdf", "epub"]
 bookdown::pdf_book:
   includes:
     in_header: preamble.tex
   latex_engine: xelatex
   citation_package: natbib
   keep_tex: yes
-  toc_depth: 3
-bookdown::epub_book:
-  dev: svglite
-  stylesheet: css/style.css
+bookdown::epub_book: default
+bookdown::bs4_book: default
