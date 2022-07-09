@@ -4,7 +4,7 @@ unlink('_book', recursive = TRUE)
 
 x = readLines('index.Rmd')
 i = 1
-s = paste0('title: "A Minimal Book Example (', c('Bootstrap', 'Tufte'), ' Style)"')
+s = paste0('title: "Omics Sciences (', c('Bootstrap', 'Tufte'), ' Style)"')
 for (fmt in c('html_book', 'tufte_html_book')) {
   unlink('_book', recursive = TRUE)
   file.copy('index.Rmd', '_index.Rmd')
@@ -38,4 +38,4 @@ for (fmt in formats) {
   if (res != 0) stop('Failed to compile the book to ', fmt)
 }
 
-bookdown::publish_book('bookdown-demo')
+bookdown::publish_book('omics_science')

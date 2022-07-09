@@ -1,7 +1,5 @@
----
-title: "Gene_Set_Enrichment_Analysis.Rmd"
-output: html_document
----
+
+# Gene Set Enrichment Analysis
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, 
@@ -17,9 +15,6 @@ library(ggplot2)
 library(dplyr)
 library(org.Hs.eg.db)})
 ```
-
-# Gene Set Enrichment Analysis
-
 The .Rmd file for this chapter can be found [here](https://github.com/gurinina/omic_sciences/blob/main/35GSEA.Rmd). To begin learning aobuto GO set enrichmet analysis and the different methods that can be utiliazed to preform these analysis a good jumping off start point is this Natural Protocols paper:
 
 As a change a pace I thought we would go through this very helpful paper written...
