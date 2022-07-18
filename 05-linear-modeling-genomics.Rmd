@@ -616,10 +616,10 @@ $$
 This implies that:
 
 $$
-\begin{align*}
+\begin{aligned}
 \mbox{Pr}(p < p_a) &= \mbox{Pr}[ \Phi^{-1}(p) < \Phi^{-1}(p_a) ] \\
   & = \mbox{Pr}(Z < a) = p_a
-\end{align*}
+\end{aligned}
 $$
 
 which is the definition of a uniform distribution.
@@ -1048,7 +1048,7 @@ With this estimate in place we can, for example, alter the Benjamini and Hochber
 
 $$\hat{\pi}_0 p_{(i)} \leq \frac{i}{m}\alpha$$
 
-However, instead of doing this, we compute a _q-value_ for each test. If a feature resulted in a p-value of $p$, the q-value is the estimated pFDR for a list of all the features with a p-value at least as small as $p$.
+So this value needs to be estimated. However, instead of doing this, we compute a _q-value_ for each test. If a feature resulted in a p-value of $p$, the q-value is the estimated pFDR for a list of all the features with a p-value at least as small as $p$.
 
 In R, this can be computed with the `qvalue` function in the `qvalue` package:
 

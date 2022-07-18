@@ -1,4 +1,3 @@
-
 # NGS Pipeline
 
 ```{r, echo=FALSE}
@@ -13,33 +12,21 @@ Ok, so our first files that we encounter are FASTQ...
 
 ## Introduction to FASTQ
 
-The first step in NGS sequencing is to read the FASTQ files and align them. We're not going to do that because the FASTQ files are too big -- but we will walk through the steps. There are many many software programs for alignment. If you want to run a truncated version to see what FASTQ files look like, you can download a single sample in a UNIX shell here:
+The first step in NGS sequencing is to read the FASTQ files and align them. We're not going to do that because the FASTQ files are too big, but we will walk through the steps. There are many many software programs for alignment. If you want to run a truncated version to see what FASTQ files look like, you can download a single sample in a UNIX shell here:
 
 **Links for this experiment**
 
-Study information at the Sequence Read Archive:
+Study information at the [Sequence Read Archive](http://www.ncbi.nlm.nih.gov/Traces/sra/?study=SRP033351)
 
-<http://www.ncbi.nlm.nih.gov/Traces/sra/?study=SRP033351>
+[Himes et al paper](http://www.ncbi.nlm.nih.gov/pubmed/24926665)
 
-Himes et al paper at PubMed Central:
+Example sample table stored in our course repo on github: [airway_sample_table](https://github.com/genomicsclass/labs/blob/master/course5/airway_sample_table.csv)
 
-<http://www.ncbi.nlm.nih.gov/pubmed/24926665>
+Details on creating such a sample table from SRA and GEO: [details](http://www.bioconductor.org/packages/release/data/experiment/vignettes/airway/inst/doc/airway.html)
 
-Example sample table stored in our course repo on github:
+The [European Nucleotide Archive (EMBL-EBI)](http://www.ebi.ac.uk/ena>)
 
-<https://github.com/genomicsclass/labs/blob/master/course5/airway_sample_table.csv>
-
-Details on creating such a sample table from SRA and GEO:
-
-<http://www.bioconductor.org/packages/release/data/experiment/vignettes/airway/inst/doc/airway.html>
-
-The European Nucleotide Archive (EMBL-EBI):
-
-<http://www.ebi.ac.uk/ena>
-
-The Sequence Read Archive (NCBI):
-
-<http://www.ncbi.nlm.nih.gov/sra/>
+The [Sequence Read Archive (NCBI)](http://www.ncbi.nlm.nih.gov/sra/>)
 
 ## Fastq file commands
 
@@ -63,29 +50,20 @@ Quality control with [fastqc](http://www.bioinformatics.babraham.ac.uk/projects/
 
 Navigate to your FASTQ directory:
 
-fastqc --noextract SRR1039508_1.fastq SRR1039508_2.fastq --outdir=/Users/gurinina/Dropbox/Documents/Rprojects/2022_GENOMICS_COURSE/fastqc
+fastqc "--" noextract SRR1039508_1.fastq SRR1039508_2.fastq "--" outdir=/Users/gurinina/Dropbox/Documents/Rprojects/2022_GENOMICS_COURSE/fastqc
 
-but we're going to use a truncated fastq file to save memory, navigate to the directory
+we're going to use a truncated fastq file to save memory, navigate to the directory
 after moving it from here:
-
-
 
 ```{r}
 library(ShortRead)
 
-## ----biocLite, eval=FALSE------------------------------------------------
-## source("http://www.bioconductor.org/biocLite.R")
-## biocLite(c("ShortRead"))
-
-## ----fastq1--------------------------------------------------------------
 fastqDir <- system.file("extdata", "E-MTAB-1147", package = "ShortRead")
-fastqPath <- list.files(fastqDir, pattern = ".fastq.gz$", full = TRUE)[1]
+fastqPath <- list.files(fastqDir, pattern = ".fastq.gz$", full.names = TRUE)[1]
 reads <- readFastq(fastqPath)
 
 ```
-fastqc --noextract ERR127302_1_subset.fastq 
-
-
+fastqc "--"noextract ERR127302_1_subset.fastq 
 
 ```{r echo = FALSE,warning=FALSE, message = FALSE}
 
@@ -132,7 +110,7 @@ fastqFile = fastqcfile[3]
 fq = readFastq(fastqFile)
 fq
 #class: ShortReadQ
-#length: 20000 reads; width: 72 cycles -- 
+#length: 20000 reads; width: 72 cycles
 #class: ShortReadQ
 
 reads = sread(fq)[1:1000]
@@ -151,7 +129,7 @@ qPerBase[1:3,]
 qcount = rowSums( qPerBase <= 20)
 # Number of reads where all Phred scores >= 20
 mean(qcount == 0)
-# 54% of the reads -- for the actual samples, this was 98%
+# 54% of the reads; for the actual samples, this was 98%
 ```
 
 **~ 98 % of the reads have all 63 bp >= 20, is that enough?**
@@ -190,7 +168,7 @@ We discuss the following software in the screencast:
 
 To extract the FASTQ files from the SRA file, we used the following line. The `--split-files` argument is used to extract two files for the two paired-ends of the fragments which were sequenced.
 
-    fastq-dump --split-files SRR1177756.sra
+    fastq-dump "--"split-files SRR1177756.sra
 
 ## STAR commands
 
@@ -222,21 +200,21 @@ mkdir gtf mkdir genome mv *.gtf gtf mv* .fa genome mkdir GRCh38.79.chrom1
 
 The STAR command to generate the genome index:
 
-STAR --runMode genomeGenerate\
---genomeDir GRCh38.79.chrom1\
---genomeFastaFiles genome/Homo_sapiens.GRCh38.dna.chromosome.1.fa\
---sjdbGTFfile gtf/Homo_sapiens.GRCh38.79.chrom1.gtf\
---sjdbOverhang 62
+STAR "--"runMode genomeGenerate\
+"--"genomeDir GRCh38.79.chrom1\
+"--"genomeFastaFiles genome/Homo_sapiens.GRCh38.dna.chromosome.1.fa\
+"--"sjdbGTFfile gtf/Homo_sapiens.GRCh38.79.chrom1.gtf\
+"--"sjdbOverhang 62
 
 Mapping the reads:
 
-STAR --runThreadN 12\
---genomeDir GRCh38.79.chrom1\
---readFilesIn fastq/SRR1039508_1.fastq fastq/SRR1039508_2.fastq
+STAR "--"runThreadN 12\
+"--"genomeDir GRCh38.79.chrom1\
+"--"readFilesIn fastq/SRR1039508_1.fastq fastq/SRR1039508_2.fastq
 
-STAR --runThreadN 12\
---genomeDir Homo_sapiens.GRCh38.dna.chromosome.1\
---readFilesIn fastq/SRR1039508_1.fastq/SRR1039508_2.fastq
+STAR "--"runThreadN 12\
+"--"genomeDir Homo_sapiens.GRCh38.dna.chromosome.1\
+"--"readFilesIn fastq/SRR1039508_1.fastq/SRR1039508_2.fastq
 
 To filter out unmapped reads from BAM files (option -F) samtools view -bF SRR1039508_2.fastq.bam \> mappedSRR_2.bam SRR1039508_1.fastq.bam \> mappedSRR_1.bam
 
@@ -725,7 +703,7 @@ Gene models and `TxDb` objects: A gene model is essentially a set of annotations
 As sample data we use the `pasillaBamSubset` data package described in the introduction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 5: readGAlignments_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 5: readGAlignments_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 un1 <- untreated1_chr4()  # single-end reads
 ```
@@ -742,7 +720,7 @@ Several functions are available for reading BAM files into R:
 Single-end reads can be loaded with the `readGAlignments` function from the `GenomicAlignments` package.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 6: readGAlignments_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 6: readGAlignments_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ```{r}
 gal <- readGAlignments(un1)
@@ -751,7 +729,7 @@ gal <- readGAlignments(un1)
 Data subsets can be specified by genomic position, field names, or flag criteria in the `ScanBamParam`. Here we input records that overlap position 1 to 5000 on the negative strand with `flag` and `cigar` as metadata columns.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 7: readGAlignments_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 7: readGAlignments_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ```{r}
 what <- c("flag", "cigar") 
@@ -769,14 +747,14 @@ Another approach to subsetting the data is to use filterBam. This function creat
 As sample data we use the `pasillaBamSubset` data package described in the introduction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 3: pasillaBamSubset %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 3: pasillaBamSubset %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 untreated1_chr4()
 untreated3_chr4()
 ```
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 4: pasillaBamSubset_help %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 4: pasillaBamSubset_help %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r,eval = FALSE}
 ?pasillaBamSubset
 ```
@@ -785,13 +763,13 @@ Paired-end reads can be loaded with the `readGAlignmentPairs`or `readGAlignments
 
 Let's start with `readGAlignmentPairs`:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 8: readGAlignmentPairs_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 8: readGAlignmentPairs_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 un3 <- untreated3_chr4()  # paired-end reads
 ```
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 9: readGAlignmentPairs_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 9: readGAlignmentPairs_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 un3 <- untreated3_chr4()
 gapairs <- readGAlignmentPairs(un3)
@@ -800,7 +778,7 @@ gapairs <- readGAlignmentPairs(un3)
 The `GAlignmentPairs` class holds only pairs; reads with no mate or with ambiguous pairing are discarded. Each list element holds exactly 2 records (a mated pair). Records can be accessed as the `first` and `last` segments in a template or as `left` and `right` alignments. See ?`GAlignmentPairs` in the `GenomicAlignments` package for more information. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 10: readGAlignmentPairs_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 10: readGAlignmentPairs_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 gapairs
 ```
@@ -808,7 +786,7 @@ gapairs
 For `readGAlignmentsList`, mate pairing is performed when `asMates` is set to `TRUE` on the `BamFile` object, otherwise records are treated as single-end. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 11: readGAlignmentsList_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 11: readGAlignmentsList_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 galist <- readGAlignmentsList(BamFile(un3, asMates=TRUE))
 ```
@@ -816,7 +794,7 @@ galist <- readGAlignmentsList(BamFile(un3, asMates=TRUE))
 `GAlignmentsList` is a more general `list-like' structure that holds mate pairs as well as non-mates (i.e., singletons, records with unmapped mates etc.) A`mates_status`metadata column (accessed with`mcols\` indicates which records were paired.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 12: readGAlignmentsList_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 12: readGAlignmentsList_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 galist
 ```
@@ -824,20 +802,20 @@ galist
 Non-mated reads are returned as groups by QNAME and contain any number of records. Here the non-mate groups range in size from 1 to 9. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 13: readGAlignmentsList_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 13: readGAlignmentsList_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 non_mates <- galist[unlist(mcols(galist)$mate_status) == "unmated"]
 table(elementNROWS(non_mates))
 ```
 
-------------------------------------------------------------------------
+
 
 ##How to read and process a big BAM file by chunks in order to reduce memory usage
 
 A large BAM file can be iterated through in chunks by setting a `yieldSize` on the `BamFile` object. As sample data we use the `pasillaBamSubset` data package described in the introduction. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 5: readGAlignments_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 5: readGAlignments_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 un1 <- untreated1_chr4()  # single-end reads
 gal <- readGAlignments(un1)
@@ -847,7 +825,7 @@ bf <- BamFile(un1, yieldSize=100000)
 Iteration through a BAM file requires that the file be opened, repeatedly queried inside a loop, then closed. Repeated calls to `readGAlignments` without opening the file first result in the same 100000 records returned each time. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 15: readGAlignments_by_chunk %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 15: readGAlignments_by_chunk %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 open(bf)
 cvg <- NULL
@@ -866,8 +844,6 @@ close(bf)
 cvg
 ```
 
-------------------------------------------------------------------------
-
 ##How to compute read coverage}
 
 The "read coverage" is the number of reads that cover a given genomic position. Computing the read coverage generally consists in computing the coverage at each position in the genome. This can be done with the `coverage` function.
@@ -876,7 +852,7 @@ As sample data we use the `pasillaBamSubset` data package described in the intro
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %%% code chunk number 16: coverage_1 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 un1 <- untreated1_chr4()  # single-end reads
 reads1 <- readGAlignments(un1)
@@ -888,7 +864,7 @@ Coverage on chr4:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %%% code chunk number 17: coverage_2 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 cvg1$chr4
 ```
@@ -897,7 +873,7 @@ Average and max coverage:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %%% code chunk number 18: coverage_3 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 mean(cvg1$chr4)
 max(cvg1$chr4)
@@ -912,7 +888,7 @@ ChIP-Seq analysis usually involves finding peaks in read coverage. This process 
 Let's assume `cvg1` is the object returned by `coverage` . We can use the `slice` function to find the genomic regions where the coverage is greater or equal to a given threshold. So what this function does is it walks through the reads and counts how many times a read is consecutively greater than a given threshold, so in this way it finds the "hot spots" of coverage in this case, or peaks if this had been a Chip-Seq experiment. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 19: peaks_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 19: peaks_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 chr4_peaks <- IRanges::slice(cvg1$chr4, lower=500)
 chr4_peaks
@@ -922,7 +898,7 @@ length(chr4_peaks)  # nb of peaks
 The weight of a given peak can be defined as the number of aligned nucleotides that belong to the peak (a.k.a. the area under the peak in mathematics). It can be obtained with `sum`}: 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 20: peaks_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 20: peaks_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 sum(chr4_peaks)
 ```
@@ -932,7 +908,7 @@ sum(chr4_peaks)
 See introduction for a quick description of what **gene models** and `TxDb` objects are. We can use the `makeTxDbFromUCSC` function from the `GenomicFeatures` package to import a UCSC genome browser track as a `TxDb` object.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 21: makeTxDbFromUCSC_1 (eval = FALSE) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 21: makeTxDbFromUCSC_1 (eval = FALSE) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r, eval = FALSE}
 ## ### Internet connection required! Can take several minutes...
 txdb <- makeTxDbFromUCSC(genome="sacCer2", tablename="ensGene")
@@ -943,14 +919,14 @@ See `makeTxDbFromUCSC` in the `GenomicFeatures` package for more information.
 Note that some of the most frequently used gene models are available as TxDb packages. A TxDb package consists of a pre-made `TxDb` object wrapped into an annotation data package. Go to [TxDb](http://bioconductor.org/packages/release/BiocViews.html#___TxDb) to browse the list of available TxDb packages.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 22: TxDb.Hsapiens.UCSC.hg19.knownGene_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 22: TxDb.Hsapiens.UCSC.hg19.knownGene_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
 txdb
 ```
 
 Extract the transcript coordinates from this gene model: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 23: TxDb.Hsapiens.UCSC.hg19.knownGene_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 23: TxDb.Hsapiens.UCSC.hg19.knownGene_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 transcripts(txdb)
 ```
@@ -960,7 +936,7 @@ transcripts(txdb)
 See introduction for a quick description of what **gene models** and `TxDb` objects are. We can use the `makeTxDbFromBiomart` function from the `GenomicFeatures` package to retrieve a gene model from the Ensembl Mart.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 24: makeTxDbFromBiomart_1 (eval = FALSE) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 24: makeTxDbFromBiomart_1 (eval = FALSE) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r, eval=FALSE}
 ## ### Internet connection required! Can take several minutes...
 txdb <- makeTxDbFromBiomart(biomart="ensembl",
@@ -972,7 +948,7 @@ See ? `makeTxDbFromBiomart` in the `GenomicFeatures` package for more informatio
 Note that some of the most frequently used gene models are available as TxDb packages. A TxDb package consists of a pre-made `TxDb` object wrapped into an annotation data package. Go to \url{http://bioconductor.org/packages/release/BiocViews.html#\_\_\_TxDb} to browse the list of available TxDb packages.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 25: TxDb.Athaliana.BioMart.plantsmart22_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 25: TxDb.Athaliana.BioMart.plantsmart22_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 txdb <- TxDb.Athaliana.BioMart.plantsmart22
 txdb
@@ -981,469 +957,11 @@ txdb
 Extract the exon coordinates from this gene model:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 26: TxDb.Athaliana.BioMart.plantsmart22_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 26: TxDb.Athaliana.BioMart.plantsmart22_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ```{r}
 exons(txdb)
 ```
 
-##How to load a gene model from a GFF or GTF file
-
-We can use the `makeTxDbFromGFF` function from the `GenomicFeatures` package to import a GFF or GTF file as a `TxDb` object.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 27: makeTxDbFromGFF_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-gff_file <- system.file("extdata", "GFF3_files", "a.gff3",
-                        package="GenomicFeatures")
-txdb <- makeTxDbFromGFF(gff_file, format="gff3")
-txdb
-```
-
-See `makeTxDbFromGFF` in the `GenomicFeatures` package for more information.
-
-Extract the exon coordinates grouped by gene from this gene model: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 28: makeTxDbFromGFF_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```{r}
-exonsBy(txdb, by="gene")
-```
-
-##How to retrieve a gene model from \Biocpkg{AnnotationHub
-
-When a gene model is not available as a `GRanges` or
-`GRangesList` object or as a `Bioconductor` data package, it may
-be available on `AnnotationHub`.
-In this **HOWTO**, we will look for a gene model for Drosophila melanogaster on `AnnotationHub`, create a `hub' and then filter on Drosophila melanogaster:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 29: hub_1
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```{r}
-### Internet connection required!
-hub <- AnnotationHub()
-hub <- subset(hub, hub$species=='Drosophila melanogaster')
-```
-There are 87 files that match Drosophila melanogaster. If you look at
-the metadata in hub, you can see that the 7th record representes a
-GRanges object from UCSC
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 30: hub_2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```{r}
-length(hub)
-head(names(hub))
-head(hub$title, n=10)
-## then look at a specific slice of the hub object.
-hub[7]
-```
-So you can retrieve that dm3 file as a `GRanges` like this:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 31: hub_3
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```{r}
-gr <- hub[[names(hub)[7]]]
-summary(gr)
-```
-The metadata fields contain the details of file origin and content.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 32: hub_4
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```{r}
-metadata(gr)
-```
-Split the `GRanges` object by gene name to get a `GRangesList`
-object of transcript ranges grouped by gene.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 33: hub_5
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-txbygn <- split(gr, gr$name)
-```
-You can now use `txbygn` with the `summarizeOverlaps` function
-to prepare a table of read counts for RNA-Seq differential gene expression.
-
-Note that before passing `txbygn` to `summarizeOverlaps`,
-you should confirm that the seqlevels (chromosome names) in it match those
-in the BAM file. See `renameSeqlevels`, ? `keepSeqlevels`
-and `seqlevels` for examples of renaming seqlevels.
-
-
-##How to prepare a table of read counts for RNA-Seq differential
-            gene expression
-
-Methods for RNA-Seq gene expression analysis generally require a table of counts that summarize the number of reads that overlap or `hit' a 
-particular gene. In this **HOWTO** we count with the
-`summarizeOverlaps` function from the `GenomicAlignment`
-package and create a count table from the results. 
-
-Other packages that provide read counting are `subread` and 
-`easyRNASeq`. The `parathyroidSE` package vignette 
-contains a workflow on counting and other common operations required for differential expression analysis. 
-
-As sample data we use the `pasillaBamSubset` data package
-described in the introduction.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 34: count_1
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-d1_chr4(),  # single-end reads
-           untrt3=untreated3_chr4())  # paired-end reads
-```
-`summarizeOverlaps` requires the name of a BAM file(s) and a
-**gene model** to count against. See introduction for a quick
-description of what a **gene models** is.
-The gene model must match the genome build the reads in the BAM file were aligned to. For the pasilla data this is dm3 Dmelanogaster which is available as a `Bioconductor` package. Load the package and extract
-the exon ranges grouped by gene:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 35: count_2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-exbygene <- exonsBy(TxDb.Dmelanogaster.UCSC.dm3.ensGene, "gene")
-```
-
-`exbygene` is a `GRangesList` object with one list
-element per gene in the gene model.
-
-`summarizeOverlaps` automatically sets a `yieldSize`
-on large BAM files and iterates over them in chunks. When reading
-paired-end data set the singleEnd argument to FALSE.
-See ? `summarizeOverlaps` for details reguarding the
-count modes and additional arguments. 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 36: count_3
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-se <- summarizeOverlaps(exbygene, reads, mode="IntersectionNotEmpty")
-```
-The return object is a `SummarizedExperiment` with counts
-accessible with the `assays` accessor:
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 37: count_4
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-class(se)
-head(table(assays(se)$counts))
-```
-The count vector is the same length as `exbygene`:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 38: count_5
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-identical(length(exbygene), length(assays(se)$counts))
-```
-A copy of `exbygene` is stored in the `se` object and
-accessible with \Rcode{rowRanges} accessor:
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 39: count_6
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-rowRanges(se)
-```
-Two popular packages for RNA-Seq differential gene expression are
-`DESeq2` and `edgeR`. Tables of counts per gene are required
-for both and can be easily created with a vector of counts. Here we use the counts from our `SummarizedExperiment` object:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 40: count_table
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-colData(se)$trt <- factor(c("untrt", "untrt"), levels=c("trt", "untrt"))
-colData(se)
-
-deseq <- DESeqDataSet(se, design= ~ 1)
-
-edger <- DGEList(assays(se)$counts, group=rownames(colData(se)))
-```
-##How to summarize junctions from a BAM file containing RNA-Seq
-            reads
-
-As sample data we use the `pasillaBamSubset` data package
-described in the introduction.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 41: summarizeJunctions_1
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-un1 <- untreated1_chr4()  # single-end reads
-reads1 <- readGAlignments(un1)
-reads1
-```
-For each alignment, the aligner generated a CIGAR string that describes its "geometry", that is, the locations of insertions, deletions and junctions in the alignment. See the SAM Spec available on the SAMtools website for the details ([souece forge](http://samtools.sourceforge.net/).
-
-The `summarizeJunctions` function from the
-`GenomicAlignment` package can be used to summarize the junctions
-in reads1.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 42: summarizeJunctions_2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-junc_summary <- summarizeJunctions(reads1)
-junc_summary
-```
-See ? `summarizeJunctions` in the `GenomicAlignment`
-package for more information.
-
-##How to get the exon and intron sequences of a given gene
-
-The exon and intron sequences of a gene are essentially the DNA
-sequences of the introns and exons of all known transcripts of the gene. The first task is to identify all transcripts associated with the gene of interest. Our sample gene is the human TRAK2 which is involved in regulation of endosome-to-lysosome trafficking of membrane cargo. The Entrez gene id is `66008'. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 43: trak_1
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-trak2 <- "66008"
-```
-The `TxDb.Hsapiens.UCSC.hg19.knownGenet` data package contains the
-gene model corresponding to the UCSC `Known Genes' track.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 44: trak_2
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
-```
-The transcript ranges for all the genes in the gene model can be extracted
-with the `transcriptsBy` function from the `GenomicFeatures`
-package. They will be returned in a named `GRangesList` object
-containing all the transcripts grouped by gene. In order to keep only the transcripts of the TRAK2 gene we will subset the `GRangesList`
-object using the `[[` operator.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 45: trak_3
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-trak2_txs <- transcriptsBy(txdb, by="gene")[[trak2]]
-trak2_txs
-```
-trak2\_txs is a `GRanges` object with one range per
-transcript in the TRAK2 gene. The transcript names are stored in the 
-`tx_name` metadata column. We will need them to subset the
-extracted intron and exon regions:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 46: trak_4
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-trak2_tx_names <- mcols(trak2_txs)$tx_name
-trak2_tx_names
-```
-The exon and intron genomic ranges for all the transcripts in the gene model can be extracted with the `exonsBy` and
-`intronsByTranscript` functions, respectively. Both functions
-return a `GRangesList` object. Then we keep only the exon and intron
-for the transcripts of the TRAK2 gene by subsetting each `GRangesList`
-object by the TRAK2 transcript names.
-
-Extract the exon regions:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 47: trak_5
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-trak2_exbytx <- exonsBy(txdb, "tx", use.names=TRUE)[trak2_tx_names]
-elementNROWS(trak2_exbytx)
-```
-... and the intron regions:
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 48: trak_7
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-```[r]
-trak2_inbytx <- intronsByTranscript(txdb, use.names=TRUE)[trak2_tx_names]
-elementNROWS(trak2_inbytx)
-```
-Next we want the DNA sequences for these exons and introns.
-The `getSeq` function from the `Biostrings` package can
-be used to query a `BSgenome`} object with a set of genomic ranges and retrieve the corresponding DNA sequences.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 50: trak_9 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-trak2_ex_seqs <- getSeq(Hsapiens, trak2_exbytx)
-trak2_ex_seqs
-trak2_ex_seqs[["uc002uyb.4"]]
-trak2_ex_seqs[["uc002uyc.2"]]
-```
-
-... and the intron sequences:
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 51: trak_10 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-trak2_in_seqs <- getSeq(Hsapiens, trak2_inbytx)
-trak2_in_seqs
-trak2_in_seqs[["uc002uyb.4"]]
-trak2_in_seqs[["uc002uyc.2"]]
-```
-
-##How to get the CDS and UTR sequences of genes associated with colorectal cancer
-
-In this **HOWTO** we extract the CDS and UTR sequences of genes involved in colorectal cancer. The workflow extends the ideas presented in the previous **HOWTO** and suggests an approach for identifying disease-related genes.
-
-**Build a gene list**
-
-We start with a list of gene or transcript ids. If you do not have pre-defined list one can be created with the `KEGGREST` and `KEGGgraph` packages.
-
-Create a table of KEGG pathways and ids and search on the term \`Colorectal cancer'.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 52: cancer_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-li <- keggList("pathway", "hsa")
-ptag <- names(grep("Colorectal cancer", li, value=TRUE))
-ptag
-tag <- gsub("path:hsa", "", ptag)
-```
-
-Use the "05210" id to query the KEGG web resource (accesses the currently maintained data).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 53: cancer_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-dest <- tempfile()
-retrieveKGML(tag, "hsa", dest, method="auto")
-```
-
-The suffix of the KEGG id is the Entrez gene id. The `translateKEGGID2GeneID` simply removes the prefix leaving just the Entrez gene ids.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 54: cancer_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-crids <- as.character(parseKGML2DataFrame(dest)[,1])
-crgenes <- unique(translateKEGGID2GeneID(crids))
-head(crgenes)
-```
-
-##Identify genomic coordinates
-
-The list of gene ids is used to extract genomic positions of the regions of interest. The Known Gene table from UCSC will be the annotation and is available as a `Bioconductor` package.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 55: cancer_4 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-txdb <- TxDb.Hsapiens.UCSC.hg19.knownGene
-```
-
-If an annotation is not available as a `Bioconductor` annotation package it may be available in `AnnotationHub`. Additionally, there are functions in `GenomicFeatures` which can retrieve data from UCSC and Ensembl to create a `TxDb`. See ? `makeTxDbFromUCSC` for more information.
-
-As in the previous **HOWTO** we need to identify the transcripts corresponding to each gene. The transcript id (or name) is used to isolate the UTR and coding regions of interest. This grouping of transcript by gene is also used to re-group the final sequence results.
-
-The `transcriptsBy` function outputs both the gene and transcript identifiers which we use to create a map between the two. The `map` is a `CharacterList` with gene ids as names and transcript ids as the list elements.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 56: cancer_5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-txbygene <- transcriptsBy(txdb, "gene")[crgenes] ## subset on colorectal genes
-map <- relist(unlist(txbygene, use.names=FALSE)$tx_id, txbygene)
-map
-```
-
-Extract the UTR and coding regions. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 57: cancer_6 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-cds <- cdsBy(txdb, "tx")
-threeUTR <- threeUTRsByTranscript(txdb)
-fiveUTR <- fiveUTRsByTranscript(txdb)
-```
-
-Coding and UTR regions may not be present for all transcripts specified in `map`. Consequently, the subset results will not be the same length. This length discrepancy must be taken into account when re-listing the final results by gene.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 58: cancer_7 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-txid <- unlist(map, use.names=FALSE)
-cds <- cds[names(cds) %in% txid]
-threeUTR <- threeUTR[names(threeUTR) %in% txid]
-fiveUTR <- fiveUTR[names(fiveUTR) %in% txid]
-```
-
-Note the different lengths of the subset regions.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 59: cancer_8 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-length(txid) ## all possible transcripts
-length(cds)
-length(threeUTR)
-length(fiveUTR)
-```
-
-These objects are `GRangesListt`s with the transcript id as the outer list element.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 60: cancer_9 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-``` [r]
-cds
-```
-
-##Extract sequences from BSgenome
-
-The `BSgenome` packages contain complete genome sequences for a given organism.
-
-Load the `BSgenome` package for homo sapiens.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 61: cancer_10 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-genome <- BSgenome.Hsapiens.UCSC.hg19
-```
-
-Use \Rfunction{extractTranscriptSeqs} to extract the UTR and coding regions from the `BSgenome`. This function retrieves the sequences for an any `GRanges` or `GRangesListt` (i.e., not just transcripts like the name implies).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 62: cancer_11 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-threeUTR_seqs <- extractTranscriptSeqs(genome, threeUTR) 
-fiveUTR_seqs <- extractTranscriptSeqs(genome, fiveUTR) 
-cds_seqs <- extractTranscriptSeqs(genome, cds) 
-```
-
-The return values are `DNAStringSet` objects.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 63: cancer_12 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-cds_seqs
-```
-
-Our final step is to collect the coding and UTR regions (currently organzied by transcript) into groups by gene id. The `relist` function groups the sequences of a `DNAStringSet` object into a `DNAStringSetList` object, based on the specified `skeleton`} argument. The `skeleton`} must be a list-like object and only its shape (i.e. its element lengths) matters (its exact content is ignored). A simple form of `skeleton`} is to use a partitioning object that we make by specifying the size of each partition. The partitioning objects are different for each type of region because not all transcripts had a coding or 3' or 5' UTR region defined.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 64: cancer_13 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-lst3 <- relist(threeUTR_seqs, PartitioningByWidth(sum(map %in% names(threeUTR))))
-lst5 <- relist(fiveUTR_seqs, PartitioningByWidth(sum(map %in% names(fiveUTR))))
-lstc <- relist(cds_seqs, PartitioningByWidth(sum(map %in% names(cds))))
-```
-
-There are 239 genes in `map` each of which have 1 or more transcripts. The table of element lengths shows how many genes have each number of transcripts. For example, 47 genes have 1 transcript, 48 genes have 2 etc.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 65: cancer_14 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-length(map)
-table(elementNROWS(map))
-```
-
-The lists of DNA sequences all have the same length as `map` but one or more of the element lengths may be zero. This would indicate that data were not available for that gene. The tables below show that there was at least 1 coding region available for all genes (i.e., none of the element lengths are 0). However, both the 3' and 5' UTR results have element lengths of 0 which indicates no UTR data were available for that gene.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% code chunk number 66: cancer_15 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-``` [r]
-table(elementNROWS(lstc))
-table(elementNROWS(lst3))
-names(lst3)[elementNROWS(lst3) == 0L] ## genes with no 3' UTR data
-table(elementNROWS(lst5))
-names(lst5)[elementNROWS(lst5) == 0L] ## genes with no 5' UTR data
-```
 
 ##How to create DNA consensus sequences for read group \`families'}
 
@@ -1458,7 +976,7 @@ The goal is to elimininate noise by grouping the reads by common start position 
 Load the BAM file into a GAlignments object.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 67: cseq_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 67: cseq_1 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 bamfile <- system.file("extdata", "ex1.bam", package="Rsamtools")
 param <- ScanBamParam(what=c("seq", "qual"))
@@ -1468,7 +986,7 @@ gal <- readGAlignments(bamfile, use.names=TRUE, param=param)
 Use the `sequenceLayer` function to **lay** the query sequences and quality strings on the reference.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 68: cseq_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 68: cseq_2 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 qseq <- setNames(mcols(gal)$seq, names(gal))
 qual <- setNames(mcols(gal)$qual, names(gal))
@@ -1481,7 +999,7 @@ qual_on_ref <- sequenceLayer(qual, cigar(gal),
 Split by chromosome.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 69: cseq_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 69: cseq_3 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 qseq_on_ref_by_chrom <- splitAsList(qseq_on_ref, seqnames(gal))
 qual_on_ref_by_chrom <- splitAsList(qual_on_ref, seqnames(gal))
@@ -1491,7 +1009,7 @@ pos_by_chrom <- splitAsList(start(gal), seqnames(gal))
 For each chromosome generate one GRanges object that contains unique alignment start positions and attach 3 metadata columns to it: the number of reads, the query sequences, and the quality strings.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 70: cseq_4 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 70: cseq_4 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 gr_by_chrom <- lapply(seqlevels(gal),
   function(seqname)
@@ -1516,7 +1034,7 @@ gr_by_chrom <- lapply(seqlevels(gal),
 Concatenate all the GRanges objects obtained in (4) together in 1 big GRanges object:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 71: cseq_5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 71: cseq_5 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 gr <- do.call(c, gr_by_chrom)
 seqinfo(gr) <- seqinfo(gal)
@@ -1525,7 +1043,7 @@ seqinfo(gr) <- seqinfo(gal)
 ```
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 72: cseq_6 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 72: cseq_6 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 gr[1:6]
 ```
@@ -1533,7 +1051,7 @@ gr[1:6]
 Look at qseq_on_ref and qual_on_ref.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 73: cseq_7 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 73: cseq_7 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 qseq_on_ref
 qual_on_ref
@@ -1542,7 +1060,7 @@ qual_on_ref
 2 reads align to start position 13. Let's have a close look at their sequences:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 74: cseq_8 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 74: cseq_8 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 mcols(gr)$qseq_on_ref[[6]]
 ```
@@ -1550,7 +1068,7 @@ mcols(gr)$qseq_on_ref[[6]]
 and their qualities:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 75: cseq_9 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
+%%% code chunk number 75: cseq_9 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
 ``` [r]
 mcols(gr)$qual_on_ref[[6]]
 ```
@@ -1562,7 +1080,7 @@ Note that the sequence and quality strings are those projected to the reference 
 For each start position, remove reads with under-represented sequence (e.g. threshold = 20% for the data used here which is low coverage). A unique number is assigned to each unique sequence. This will make future calculations easier and a little bit faster.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 76: cseq_10 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 76: cseq_10 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 qseq_on_ref <- mcols(gr)$qseq_on_ref
 tmp <- unlist(qseq_on_ref, use.names=FALSE)
@@ -1572,7 +1090,7 @@ qseq_on_ref_id <- relist(match(tmp, tmp), qseq_on_ref)
 Quick look at `qseq_on_ref_id': It's an IntegerList object with the same length and "shape" as`qseq_on_ref'.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 77: cseq_11 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 77: cseq_11 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 qseq_on_ref_id
 ```
@@ -1580,7 +1098,7 @@ qseq_on_ref_id
 Remove the under represented ids from each list element of qseq_on_ref_id:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 78: cseq_12 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 78: cseq_12 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 qseq_on_ref_id2 <- endoapply(qseq_on_ref_id,
     function(ids) ids[countMatches(ids, ids) >= 0.2 * length(ids)])
@@ -1589,7 +1107,7 @@ qseq_on_ref_id2 <- endoapply(qseq_on_ref_id,
 Remove corresponding sequences from qseq_on_ref:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 79: cseq_13 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 79: cseq_13 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 tmp <- unlist(qseq_on_ref_id2, use.names=FALSE)
 qseq_on_ref2 <- relist(unlist(qseq_on_ref, use.names=FALSE)[tmp],
@@ -1601,7 +1119,7 @@ qseq_on_ref2 <- relist(unlist(qseq_on_ref, use.names=FALSE)[tmp],
 Compute 1 consensus matrix per chromosome:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 80: cseq_14 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 80: cseq_14 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 split_factor <- rep.int(seqnames(gr), elementNROWS(qseq_on_ref2))
 qseq_on_ref2 <- unlist(qseq_on_ref2, use.names=FALSE)
@@ -1620,14 +1138,14 @@ cm_by_chrom is a list of consensus matrices. Each matrix has 17 rows
 (1 per letter in the DNA alphabet) and 1 column per chromosome position.
 ```
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 81: cseq_15 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 81: cseq_15 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 lapply(cm_by_chrom, dim)
 ```
 Compute the consensus string from each consensus matrix. We'll put "+" in the strings wherever there is no coverage for that position, and "N" where there is coverage but no consensus.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 82: cseq_16 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 82: cseq_16 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 cs_by_chrom <- lapply(cm_by_chrom,
     function(cm) {
@@ -1644,7 +1162,7 @@ cs_by_chrom <- lapply(cm_by_chrom,
 The new consensus strings.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-%%% code chunk number 83: cseq_17 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% code chunk number 83: cseq_17 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ``` [r]
 cs_by_chrom
 ```
@@ -1725,7 +1243,7 @@ plotGRanges = function (x, xlim = x, col = "black", sep = 0.5, xlimits = c(0,
 
 Let's visualize `ir` and several intra-range operations.
 
-```{r lkir,fig=TRUE, out.height="800px"}
+```{r lkir}
 par(mfrow=c(4,1), mar=c(4,2,2,2))
 plotRanges(ir, xlim=c(0,60))
 plotRanges(reduce(ir), xlim=c(0,60))
@@ -1749,7 +1267,7 @@ gir = GRanges(seqnames="chr1", ir, strand=c(rep("+", 4), rep("-",3)))
 
 Let's assume the intervals represent genes. The following plots illustrate the identification of transcription start sites (green), upstream promoter regions (purple), downstream promoter regions (brown).
 
-```{r dopr,fig=TRUE, out.height="800px", out.width="500px"}
+```{r dopr}
 par(mfrow=c(4,1), mar=c(4,2,2,2))
 plotGRanges(gir, xlim=c(0,60))
 plotGRanges(resize(gir,1), xlim=c(0,60),col="green")

@@ -374,6 +374,112 @@ table(true=tissue, cluster=hclusters)
 
 In both cases we do see that, with some exceptions, each tissue is uniquely represented by one of the clusters. In some instances, the one tissue is spread across two tissues, which is due to selecting too many clusters. Selecting the number of clusters is generally a challenging step in practice and an active area of research.
 
+In both cases we do see that, with some exceptions, each tissue is uniquely represented by one of the clusters. In some instances, the one tissue is spread across two tissues, which is due to selecting too many clusters. Selecting the number of clusters is generally a challenging step in practice and an active area of research.
+
+<a name="kmeans"></a>
+
+## K-means clustering
+The K-means approach, like many clustering methods, is highly algorithmic (can’t be summarized in a formula) and is iterative. The basic idea is that you are trying to find the centroids of a fixed number of clusters of points in a high-dimensional space. In two dimensions, you can imagine that there are a bunch of clouds of points on the plane and you want to figure out where the centers of each one of those clouds is.
+
+The K-means approach is a partitioning approach, whereby the data are partitioned into groups at each iteration of the algorithm. One requirement is that you must pre-specify how many clusters there are. Of course, this may not be known in advance, but you can guess and just run the algorithm anyway. Afterwards, you can change the number of clusters and run the algorithm again to see if anything changes.
+
+The outline of the algorithm is
+
+Fix the number of clusters at some integer greater than or equal to 2
+
+Start with the “centroids” of each cluster; initially you might just pick a random set of points as the centroids
+
+Assign points to their closest centroid; cluster membership corresponds to the centroid assignment
+
+Reclaculate centroid positions and repeat.
+
+This approach, like most clustering methods requires a defined distance metric, a fixed number of clusters, and an initial guess as to the cluster centriods. There’s no set approach to determining the initial configuration of centroids, but many algorithms simply randomly select data points from your dataset as the initial centroids.
+
+The K-means algorithm produces
+
+A final estimate of cluster centroids (i.e. their coordinates)
+
+An assignment of each point to their respective cluster
+
+Using the `kmeans` function to perform k-means clustering, centroids are chosen by random from the observations based on the number of desired clusters. Membership is then assigned based on the closest centroid.
+Centroids are recalculated and process is repeated.
+
+As an example, let's run k-means on the samples in the space of the first two genes:
+
+```{r kmeans, fig.cap="Plot of gene expression for first two genes (order of appearance in data) with color representing tissue (left) and clusters found with kmeans (right).",fig.width=10.5,fig.height=5.25}
+set.seed(1)
+km <- kmeans(t(e[1:2,]), centers=7)
+names(km)
+
+mypar(1,2)
+plot(e[1,], e[2,], col=as.fumeric(tissue), pch=16)
+plot(e[1,], e[2,], col=km$cluster, pch=16)
+```
+
+In the first plot, color represents the actual tissues, while in the second, color represents the clusters that were defined by `kmeans`. We can see from tabulating the results that this particular clustering exercise did not perform well:
+
+```{r kmtable}
+km <- kmeans(t(e[1:2,]), centers=7)
+table(true=tissue,cluster=km$cluster)
+```
+
+This is very likely due to the fact that the first two genes are not informative regarding tissue type. We can see this in the first plot above. If we instead perform k-means clustering using all of the genes, we obtain a much improved result. To visualize this, we can use an MDS plot:
+
+
+```{r kmeans_mds, fig.cap="Plot of gene expression for first two PCs with color representing tissues (left) and clusters found using all genes (right).",fig.width=10.5,fig.height=5.25}
+km <- kmeans(t(e), centers=7)
+mds <- cmdscale(d)
+
+mypar(1,2)
+plot(mds[,1], mds[,2]) 
+plot(mds[,1], mds[,2], col=km$cluster, pch=16)
+```
+
+By tabulating the results, we see that we obtain a similar answer to that obtained with hierarchical clustering.
+
+```{r tissuetable}
+table(true=tissue,cluster=km$cluster)
+```
+
+
+<a name="heatmap"></a>
+
+#### Heatmaps
+
+Heatmaps are ubiquitous in the genomics literature. They are very useful plots for visualizing the measurements for a subset of rows over all the samples. A *dendrogram* is added on top and on the side that is created with hierarchical clustering. We will demonstrate how to create heatmaps from within R. Let's begin by defining a color palette:
+
+```{r colorramp}
+library(RColorBrewer) 
+hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
+```
+
+Now, pick the genes with the top variance over all samples:
+
+```{r genefilter, message=FALSE}
+library(genefilter)
+
+```
+
+While a `heatmap` function is included in R, we recommend the `heatmap.2` function from the `gplots` package on CRAN because it is a bit more customized. For example, it stretches to fill the window. Here we add colors to indicate the tissue on the top:
+
+```{r heatmap2,message=FALSE,fig.cap="Heatmap created using the 40 most variable genes and the function heatmap.2.", fig.width=10.5,fig.height=5.25}
+library(RColorBrewer) 
+hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
+library(gplots) ##Available from CRAN
+library(genefilter)
+rv <- rowVars(e)
+idx <- order(-rv)[1:40]
+cols <- palette(brewer.pal(8, "Dark2"))[as.fumeric(tissue)]
+head(cbind(colnames(e),cols))
+heatmap.2(e[idx,], labCol=tissue,
+          trace="none", 
+          ColSideColors=cols, 
+          col=hmcol)
+```
+
+We did not use tissue information to create this heatmap, and we can quickly see, with just 40 genes, good separation across tissues.
+
+
 88888888888888888888888888888888888888888888888888
 
 **Other exploratory analysis techniques** 
@@ -777,7 +883,9 @@ If we define the following two dimensional vector...
 
 
 $$(\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) \approx  \left\{[\mathbf{U}_1 \mathbf{U}_2] (\mathbf{Z}_i-\mathbf{Z}_j)\right\}^\top\left\{[\mathbf{U}_1 \mathbf{U}_2]  (\mathbf{Z}_i-\mathbf{Z}_j)\right\}$$
+
 $$(\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) =   (\mathbf{Z}_i-\mathbf{Z}_j)^\top[\mathbf{U}_1 \mathbf{U}_2]^\top[\mathbf{U}_1 \mathbf{U}_2](\mathbf{Z}_i-\mathbf{Z}_j)$$
+
 $$\mathbf{Y}_i - \mathbf{Y}_j)^\top(\mathbf{Y}_i - \mathbf{Y}_j) =   (\mathbf{Z}_i-\mathbf{Z}_j)^\top(\mathbf{Z}_i-\mathbf{Z}_j)$$
 
 This derivation tells us that the distance between samples $i$ and $j$ is approximated by the distance between two dimensional points.
@@ -794,7 +902,7 @@ PC1 <- s$d[1]*s$v[,1]
 PC2 <- s$d[2]*s$v[,2]
 mypar(1,1)
 plot(PC1,PC2,pch=21,bg=as.numeric(group))
-legend("bottomright",levels(group),col=seq(along=levels(group)),pch=15,cex=1.5)
+legend("bottomright",levels(group),col=seq(along=levels(group)),pch=15,cex=1)
 ```
 
 Note that the points separate by tissue type as expected. Now the accuracy of the approximation above depends on the proportion of variance explained by the first two principal components. As we showed above, we can quickly see this by plotting the variance explained plot:
@@ -810,7 +918,7 @@ PC3 <- s$d[3]*s$v[,3]
 PC4 <- s$d[4]*s$v[,4]
 mypar(1,1)
 plot(PC3,PC4,pch=21,bg=as.numeric(group))
-legend("bottomright",levels(group),col=seq(along=levels(group)),pch=15,cex=1.5)
+legend("bottomleft",levels(group),col=seq(along=levels(group)),pch=15,cex=1)
 ```
 
 Note that the 4th PC shows a strong separation within the kidney samples. Later we will learn about batch effects, which might explain this finding. 
@@ -843,7 +951,7 @@ for(i in 1:2){
 
 
 
-Why dimension reduction is useful; example: exploratory data analysis with the tissueGeneExpression dataset.
+In summary: Why dimension reduction is useful; example: exploratory data analysis with the tissueGeneExpression dataset.Assist in guiding clustering analysis, gut checks.
 ```{r}
 library(rafalib)
 library(gplots) ##Available from CRAN
@@ -861,27 +969,30 @@ d <- dist(t(mat))
 mds <- cmdscale(d)
 dv = diag(s$d)%*%t(s$v)
 dv = t(dv)
+```
+
+
+```{r}
 par(pch=19)
 mypar(1,2)
 
 plot(pc$x[,1],pc$x[,2],col=cols,main = "PCA",
 xlab="PC1",ylab="PC2")
-legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15)
-
+legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15, cex = 0.75)
 
 plot(dv[,1],dv[,2],col=cols,main = "SVD",
 xlab="PC1",ylab="PC2")
-legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15)
+legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15, cex = 0.75)
 
 plot(pc$x[,1],pc$x[,2],col=cols,main = "PCA",
 xlab="PC1",ylab="PC2")
-legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15)
+legend("bottomright",levels(f),col=seq(along=levels(f)),pch=15, cex = 0.75))
 
 plot(mds[,1],mds[,2],col= cols,main = "MDS",
 xlab="First dimension",ylab="Second dimension")
-legend("bottomleft",levels(f),col=seq(along=levels(f)),pch=15)
+legend("bottomleft",levels(f),col=seq(along=levels(f)),pch=15, cex = 0.75))
 ```
-Little between PCA.SVD and MDS aside from sign flip.
+Little differences between PCA.SVD and MDS aside from sign flip.
 
 
 
