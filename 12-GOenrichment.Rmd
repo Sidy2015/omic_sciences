@@ -524,10 +524,10 @@ table(fnegsea$padj < 0.05)
 ```
 There are over 700 terms for both the
 positive and negative GSEA enrichments.
-How do we make sense of them all?
+How do we make sense of them all? 
 
 You could look at just the most extreme
-scores:
+scores with the lowest adjusted pvalues:
 
 ```{r}
 ### GO enrichment analysis
@@ -572,7 +572,124 @@ sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=FALSE)
 hx = pairwise_termsim(nego, semData = sapGO)
 emapplot(hx, showCategory = 15)
 ```
-Another approach is to collapse the terms by semantic similarity.
+Another approach is to collapse the GO terms by semantic similarity.
+Because GO is organized hierarchically in a parent-child structure, 
+a parent term can overlap with a large proportion with all its child
+terms. This means that many of the enriched GO terms are redundant.  
+The package `GOSemSim` allows you to do that. There are two basic ways
+of measurig GO term semanitic similarity, IC, information content
+and graph-based measures. IC-based measures are based on the closest
+common ancester and graph based measures are based on location and
+topology in the hierarchical GO graph. The Wang metric is a graph-based
+strategy and encodes GO terms into a numeric format. So lets try that
+on our data. The default metric for GOSemSim is Wang, and it's
+actually wrappped inside of a clusterProfiler function -- the clusterProfiler
+package is actually written by the same person as the GOSemSim
+package, so that makes sense. There's a really nice book here
+[clusterProfiler/GOSemSim packages](https://yulab-smu.top/biomedical-knowledge-mining-book/GOSemSim.html).
+
+
+The function `simplify` internally calls GOSemSim (Yu et al. 2010) to calculate semantic similarity among GO terms and remove those highly similar terms by keeping one representative term. The simplify() method apply select_fun (which can be a user defined function) to feature by to select one representative term from redundant terms (which have similarity higher than cutoff).
+
+
+```{r}
+
+simp = clusterProfiler::simplify(gse)
+
+```
+Another way of measuring redundancy or similarity 
+between GO terms is simply to look at the overlap 
+between geneSets. There are two metrics to measure overlaps: one is called
+the **overlap coefficient**, which is defined by the length of the
+intersection between two GO terms divided by the length of the
+shortest GO term. A more stringent approach is the **Jaccard 
+coefficient**,which is the length of the intersection divided 
+by the union of the two GO terms. By modifying the simplify 
+function I created a new function that implements these
+measures of redundancies:
+
+
+```{r}
+
+calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCategory = 200, keytype = "GENENAME",ont = "BP",orgDb = "org.Sc.sgd.db") { ## tso satisfy codetools for calling gather
+    
+  overlapcoeff <- function (x, y) {
+
+    x <- unlist(x)
+    y <- unlist(y)
+    lenx = length(x)
+    leny = length(y)
+
+    len = c(lenx,leny)
+    mn = which.min(len)
+    int = length(intersect(x, y))
+    overcoeff = int/len[mn]
+    overcoeff
+}
+  jaccard <- function (x, y) {
+
+    x <- unlist(x)
+    y <- unlist(y)
+    lenx = length(x)
+    leny = length(y)
+
+    len = c(lenx,leny)
+    
+    int = length(intersect(x, y))
+    un  = length(union(x,y))
+    jaccard = int/un
+    jaccard
+}
+  
+  
+    gs = res
+    res = data.frame(res,stringsAsFactors = F)
+    res = res %>% arrange(p.adjust)
+    mx = matrix(rep(NA,showCategory*showCategory),nrow=showCategory,ncol=showCategory)
+    
+    colnames(mx) = res$ID
+    rownames(mx) = res$ID
+    
+    yGO= clusterProfiler:::get_GO_data(orgDb,ont,keytype)
+    ygo = get("PATHID2EXTID",envir=yGO)
+    
+    mx[upper.tri(mx)]=888
+    m = reshape2::melt(mx, value.name = "overlap",as.is = TRUE,varnames = c("go1","go2"),na.rm = T)
+    m1 = match(m$go1,names(ygo))
+    m2 = match(m$go2,names(ygo))
+    
+    m$overlap = mapply(select_fun,ygo[m1],ygo[m2])
+    
+    
+    wm = which(m$overlap < cutoff)
+    if(length(wm) > 0) m = m[-wm,]
+    
+    m1=match(m$go1,res$ID)
+    m$padj1=res$p.adjust[m1]
+    m1=match(m$go2,res$ID)
+    m$padj2=res$p.adjust[m1]
+    m=m%>% mutate(gotoremove= m%>%select(padj1,padj2)%>% apply(MARGIN = 1, FUN = function(x) which.max(x)))
+    
+    
+   
+    w1 = which(m$gotoremove == 1)
+    w2 = which(m$gotoremove == 2)
+    if(length(w1) > 0) m$gotoremove[w1]=m$go1[w1]
+    if(length(w2) > 0) m$gotoremove[w2]=m$go2[w2]
+    wres = c(w1,w2)
+    if(length(wres) > 0) res = res[!res$ID %in% m$gotoremove,]
+    
+    gs@result = res
+    gs
+  }
+
+
+```
+
+
+
+
+
 The package `ViSEAGO` combined with `topGO` allows you to do that.
 Here is the setup:
 
@@ -849,7 +966,7 @@ ego <- clusterProfiler::enrichGO(
         minGSSize = 15,
         maxGSSize = 200,
         pvalueCutoff  = 0.05,
-        qvalueCutoff = 1)
+        qvalueCutoff = 0.05)
 
 goplot(ego)
 ### 'A universal enrichment analyzer'
@@ -880,7 +997,33 @@ hse <- clusterProfiler::gseGO(
   by = "fgsea"
 )
 goplot(hse)
-sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=FALSE)
+sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+h = calcOverGOcoeff(res=hse,showCategory = nrow(data.frame(hse)),cutoff=0.5,select_fun = overlapcoeff,orgDb = "org.Hs.eg.db",keytype="SYMBOL")
+x = pairwise_termsim(h, semData = sapGO,showCategory = nrow(h))
+tp= treeplot(x, hclust_method = "ward.D2",showCategory = nrow(x),nCluster=12)
+dp=tp$data
+wna=which(is.na(dp$label))
+
+dp=dp[-wna,]
+s=split(dp$label,dp$group)
+
+s[1]
+s[2]
+s[3]
+s[4]
+s[5]
+s[6]
+s[7]
+s[8]
+s[9]
+s[10]
+s[11]
+s[12]
+
+
+
+
+
 hx = pairwise_termsim(hse, semData = sapGO)
 px <- treeplot(hx)
 p2<- treeplot(hx, hclust_method = "ward.D2")
