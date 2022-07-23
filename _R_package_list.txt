@@ -36,8 +36,8 @@ RColorBrewer
 genefilter
 qvalue
 tissuesGeneExpression
-MASS
 gplots
+MASS
 sva
 ShortRead
 fastqcr
@@ -63,4 +63,10 @@ clusterProfiler
 fgsea
 enrichplot
 ggplot2
+DOSE
+GOSemSim
+ViSEAGO
+topGO
 org.Sc.sgd.db
+GOenrichment
+data.table

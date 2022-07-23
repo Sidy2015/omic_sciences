@@ -5,5 +5,5 @@ rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconducter.Rmd",
   "06-distance-and-dimension-reduction.Rmd",
 "07-confounding.Rmd","08-NGS-pipeline.Rmd","09-annotation.Rmd",
 "10-RNA-seq_DESeq2.RMD","11-RNAseq-limma.Rmd",
-"12-GSEA.Rmd"]
+"12-GOenrichment.Rmd"]
 

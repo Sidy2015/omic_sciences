@@ -1,14 +1,9 @@
-<<<<<<< HEAD
+
 ---
 editor_options:
   markdown:
     wrap: 40
 ---
-=======
-
-# Gene Set Enrichment Analysis
->>>>>>> 76c16d463fa273bd8d94966c4b198862d0b955e9
-
 # Gene Set Enrichment Analysis
 
 ```{r setup, include=FALSE}
@@ -825,11 +820,17 @@ maxGSSize = 150,
 verbose = TRUE,
 OrgDb = "org.Sc.sgd.db",
 pAdjustMethod = "BH",
+by = "fgsea"
 )
+scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
 
 goplot(gse)
-x = pairwise_termsim(gse)
+scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+
+x = pairwise_termsim(gse, semData  = scGO, showCategory = 200)
 emapplot(x, showCategory = 20)
+p2 <- treeplot(x, hclust_method = "average")
+
 upsetplot(gse)
 dotplot(gse, showCategory = 5, split = ".sign") + facet_grid(. ~.sign)
 cnetplot(gse, categorySize="pvalue", foldChange=names(ygene)[1:10], showCategory = 3)
@@ -850,7 +851,7 @@ ego <- clusterProfiler::enrichGO(
         pvalueCutoff  = 0.05,
         qvalueCutoff = 1)
 
-
+goplot(ego)
 ### 'A universal enrichment analyzer'
 # henrich = clusterProfiler::enricher(
 #   gene = names(ranks)[1:1500],
@@ -864,24 +865,25 @@ ego <- clusterProfiler::enrichGO(
 #   pAdjustMethod = "BH"
 # )
 
-### GSEA
-# hse <- clusterProfiler::gseGO(
-#   geneList = hanks,
-#   ont = "BP",
-#   keyType = "ENTREZID",
-#   
-#   minGSSize = 15,
-#   maxGSSize = 200,
-#   
-#   scoreType = "pos",
-#   
-#   verbose = TRUE,
-#   OrgDb = "org.Hs.eg.db",
-#   
-#   by = "fgsea"
-# )
-# goplot(hse)
-
+## GSEA
+hse <- clusterProfiler::gseGO(
+  geneList = ranks,
+  ont = "BP",
+  keyType = "SYMBOL",
+  eps = 0,
+  minGSSize = 15,
+  maxGSSize = 200,
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.05,
+  verbose = TRUE,
+  OrgDb = "org.Hs.eg.db",
+  by = "fgsea"
+)
+goplot(hse)
+sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=FALSE)
+hx = pairwise_termsim(hse, semData = sapGO)
+px <- treeplot(hx)
+p2<- treeplot(hx, hclust_method = "ward.D2")
 
 ```
 Let's see how well these agree
