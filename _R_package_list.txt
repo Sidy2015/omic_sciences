@@ -69,4 +69,5 @@ ViSEAGO
 topGO
 org.Sc.sgd.db
 GOenrichment
+"biomaRt"
 data.table
