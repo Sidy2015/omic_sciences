@@ -625,11 +625,14 @@ based on the input fitness threshold cutoff set by `sig`, typically = 1.
 Just like for fgsea, we need a rank file, that is how we use ygene here:
 
 ```{r}
+library(GOenrichment)
 dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
 head(dfsig)
 table(dfsig$index)
 wna = which(is.na(dfsig$score))
 dfsig = dfsig[-wna,]
+table(dfsig$index)
+
 
 ygene = dfsig$score
 names(ygene) = dfsig$gene
@@ -1283,15 +1286,27 @@ Ok. Before we get back into that I just
 want to go over what GO enrichment does.
 So for a GO enrichment with a
 significant set of genes and a
-background list we can model the
+background list, in other words an over-representation
+GO analysis, we can model the
 association between genes and GO class
-using a hypergeometric distribution. The
-classical example for the hypergeometric
-is the ranomdly selection of k balls in
-an urn containing N totalballs, m white
+using a hypergeometric distribution. That is, we can calculate
+the probability of a gene belonging to a GO geneSet in our set of 
+significant genes compared to the probability of a gene belonging
+to that set in the background list (universe).
+The hypergeometric distribution is a probability distribution that describes 
+the probability of k successes (random draws for which the 
+object drawn has a specific feature) in n draws, from a population
+of size N that contains exactly K objects with that feature. For 
+reference, the binomial distribution describes the probabillity
+of k successes in n draws with replacement. For reference, the
+binomical distribution describes the probability of k successes
+in n draws with replacement. The
+classic example for the hypergeometric
+is the random selection of k balls in
+an urn containing N total balls, m white
 and n black balls, and the observation
 that the selection contains "x" marked
-ball.
+balls.
 
 To illustrate the way to perform the
 hypergeometric test, we will re-analyze
@@ -1315,7 +1330,7 @@ table(dfsig$index)
 
 ```
 
-There are often fitness scores that have
+As we saw before, there are often fitness scores that have
 NA values, so lets check for that right
 away and get rid of those.
 
@@ -1324,7 +1339,12 @@ wna  = which(is.na(dfsig$score))
 length(wna)
 dfsig = dfsig[-wna,]
 table(dfsig$index)
+
 ```
+
+
+
+
 
 We define the parameters of the
 hypergeometric test in the following
@@ -1353,7 +1373,7 @@ significant genes have a GO annotation:
 N = nrow(dfsig)
 
 # moving forward we should also filter out geneSets
-# this is done inside the function:
+# but this is done inside the runGORESP function:
 yGOBP = lapply(yGOBP.gmt,intersect,dfsig$gene)
 
 ```
@@ -1369,13 +1389,14 @@ PROCESS).
 ```{r}
 w = which(names(yGOBP)=="ARGININE BIOSYNTHETIC PROCESS")
 yGOBP[[w]]
+yGOBP.gmt[[w]]
 m = length(yGOBP[[w]])
 m
 n = N-m
 n
 ```
 
-N = 4797 m = 9 n = N−m = 3806 #number of
+N = 4797 m = 9 n = N−m = 4788 #number of
 blackballs, i.e. the number of genes
 that have annotation distinct \# from
 the GO term (ARGININE BIOSYNTHETIC
@@ -1408,6 +1429,41 @@ arg = yGOBP$`ARGININE BIOSYNTHETIC PROCESS`
 int = intersect(arg,gene)
 x = length(int)
 x
+```
+Before we go on here, I can't help but notice that the `sampleFitdata` has
+a more recent version of gene names than my gmt files does. So I'm going to
+cheat a little here for the ARGININE geneset to my favor and 
+rename the offending rowname:
+
+```{r}
+dfsig$gene[5]
+g = grep("ARG5",rownames(sampleFitdata))
+rownames(sampleFitdata)[g] = "ARG5,6"
+
+
+```
+Then let's rerun goresp, and rerun compSCORE, it won't make
+too much difference but it serves to bring home the point of
+the importance of geneSets being updated, particularly in this
+case when there are only a handful of members in the geneSet.
+
+```{r}
+go_input = dfGOBP
+bp_input = yGOBP.gmt
+
+goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
+      mat = sampleFitdata, coln = 1, sig = 1, bp_input = bp_input,go_input = go_input)
+```
+And them `compSCORE`:
+
+```{r}
+dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
+head(dfsig)
+table(dfsig$index)
+wna = which(is.na(dfsig$score))
+dfsig = dfsig[-wna,]
+table(dfsig$index)
+
 ```
 
 We can use the phyper function, which gives the
