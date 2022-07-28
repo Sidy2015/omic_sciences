@@ -74,7 +74,8 @@ a practical data-related challenge. This book also includes the computer code th
 provides a solution to the problem and helps illustrate the
 concepts behind the solution. By running the code yourself, and seeing
 data generation and analysis happen live, you will get a better
-intuition for the concepts, the mathematics, and the theory.
+intuition for the concepts, the mathematics, and the theory. 
+For example, this Rmd code is available [here](https://github.com/gurinina/omic_sciences/blob/main/index.Rmd).
 
 We focus on the practical challenges faced by data analysts in the
 life sciences and introduce mathematics as a tool that can help us
