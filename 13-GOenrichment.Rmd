@@ -29,7 +29,7 @@ library(org.Hs.eg.db)})
 
 The .Rmd file for this chapter can be
 found
-[here](https://github.com/gurinina/omic_sciences/blob/main/12-GSEA.Rmd).
+[here](https://github.com/gurinina/omic_sciences/blob/main/13-GSEA.Rmd).
 To begin learning about GO set
 enrichmet analysis and the different
 methods that can be utiliazed to preform

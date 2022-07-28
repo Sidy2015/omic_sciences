@@ -14,7 +14,7 @@ library(IRanges)})
 
 ## Interval data on Estrogen Receptor binding
 
-The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/11-Chip-chip.Rmd).
+The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/12-Chip-chip.Rmd).
 
 A 2006 Nature Genetics paper by Carroll, Meyer, Song et al.
 describes the notion that a group of genes
