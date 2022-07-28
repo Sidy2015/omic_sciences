@@ -1440,8 +1440,27 @@ dfsig$gene[5]
 g = grep("ARG5",rownames(sampleFitdata))
 rownames(sampleFitdata)[g] = "ARG5,6"
 
+goresp$enrichInfo[1:3,1:10]
 
 ```
+This correction is more to point out an example of why it's important
+to keep geneSets updated. In this case, I know for a fact that none of the
+current geneSets we've used in the yeast datasets so far (gseGO,enrichGO) have
+updated that gene from "ARG5,6" to its current name "ARG56", neither does the
+`org.Sc.sgd.db` have the correct genename. So in this case my error was using
+a genename that was too recent! 
+
+In fact I can check that by typing:
+
+```{r}
+org.Sc.sgd_dbInfo()
+```
+And I can see that the last update was in March. The yeast GMT file I generarted
+was in January -- that's 6 months ago, so time for me to update that file...
+
+>>>>>>> 4ee818e (GO enrichment)
+>>>>>>> 43efd3b (GO enrichment)
+>>>>>>> debdc97 (GO enrichment)
 Then let's rerun goresp, and rerun compSCORE, it won't make
 too much difference but it serves to bring home the point of
 the importance of geneSets being updated, particularly in this
@@ -1465,12 +1484,44 @@ dfsig = dfsig[-wna,]
 table(dfsig$index)
 
 ```
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+So now for 'ARGININE BIOSYNTHETIC PROCESS' instead of a 
+P-value of 4.76e-11 we get a value of 2.02e-12
+
+```{r}
+goresp$enrichInfo[1:3,1:10]
+```
+
+Going back to our calculation:
+```{r}
+N = nrow(dfsig)
+
+# moving forward we should also filter out geneSets
+# but this is done inside the runGORESP function:
+yGOBP = lapply(yGOBP.gmt,intersect,dfsig$gene)
+arg = yGOBP$`ARGININE BIOSYNTHETIC PROCESS`
+gene = dfsig$gene[dfsig$index==1]
+arg = yGOBP$`ARGININE BIOSYNTHETIC PROCESS`
+m = length(arg)
+int = intersect(arg,gene)
+x = length(int)
+x
+n = N - m
+```
+>>>>>>> 4ee818e (GO enrichment)
+>>>>>>> 43efd3b (GO enrichment)
+>>>>>>> debdc97 (GO enrichment)
 
 We can use the phyper function, which gives the
 cumulative probability of the hypergeometric
 distribution at a specified value where again:
 
-q is the number of white balls drawn without replacment
+q is the number of white balls drawn without replacment = x-1
 
 m is the number of white balls in the urn
 
@@ -1480,8 +1531,8 @@ k is the number of balls drawn from the urn
 
 ```{r}
 phyper(q = x-1, m, n, k, lower.tail = FALSE)
-goresp$enrichInfo$P[3]
-goresp$enrichInfo$nOverlap[3]
+goresp$enrichInfo$P[2]
+goresp$enrichInfo$nOverlap[2]
 ```
 
 So we get the same value. We can look at it
