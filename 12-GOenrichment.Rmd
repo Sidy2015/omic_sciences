@@ -25,7 +25,7 @@ library(topGO)
 library(org.Sc.sgd.db)
 library(org.Hs.eg.db)})
 ```
-<<<<<<< HEAD
+
 
 The .Rmd file for this chapter can be
 found
@@ -147,7 +147,7 @@ Jüri Reimand, Ruth Isserlin, Veronique Voisin, Mike Kucera, Christian Tannus-Lo
 
 Comprehensive quantification of DNA, RNA and proteins in biological samples is now routine. The resulting data are growing exponentially, and their analysis helps researchers discover novel biological functions, genotype–phenotype relationships and disease mechanisms1,2. However, analysis and interpretation of these data represent a major challenge for many researchers. Analyses often result in long lists of genes that require an impractically large amount of manual literature searching to interpret. A standard approach to addressing this problem is pathway enrichment analysis, which summarizes the large gene list as a smaller list of more easily interpretable pathways. Pathways are statistically tested for over-representation in the experimental gene list relative to what is expected by chance, using several common statistical tests that consider the number of genes detected in the experiment, their relative ranking and the number of genes annotated to a pathway of interest. For instance, experimental data containing 40% cell cycle genes are surprisingly enriched, given that only 8% of human protein-coding genes are involved in this process. In a recent example, we used pathway enrichment analysis to help identify histone and DNA methylation by the polycomb repressive complex (PRC2) as the first rational therapeutic target for ependymoma, one of the most prevalent childhood brain cancers3. This pathway is targetable by available drugs such as 5-azacytidine, which was used on a compassionate basis in a terminally ill patient and stopped rapid metastatic tumor growth3. In another example, we analyzed rare copynumber variants (CNVs) in autism and identified several significant pathways affected by gene deletions, whereas few significant hits were identified with case–control association tests of single genes or loci4,5. These examples illustrate the useful insights into biological mechanisms that can be achieved using pathway enrichment analysis.
 
->>>>>>> 76c16d463fa273bd8d94966c4b198862d0b955e9
+
 
 ## Application to diverse omics data
 
@@ -410,6 +410,11 @@ names(ranks) = prank$GeneName
 wdup = which(duplicated(names(ranks)))
 if(length(wdup) >0) ranks=ranks[-wdup]
 ```
+The .gmt is from a variety of sources that is mainly comprised  
+of GO ontology, but has also been supplemented with ontologies
+from other databases including, for example, MSIGDB, PANTHER, 
+NCI, and REACTOME.
+
 
 The to run fgsea:
 
@@ -472,10 +477,14 @@ let's look at the results:
 
 ```{r results}
 fnegsea = mygseatidy(fgseaRes)$nres
+fnegsea=fnegsea%>%filter(padj <= 0.05)
+
 fposgsea = mygseatidy(fgseaRes)$pres
+fposgsea=fposgsea%>%filter(padj <= 0.05)
+
 ```
 
-lets compare this to the output run by
+Let's compare this to the output run by
 the GSEA desktop version of Cytoscape
 covered in the paper. I would really
 encourage you to run on your own, it's a
@@ -505,21 +514,27 @@ ppos = read.delim(file = "STable8_gsea_report_for_na_pos.txt" ,stringsAsFactors 
 
 pneg = read.delim(file = "STable9_gsea_report_for_na_neg.txt" ,stringsAsFactors = F,
                   check.names = F)
-ppos = ppos %>% arrange(desc(ES),`FDR Q-VAL`,TERM)
-pneg = pneg %>% arrange(ES,`FDR Q-VAL`,TERM)
+ppos=ppos%>% filter(`FDR Q-VAL`<= 0.05)
 
-intersect(fposgsea$pathway[1:10],ppos$TERM[1:10])
+ppos = ppos %>% arrange(desc(ES),`FDR Q-VAL`,`TERM|SOURCE`)
 
-intersect(fnegsea$pathway[1:10],pneg$TERM[1:10])
+pneg=pneg%>% filter(`FDR Q-VAL`<= 0.05)
+
+
+pneg = pneg %>% arrange(ES,`FDR Q-VAL`,`TERM|SOURCE`)
+
+intersect(fposgsea$pathway[1:20],ppos$`TERM|SOURCE`[1:20])
+
+intersect(fnegsea$pathway[1:20],pneg$`TERM|SOURCE`[1:20])
 ```
 
-We have successfully found the GO
-enrihchments. 
+We have successfully found the GO enrihchments by the two methods, one by GSEA desktop
+and one by fgsea.
 
 ```{r}
 
-table(fposgsea$padj < 0.05)
-table(fnegsea$padj < 0.05)
+nrow(fposgsea)
+nrow(fnegsea)
 
 ```
 There are over 700 terms for both the
@@ -536,7 +551,7 @@ abline(v = 3500)
 abline(v = 1500)
 ego <- clusterProfiler::enrichGO(
         gene  = names(ranks)[1:1500],
-        OrgDb = org.Hs.eg.db,
+        OrgDb = "org.Hs.eg.db",
         keyType  = 'SYMBOL',
         universe = names(ranks),
         ont = "BP",
@@ -544,11 +559,11 @@ ego <- clusterProfiler::enrichGO(
         minGSSize = 15,
         maxGSSize = 200,
         pvalueCutoff  = 0.05,
-        qvalueCutoff = 1)
+        qvalueCutoff = 0.05)
 
 goplot(ego)
 dotplot(ego, showCategory=10) + ggtitle("positive enrichment")
-sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=FALSE)
+sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
 hx = pairwise_termsim(ego, semData = sapGO)
 emapplot(hx, showCategory = 15)
 ```
@@ -556,7 +571,7 @@ We can also look at athe negative enrichment, or the repressed end:
 ```{r}
 nego <- clusterProfiler::enrichGO(
         gene  = names(ranks)[13711:15211],
-        OrgDb = org.Hs.eg.db,
+        OrgDb = "org.Hs.eg.db",
         keyType  = 'SYMBOL',
         universe = names(ranks),
         ont = "BP",
@@ -568,14 +583,134 @@ nego <- clusterProfiler::enrichGO(
 
 goplot(nego)
 dotplot(nego, showCategory=10) + ggtitle("negative enrichment analysis")
-sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=FALSE)
+
 hx = pairwise_termsim(nego, semData = sapGO)
 emapplot(hx, showCategory = 15)
+
 ```
-Another approach is to collapse the GO terms by semantic similarity.
-Because GO is organized hierarchically in a parent-child structure, 
-a parent term can overlap with a large proportion with all its child
-terms. This means that many of the enriched GO terms are redundant.  
+
+How well do these enrichGO terms agree with the fgsea enrichment terms?
+
+We can look at the intersection but first to be fair we should
+run GSEA with only the GO terms and not the supplemented terms
+from MSIGDB, PANTHER, NCI, and REACTOME etc. So let's do that by
+generating a GSEA enrichment only from the GO terms. We can do
+that by filtering the fgeapos resulting only for GOBP or we could
+use the function gseGO to regenerated a new set of terms. In this 
+particular case, it doesn't really matter so let's use gseGO.
+
+For a simpler comparison, I am including a yeast dataset here.
+The data for this is in the GOenrichment package. If you list
+the GO enrichment package you'll see everything that is in it
+(just like you can do for any package):
+```{r}
+ls("package:GOenrichment")
+```
+What you see here are mostly functions except for `dfGOBP`,`hGOBP.gmt`,
+`sampleFitdata` and `yGOBP.gmt`. `sampleFitdata` contains sample
+yeast fitness data that we will use for looking for enrichments. Unlike
+expression data, fitness data is a measure of, in this case, strain
+`fitness`, or the requirement when grown in a particular stress. Typically,
+the stress is a drug, and the strain in question is a yeast deletion strain.
+So a fitness defect in a deletion strain tells you that the gene deleted
+in that strain is important for resistance to drug, which can be, among
+other genes, the drug target. We will go into this more when we talk
+about chemogenogics. `yGOBP.gmt` is the GO BP terms for yeast, and `dfGOBP`
+is related; it just carries the GO ID for these terms in a lookup table.
+Ok, so let's get some data from the yeast `sampleFitdata`. This is a matrix
+where every column is a sample. The function `compSCORE` returns a dataframe 
+designating significant scores from the input matrix of screening data 
+based on the input fitness threshold cutoff set by `sig`, typically = 1.
+
+Just like for fgsea, we need a rank file, that is how we use ygene here:
+
+```{r}
+dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
+head(dfsig)
+table(dfsig$index)
+wna = which(is.na(dfsig$score))
+dfsig = dfsig[-wna,]
+
+ygene = dfsig$score
+names(ygene) = dfsig$gene
+
+gse <- clusterProfiler::gseGO(
+geneList = ygene,
+ont = "BP",
+pvalueCutoff = 0.05,
+keyType = "GENENAME",
+eps = 0,
+minGSSize = 5,
+maxGSSize = 150,
+verbose = TRUE,
+OrgDb = "org.Sc.sgd.db",
+pAdjustMethod = "BH",
+by = "fgsea"
+)
+scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+
+goplot(gse)
+scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+
+x = pairwise_termsim(gse, semData  = scGO, showCategory = 200)
+emapplot(x, showCategory = 15,cex_category = 1.5)
+p2 <- treeplot(x, hclust_method = "average")
+p2
+upsetplot(gse)
+dotplot(gse, showCategory = 5, split = ".sign") + facet_grid(. ~.sign)
+cnetplot(gse, categorySize="pvalue", foldChange=names(ygene)[1:10], showCategory = 3)
+
+gseaplot2(gse, geneSetID = 1:5)
+
+
+## GSEA
+hse <- clusterProfiler::gseGO(
+  geneList = ranks,
+  ont = "BP",
+  keyType = "SYMBOL",
+  eps = 0,
+  minGSSize = 15,
+  maxGSSize = 200,
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.05,
+  verbose = TRUE,
+  OrgDb = "org.Hs.eg.db",
+  by = "fgsea"
+)
+goplot(hse)
+
+gseaplot2(hse, geneSetID = 1:5)
+```
+Let's see what the intersection of the terms from running GSEA
+and running over-representation analysis is:
+
+```{r}
+length(intersect(hse$Description[hse$enrichmentScore>=0],ego$Description))
+length(intersect(hse$Description[hse$enrichmentScore<0],nego$Description))
+
+length(intersect(hse$Description[hse$enrichmentScore>=0],ego$Description))/length(ego$Description)
+
+length(intersect(hse$Description[hse$enrichmentScore>=0],ego$Description))/length(hse$Description[hse$enrichmentScore>=0])
+
+length(intersect(hse$Description[hse$enrichmentScore<0],nego$Description))/length(nego$Description)
+
+length(intersect(hse$Description[hse$enrichmentScore<0],nego$Description))/length(hse$Description[hse$enrichmentScore<0])
+
+
+```
+
+The 2nd and the 4th percentages suggest that by testing just 10% of the genes in an over-representation GO analysis, we do nearly as well as using the entire list of genes in a GSEA analysis. This makes some sense because in GSEA the genes at the top
+and bottom of the list are weighted more heavily. The GO term set used right
+off the bat will be different; the scope of the over-representation analysis
+is limited to that of the genes in the querySet.
+
+This doesn't solve our problem though of handing the large number of GO
+terms and making sense of them, becausae we still wound up with ~700 terms
+at least for the positive end of the enrichment scores. Because GO is 
+organized hierarchically in a parent-child structure, a parent term 
+can overlap with a large proportion with all its child
+terms. This means that many of the enriched GO terms are redundant. So one
+thing you can do is to collapse the GO terms by semantic similarity.
 The package `GOSemSim` allows you to do that. There are two basic ways
 of measurig GO term semanitic similarity, IC, information content
 and graph-based measures. IC-based measures are based on the closest
@@ -593,11 +728,13 @@ The function `simplify` internally calls GOSemSim (Yu et al. 2010) to calculate 
 
 
 ```{r}
-
-simp = clusterProfiler::simplify(gse)
-
+sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+simp = clusterProfiler::simplify(hse,semData  = sapGO)
+simp$Description[1:10]
 ```
-Another way of measuring redundancy or similarity 
+
+But we're still left with nearly 500 terms.
+Another more straightforward way of measuring redundancy or similarity 
 between GO terms is simply to look at the overlap 
 between geneSets. There are two metrics to measure overlaps: one is called
 the **overlap coefficient**, which is defined by the length of the
@@ -611,12 +748,8 @@ measures of redundancies:
 
 ```{r}
 
-calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCategory = 200, keytype = "GENENAME",ont = "BP",orgDb = "org.Sc.sgd.db") { ## tso satisfy codetools for calling gather
-    
-  overlapcoeff <- function (x, y) {
+overlapcoeff <- function (x, y) {
 
-    x <- unlist(x)
-    y <- unlist(y)
     lenx = length(x)
     leny = length(y)
 
@@ -628,8 +761,6 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
 }
   jaccard <- function (x, y) {
 
-    x <- unlist(x)
-    y <- unlist(y)
     lenx = length(x)
     leny = length(y)
 
@@ -641,14 +772,18 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
     jaccard
 }
   
+
+calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCategory = 200, keytype = "GENENAME",ont = "BP",orgDb = "org.Sc.sgd.db") { 
+    library(dplyr)
+  
   
     gs = res
     res = data.frame(res,stringsAsFactors = F)
     res = res %>% arrange(p.adjust)
     mx = matrix(rep(NA,showCategory*showCategory),nrow=showCategory,ncol=showCategory)
     
-    colnames(mx) = res$ID
-    rownames(mx) = res$ID
+    colnames(mx) = res$ID[1:length(showCategory)]
+    rownames(mx) = res$ID[1:length(showCategory)]
     
     yGO= clusterProfiler:::get_GO_data(orgDb,ont,keytype)
     ygo = get("PATHID2EXTID",envir=yGO)
@@ -668,7 +803,7 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
     m$padj1=res$p.adjust[m1]
     m1=match(m$go2,res$ID)
     m$padj2=res$p.adjust[m1]
-    m=m%>% mutate(gotoremove= m%>%select(padj1,padj2)%>% apply(MARGIN = 1, FUN = function(x) which.max(x)))
+    m=m%>% dplyr::mutate(gotoremove= m%>%dplyr::select(padj1,padj2)%>% apply(MARGIN = 1, FUN =      function(x) which.max(x)))
     
     
    
@@ -685,181 +820,51 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
 
 
 ```
-
-
-
-
-
-The package `ViSEAGO` combined with `topGO` allows you to do that.
-Here is the setup:
-
+Let's try this function to see how we can reduce the GO term redundancy in the
+gseGO enrichment for both the yeast and the human. First let's tackle the yeast:
 
 ```{r}
-gene.df <- clusterProfiler::bitr(names(ranks), fromType = "SYMBOL",
-toType = c("ENSEMBL", "ENTREZID"),
-OrgDb = org.Hs.eg.db)
+y = calcOverGOcoeff(res=gse,showCategory = nrow(data.frame(gse)),cutoff=1,select_fun = overlapcoeff,orgDb = "org.Sc.sgd.db",keytype="GENENAME")
+x = pairwise_termsim(y, semData = scGO,showCategory = nrow(y))
+treeplot(x, hclust_method = "ward.D2",showCategory = nrow(x),nCluster=6)
 
-w=which(names(ranks)%in%gene.df$SYMBOL)
-
-m=match(names(ranks)[w],gene.df$SYMBOL)
-hanks=ranks[w]
-names(hanks)=gene.df$ENTREZID[m]
-sanks=names(hanks)[1:1500]
-
-Bioconductor<-ViSEAGO::Bioconductor2GO()
-myGENE2GO<-ViSEAGO::annotate(
-"org.Hs.eg.db",
-Bioconductor
-)
-library(data.table)
-m1 = matrix(unname(hanks),ncol=1)
-rownames(m1)=names(hanks)
-t1=as.table(m1)
-d1 = data.table(t1)
-d1=d1[,-2]
-names(d1)=c("Id","value")
-hg<-runfgsea(
-geneSel=d1,method="fgseaSimple",
-gene2GO=myGENE2GO,
-ont="BP",
-params = list(
-scoreType = "pos",
-minSize= 15,
-maxSize = 200,
-nperm=10000)
-)
-
-hgres<-ViSEAGO::merge_enrich_terms(
-Input=list(
-"hg"
-)
-)
 ```
-
-GO terms are then combined using
-buiild_GO_SS, and semantic similarity
-calculated using compute_SS_distances.
-Finally, they are clustered based on
-these similarities using
-GOterms_heatmap.
-
-```{r}
-myGOs<-ViSEAGO::build_GO_SS(
-gene2GO=myGENE2GO,
-enrich_GO_terms=hgres
-)
-# compute all available Semantic Similarity (SS) measures
-myGOs<-ViSEAGO::compute_SS_distances(
-myGOs,
-distance="Wang"
-)
-ViSEAGO::MDSplot(myGOs)
-# GOterms heatmap with the default parameters
-Wang_clusters_wardD2<-ViSEAGO::GOterms_heatmap(
-    myGOs,
-    showIC=TRUE,
-    showGOlabels=TRUE,
-    GO.tree=list(
-        tree=list(
-            distance="Wang",
-            aggreg.method="ward.D2"
-        ),
-        cut=list(
-            dynamic=list(
-                pamStage=TRUE,
-                pamRespectsDendro=TRUE,
-                deepSplit=2,
-                minClusterSize =2
-            )
-        )
-    ),
-    samples.tree=NULL
-)
-
-# Display the clusters-heatmap
-ViSEAGO::show_heatmap(
-    Wang_clusters_wardD2,
-    "GOterms"
-)
-
-# Print the clusters-heatmap table
-ViSEAGO::show_table(
-    Wang_clusters_wardD2,
-    "cluster_heatmap_Wang_wardD2.xls"
-)
-```
-
-You can reiterate this until you get
-down to even fewer GO terms:
-
 ```{r}
 
-Wang_clusters_wardD3<-ViSEAGO::compute_SS_distances(
-Wang_clusters_wardD2,
-distance=c("max", "avg","rcmax", "BMA")
-)
-ViSEAGO::MDSplot(
-Wang_clusters_wardD3,
-"GOclusters"
-)
-Wang_clusters_wardD4<-ViSEAGO::GOclusters_heatmap(
-Wang_clusters_wardD3,
-tree=list(
-distance="BMA",
-aggreg.method="ward.D2"
-)
-)
-ViSEAGO::show_heatmap(
-Wang_clusters_wardD4,
-"GOclusters"
-)
-```
+h = calcOverGOcoeff(res=hse,showCategory = nrow(data.frame(hse)),cutoff=0.5,select_fun = overlapcoeff,orgDb = "org.Hs.eg.db",keytype="SYMBOL")
+x = pairwise_termsim(h, semData = sapGO,showCategory = nrow(h))
+tp= treeplot(x, hclust_method = "ward.D2",showCategory = nrow(x),nCluster=12)
+dp=tp$data
+wna=which(is.na(dp$label))
 
-But at this point, it looks like you've
-now killed your signal. So lets go back
-to the clustering step of the GO terms
-and read in that file to see how that
-may have helped us. It says its an excel
-file, but experience has told me its
-really a tab-delimited file.
+dp=dp[-wna,]
+s=split(dp$label,dp$group)
+
+s[1]
+s[2]
+s[3]
+s[4]
+s[5]
+s[6]
+s[7]
+s[8]
+s[9]
+s[10]
+s[11]
+s[12]
+
+```
+So the overlap coefficient got us down to just 200 terms. Still too
+big for visualization, but we've perserved the top annotations:
 
 ```{r}
-wang = read.delim("cluster_heatmap_Wang_wardD2.xls",stringsAsFactors = F,check.names = F)
-
-names(wang)
-names(wang) = gsub("condition.","",names(wang))
-range(wang$size)
-
-wang = wang %>% filter(size <= 200 & size >=15)
-
-range(wang$padj)
-
-wang = wang %>% filter(padj <= 0.05)
-
-dim(wang)
-
-
-spl = split(wang$term,wang$GO.cluster)
-
-spl[1:5]
-
-spl[6:10]
+hse$Descrition[1:10]
+x$Description[1:10]
 ```
-So that is useful for making sense of
-a long list of GO terms, when writing 
-a paper for example.
-
-Here is another visualization from topGO
+Here is a visualization from topGO
 that is useful because you see the GO
 hierarchy. For this I am goiong to use
 the yeast data.
-
-We use `compSCORE` and the `sampleFitdata`
-to get some data to  play with. This function
-returns a dataframe of designating
-significant scores from the input matrix
-of screening data based on the fitness
-threshold cutoff.
 
 The `bitr` function here is in the clusterProfiler
 package, and is just an easy function for
@@ -872,11 +877,7 @@ myGENE2GO<-ViSEAGO::annotate(
 Bioconductor
 )
 
-dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
-head(dfsig)
-table(dfsig$index)
-wna = which(is.na(dfsig$score))
-dfsig = dfsig[-wna,]
+
 
 background = dfsig$gene
 gene = dfsig$gene[dfsig$index ==1]
@@ -916,128 +917,165 @@ showSigOfNodes(BP, score(classic), firstSigNodes = 5, useInfo = 'all')
 Another way of  doing that is with goplot from the
 enrichplot package
 
-
-
-
-
-
+Another way to filter GO terms is to filter them by GO level.
+But this doesn't work that well because of the uneveness of 
+the GO ontology. For example, we can use this on the output 
+of the GO over-representation analysis:
 
 ```{r}
-ygene = dfsig$score
-names(ygene) = dfsig$gene
 
-gse <- clusterProfiler::gseGO(
-geneList = ygene,
-ont = "BP",
-pvalueCutoff = 0.05,
-keyType = "GENENAME",
-eps = 0,
-minGSSize = 5,
-maxGSSize = 150,
-verbose = TRUE,
-OrgDb = "org.Sc.sgd.db",
-pAdjustMethod = "BH",
-by = "fgsea"
-)
-scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+ego4 = gofilter(ego,level = 4)
 
-goplot(gse)
-scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+hx4 = pairwise_termsim(ego4, semData = sapGO)
+treeplot(hx4)
+### compare to the previous set of similariites, let it go with
+### the default 30 categories
+x = pairwise_termsim(h, semData = sapGO)
+treeplot(x, hclust_method = "ward.D2",nCluster=12)
+ego3 = gofilter(ego,level = 3)
+ego3$Description
+```
+Level 4 goterms can be useful for filtering enriched terms from
+overexpression analysis, though you may miss the very top GO
+enrichments. Level 3 is too course.
 
-x = pairwise_termsim(gse, semData  = scGO, showCategory = 200)
-emapplot(x, showCategory = 20)
-p2 <- treeplot(x, hclust_method = "average")
+Yet another way to avoid GO redundancy is to filter GO terms
+upfront. This can be done by using what is called "GO slim",
+literally a slimmed version of GO where all three ontologies
+are combined into a much broader annotation. We can look
+at how well that does by downloading the slim annotations from
+Biomart.
 
-upsetplot(gse)
-dotplot(gse, showCategory = 5, split = ".sign") + facet_grid(. ~.sign)
-cnetplot(gse, categorySize="pvalue", foldChange=names(ygene)[1:10], showCategory = 3)
-ridgeplot(gse, showCategory = 10) + labs(x = "enrichment distribution")
-gseaplot(gse, by = "all", title = gse$Description[7], geneSetID = "GO:0006526")
+```{r}
 
+library("biomaRt")
+listMarts()
+ensembl=useMart("ensembl")
+listDatasets(ensembl)
+hensembl = useDataset("hsapiens_gene_ensembl",mart=ensembl)
+yensembl = useDataset("scerevisiae_gene_ensembl",mart=ensembl)
 
-### GO enrichment analysis
-ego <- clusterProfiler::enrichGO(
-        gene  = names(ranks)[1:1500],
-        OrgDb = org.Hs.eg.db,
-        keyType  = 'SYMBOL',
-        universe = names(ranks),
-        ont = "BP",
-        pAdjustMethod = "BH",
-        minGSSize = 15,
-        maxGSSize = 200,
-        pvalueCutoff  = 0.05,
-        qvalueCutoff = 0.05)
+yslim <- getBM(attributes=c('ensembl_gene_id','external_gene_name',
+        'sgd_gene',  "goslim_goa_accession", "goslim_goa_description" ),
+        mart = yensembl)
 
-goplot(ego)
-### 'A universal enrichment analyzer'
-# henrich = clusterProfiler::enricher(
-#   gene = names(ranks)[1:1500],
-#   TERM2GENE = hterm2gene,
-#   TERM2NAME = hterm2name,
-#   universe = names(ranks),
-#   minGSSize = 15,
-#   maxGSSize = 200,
-#   qvalueCutoff = 1,
-#   pvalueCutoff = 0.05,
-#   pAdjustMethod = "BH"
-# )
+tapp=tapply(yslim$goslim_goa_accession,yslim$goslim_goa_description,length)
+m=match(yslim$goslim_goa_description,names(tapp))
+table(is.na(m))
+yslim$geneSetSize = tapp[m]
 
-## GSEA
-hse <- clusterProfiler::gseGO(
-  geneList = ranks,
-  ont = "BP",
-  keyType = "SYMBOL",
-  eps = 0,
-  minGSSize = 15,
-  maxGSSize = 200,
-  pAdjustMethod = "BH",
-  pvalueCutoff = 0.05,
-  verbose = TRUE,
-  OrgDb = "org.Hs.eg.db",
-  by = "fgsea"
-)
-goplot(hse)
-sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
-h = calcOverGOcoeff(res=hse,showCategory = nrow(data.frame(hse)),cutoff=0.5,select_fun = overlapcoeff,orgDb = "org.Hs.eg.db",keytype="SYMBOL")
-x = pairwise_termsim(h, semData = sapGO,showCategory = nrow(h))
-tp= treeplot(x, hclust_method = "ward.D2",showCategory = nrow(x),nCluster=12)
-dp=tp$data
-wna=which(is.na(dp$label))
-
-dp=dp[-wna,]
-s=split(dp$label,dp$group)
-
-s[1]
-s[2]
-s[3]
-s[4]
-s[5]
-s[6]
-s[7]
-s[8]
-s[9]
-s[10]
-s[11]
-s[12]
+length(unique(yslim$goslim_goa_description))
 
 
+attr = c("ensembl_gene_id", "entrezgene_id","hgnc_symbol" ,
+         "ensembl_gene_id_version", "goslim_goa_accession" ,
+         "goslim_goa_description")
+hslim <- getBM(attributes=attr, mart = hensembl)
+tapp=tapply(hslim$goslim_goa_accession,hslim$goslim_goa_description,length)
+m=match(hslim$goslim_goa_description,names(tapp))
+table(is.na(m))
+hslim$geneSetSize = tapp[m]
+w=which(hslim$geneSetSize>1000)
+length(unique(hslim$goslim_goa_description))
+```
 
+So 142 categories for human and 161 for yeast. That's
+not alot. Still, the big ones aren't likely to be informative.
 
+```{r}
+w = which(hslim$geneSetSize > 2000)
+tab = table(hslim$goslim_goa_description[w])
+tab = tab[order(tab,decreasing = T)]
 
-hx = pairwise_termsim(hse, semData = sapGO)
-px <- treeplot(hx)
-p2<- treeplot(hx, hclust_method = "ward.D2")
+w = which(hslim$geneSetSize > 5000)
+hslim = hslim[-w,]
+
+w = which(yslim$geneSetSize > 5000)
+yslim = yslim[-w,]
+```
+
+Let's see how well these agree with the full 
+GO BP set:
+
+```{r}
+ys=split(yslim$external_gene_name,yslim$goslim_goa_description)
+ys=lapply(ys,unique)
+ys=lapply(ys,sort)
+ygsea= fgseaSimple(pathways = ys,stats=ygene,nperm=1000,maxSize = 5000,minSize = 5)
+ypos=mygseatidy(ygsea)$pres
+yneg=mygseatidy(ygsea)$nres
+ypos = ypos %>% filter(padj < 0.05)
+yneg = yneg %>% filter(padj < 0.05)
+
+intersect(ypos$pathway,gse$Description)
+
+intersect(yneg$pathway,gse$Description)
+
 
 ```
-Let's see how well these agree
+So, not so bad. We are getting the major pathways:
+mitochondrial translation, which happens to be a large
+GO term to begin with, and cellular amino acid metabolic process.
+Three of the yeast slim gsea positive and nine of the negative
+pathway terms intersect with the yeast gseGO enrichment terms.
+
+Lets see how the human compares. Let's use the GOID this time,
+it's probably smarter than using the GO term.
+
+```{r}
+hs=split(hslim$hgnc_symbol,hslim$goslim_goa_accession)
+hs=lapply(hs,unique)
+hs=lapply(hs,sort)
+hgsea= fgseaSimple(pathways = hs,stats=ranks,nperm=10000,maxSize = 5000,minSize = 15)
+hpos=mygseatidy(hgsea)$pres
+hneg=mygseatidy(hgsea)$nres
+hpos = hpos %>% filter(padj < 0.05)
+hneg = hneg %>% filter(padj < 0.05)
+
+intersect(hpos$pathway,hse$ID)
+
+intersect(hneg$pathway,hse$ID)
+
+```
+Now let's just find out what those GOIDs are:
+
+```{r}
+m = match(hpos$pathway,hslim$goslim_goa_accession)
+hpos$term = hslim$goslim_goa_description[m]
+m = match(hneg$pathway,hslim$goslim_goa_accession)
+hneg$term = hslim$goslim_goa_description[m]
+
+intersect(hpos$term,hse$Description)
+
+intersect(hneg$term,hse$Description)
+
+```
+
+So again, we have agreemennt, but the human slim enrichment
+standing on its own really isn't very informative at all.
+Really in both cases we're lacking the granularity and the
+richness of the GO BP terms. Let's just look at the top 10
+terms of each:
+
+```{r}
+hpos$term[1:10]
+hneg$term[1:10]
 
 
+```
+You can see that we also have other terms that are unfamiliar to us
+thus far, suchh as "nuxleotidytransferase activity", "hydrolase
+activity, acting on glycosyl bonds" -- these belong to molecular
+function or MF GO terms. Others like "ribosome" and "nuclear 
+chromosome" belong to cellular component, or CC GO terms. While 
+these may be informative the MF and CC GO ontologies are in
+general not nearly as rich as the BP GO terms.
 
-
-So we can see overall that there is not very
-good agreement between these functions.
-Why? We'd have to look into the package
-daetails, but the major reason is
+So the take hom lesson is that in general we don't see 
+good agreement when we run GO enrichments from different 
+packages even if they are based on the same functions. 
+Why? We'd have to look into 
+the package details, but the major reason is
 likely to be the due to the differences
 in geneSets. I did spend soome time
 looking into the details. For example, 
@@ -1171,7 +1209,7 @@ The GO enrichment itself is basically
 over representation analysis, so we need a listdon't need to go over that
 bit in detail.
 
-Heere, instead of using a ranked
+Here, instead of using a ranked
 list however, to run the GO enrichment we use a list of
 "significant genes" and compared it to a
 set of background genes, instead of
@@ -1373,7 +1411,16 @@ x
 ```
 
 We can use the phyper function, which gives the
-cumulative probability at a specified value:
+cumulative probability of the hypergeometric
+distribution at a specified value where again:
+
+q is the number of white balls drawn without replacment
+
+m is the number of white balls in the urn
+
+n is the number of black balls in the urn
+
+k is the number of balls drawn from the urn
 
 ```{r}
 phyper(q = x-1, m, n, k, lower.tail = FALSE)
@@ -1381,6 +1428,8 @@ goresp$enrichInfo$P[3]
 goresp$enrichInfo$nOverlap[3]
 ```
 
+So we get the same value. We can look at it
+another way. 
 This is equivalent to setting up a
 contingency table and doing a Fisher's
 exact test:
@@ -1576,7 +1625,71 @@ w = which(hresp$enrichInfo$cluster == "#9900FF")
 hresp$enrichInfo$term[w]
 
 ```
-You could imagine modifying this function osuch that
+By modifying our calcOverlap function we could get rid of a 
+lot of the overlapping terms. So lets do that:
+
+```{r}
+calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, padj = "p.adjust",term = "ID", goont) { 
+    library(dplyr)
+  
+  
+    gs = res
+    res = data.frame(res,stringsAsFactors = F)
+    
+    mx = matrix(rep(NA,nrow(res)*nrow(res)),nrow=nrow(res),ncol = nrow(res))
+    
+    colnames(mx) = res[,term]
+    rownames(mx) = res[,term]
+    
+    GO = goont
+    
+    
+    mx[upper.tri(mx)]=888
+    m = reshape2::melt(mx, value.name = "overlap",as.is = TRUE,varnames = c("go1","go2"),na.rm = T)
+    m1 = match(m$go1,names(GO))
+    m2 = match(m$go2,names(GO))
+    
+    m$overlap = mapply(select_fun,GO[m1],GO[m2])
+    
+    
+    wm = which(m$overlap < cutoff)
+    if(length(wm) > 0) m = m[-wm,]
+    
+    m1=match(m$go1,res[,term])
+    m$padj1=res[m1,padj]
+    m1=match(m$go2,res[,term])
+    m$padj2=res[m1,padj]
+    m=m%>% dplyr::mutate(gotoremove= m%>%dplyr::select(padj1,padj2)%>% apply(MARGIN = 1, FUN =      function(x) which.max(x)))
+    
+    
+   
+    w1 = which(m$gotoremove == 1)
+    w2 = which(m$gotoremove == 2)
+    if(length(w1) > 0) m$gotoremove[w1]=m$go1[w1]
+    if(length(w2) > 0) m$gotoremove[w2]=m$go2[w2]
+    wres = c(w1,w2)
+    if(length(wres) > 0) {w = which(res[,term]%in% m$gotoremove)
+    res = res[-w,]}
+    
+    if(class(gs)=="gseaResult"|class(gs)=="enrichResult") {gs@result=res
+    return(gs)} else {return(res)}
+    
+}
+```
+Use the hresp enrichInfo and plug it into this revised function:
+```{r}
+newhresp = calcOverGOcoeff(select_fun=overlapcoeff,cutoff=0.7,res = hresp$enrichInfo,padj="FDR",term="term",goont=hGOBP.gmt)
+
+w=which(hresp$edgeMat$source%in% newhresp$id)
+ww=which(hresp$edgeMat$target[w]%in% newhresp$id)
+newedge = hresp$edgeMat[w[ww],]
+
+v = visSetup(newhresp,newedge)
+
+runNetwork(v$nodes,v$edges)
+```
+So we could play those parameters, to get something
+pretty. You could also imagine modifying runGORESP such that
 it doesn't rely on a significance cutoff and instead
 tests iteratively down the ranked list of genes akin 
 to GSEA until it reaches the maximum GO enrichment
@@ -1595,14 +1708,26 @@ analysis: goprofiler2, clusterProfiler,
 GOfuncR, limma, goseq, topGO GSEA:
 fgsea, GSEA, ViSEAGO, RGSEA 
 
-For an expression experiment, to
-generate a rank file one should add
-these columns: 1. sign (sign of logFC)
-2. logP = -log10(Pvalue) 3. combine
-these into a score and include the gene
-name; such that
-a large logP implies a highly
-significant gene, and the sign just
-reflects the direction of that logFC.
+I hope from this discussion you realize that it is important to try different
+GO analyses and different geneSets to turn your data around such that you 
+end up with results you have confidence in. Meaning the results will generally
+agree if you run the same enrichment algorithm using a different function with the
+same geneSet. That is not always straightforward as we've seen, because
+different functions can call different geneSets. An acceptable solution 
+to this is to run two
+enrichments and take the intersection between them. Or simply be very
+explicit about the enrichment you do run and the parameters that 
+were used as long as that geneSet is one broadly used set in the literature. 
+Download dates need to be included obviously. I hope you've also recognized 
+when it is ok to slim down your GO enrichment terms, and when it 
+doesn't make sense and you lose too much information. I would definitely 
+keep gsea positive and gsea 
+negative results in different sets of data to clearly distinguish 
+between results. I think clusterProfiler is one of the best packages, that's
+why I've highlighted it here. It gives you a lot of options within the same
+package and it plays nicely with GOSemSim and enrichplot.
+Visualization wherever possible is essential in communicating
+your results. GO enrichment is the fun part in my eyes, as it is here where 
+you really can extract the meaning from large-scale data analysis...
 
 

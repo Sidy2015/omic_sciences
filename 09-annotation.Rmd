@@ -36,7 +36,8 @@ library(ph525x)
 
 
 In this document we will review Bioconductor's facilities for
-handling and annotating genomic sequence.  We'll look at
+handling and annotating genomic sequence. The Rmd for this
+file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/09-annotation.Rmd). We'll look at
 reference genomic sequence, transcripts and genes, and
 conclude with gene pathways.  Keep in mind that our ultimate aim
 is to use annotation information to help produce reliable
@@ -60,12 +61,14 @@ library(org.Hs.eg.db)
 keytypes(org.Hs.eg.db) # columns() gives same answer
 ```
 ```{r lkt}
-head(select(org.Hs.eg.db, keys="ORMDL3", keytype="SYMBOL", 
-   columns="PMID"))
+select(org.Hs.eg.db, keys="ORMDL3", keytype="SYMBOL", 
+   columns="GENENAME")
 ```
+The format is:
 
+select(orgDb,keys(whatsinyourlist,columns = c(whatyouwanttogetback),keytype = typeofkeyinyourlist)
 <a name="genesets"></a>
-## AnnotationDBO
+
 **mapIds**
 
 ```{r}
@@ -89,7 +92,6 @@ We can discover available keytypes() for querying the database, and columns() to
 ```{r}
 head(keys(org.Hs.eg.db))
 ```
-## [1] "1"  "2"  "3"  "9"  "10" "11"
 Here are a handful of ENTREZID keys
 
 ```{r}
@@ -101,11 +103,12 @@ Two main functions are `select()` and `mapIds()`. `mapIds()` is more focused. It
 mapIds(org.Hs.eg.db, keys = eid, column = "SYMBOL", keytype = "ENTREZID")
 ```
 I like to spell these out:
-mapIds(Orgdb, keys = selectheserecord, column = retrievetheserecords,keytype=keytypeofseiectedrecord) 
+mapIds(Orgdb, keys = selectedrecords, column = retrievetheserecords,keytype=keytypeofseiectedrecord) 
 
 **select**
 `select()` is more general, returning a data.frame of keys, plus one or more columns. If a key maps to multiple values, then multiple rows are returned.
 
+which is the same as map, with just SYMBOL. if you add GO, then SYMBOL & GO annotations are returned
 ```{r}
 map <- select(org.Hs.eg.db, eid, c("SYMBOL", "GO"), "ENTREZID")
 ```
@@ -209,7 +212,7 @@ eid %>%
     mapIds(x = org, "SYMBOL", "ENTREZID") %>%
     tibble::enframe("ENTREZID", "SYMBOL")
 ```
-##Ensembl GTF and FASTA files for TxDb gene models and sequence queries
+## Ensembl GTF and FASTA files for TxDb gene models and sequence queries
 
 Bioconductor represents gene models using ‘transcript’ databases. These are available via packages such as `TxDb.Hsapiens.UCSC.hg19.knownGene` or can be constructed using functions such as `GenomicFeatures::makeTxDbFromBiomart()`.
 

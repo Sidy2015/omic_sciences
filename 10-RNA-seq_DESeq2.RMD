@@ -6,7 +6,7 @@ library(knitr)
 
 http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
 https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
-RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
+The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/10-RNA-seq_DESeq2.RMD). RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
 
 In this lab, we will focus on comparing the expression levels of genes across different samples, by counting the number of reads which overlap the exons of genes defined by a known annotation. As described in the lecture, this analysis sets aside the task of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. One advantage of looking at these matrices of counts is that we can use statistical distributions to model how the variance of counts will change when the counts are low vs high. We will explore the relationship of the variance of counts to the mean later in this lab.
 

@@ -5,7 +5,7 @@ library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 
 ```
-The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English and we are therefore going to introduce two simple functions: one is used to subset and the other to select columns.
+The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English and we are therefore going to introduce two simple functions: one is used to subset and the other to select columns. The Rmd file for this section is available [here](https://github.com/gurinina/omic_sciences/blob/main/03-dplyr-tutorial.Rmd).
 
 ```{r,echo=FALSE}
 url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"

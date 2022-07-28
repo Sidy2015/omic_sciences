@@ -7,7 +7,8 @@ knitr::opts_chunk$set(echo=FALSE)
 opts_knit$set(progress=FALSE, verbose=FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
-We are going to walk through the general steps of a Next Generation Sequencing pipeline, even though the analyical steps are beyond the scope of this course, for reasons mainlly due to the memory capacities of our laptops. We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for that reason, one of the more frequently used technologies in research, likely for this reasons.
+We are going to walk through the general steps of a Next Generation Sequencing pipeline, even though the analytical steps are beyond the scope of this course, for reasons mainlly due to the memory capacities of our laptops. The Rmd for this file can be found
+[here](https://github.com/gurinina/omic_sciences/blob/main/08-NGS-pipeline.Rmd). We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for that reason, one of the more frequently used technologies in research, likely for this reasons.
 
 Ok, so our first files that we encounter are FASTQ...
 

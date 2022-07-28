@@ -31,10 +31,10 @@ library(ph525x)
 <a name="rlang"></a>
 
 <a name="whyr"></a>
-
+The Rmd file for this lesson is available [here](https://github.com/gurinina/omic_sciences/blob/main/02-bioconducter.Rmd)
 ## Why R Bioconductor?
 
-Bioconductor is based on [R](www.r-project.org).  Three key reasons for this are:
+Bioconductor is based on [R](www.r-project.org). Three key reasons for this are:
 
 - R is used by many statisticians and biostatisticians to create algorithms that advance our ability to understand complex experimental data.
 - R is highly interoperable, and fosters reuse of software components written in other languages. 
