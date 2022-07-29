@@ -5,7 +5,6 @@ library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 
 ```
-
 ```{r setup,echo=FALSE,results="hide"}
 suppressMessages({
 suppressWarnings({
@@ -70,6 +69,7 @@ advanced example with Bioconductor, we will consider an
 approach to defining an "object" representing on the genome
 of *Homo sapiens*:
 ```{r lkho}
+BiocManager::install("Homo.sapiens")
 library(Homo.sapiens)
 class(Homo.sapiens)
 methods(class=class(Homo.sapiens))
@@ -230,8 +230,11 @@ you need. This will be different for each person. I've also made
 ```{r}
 int <- installed.packages()[, 1]
 need <- setdiff(pkgs, int)
-bioc = readLines("_R_package_list.txt")
+
 git= readLines("_R_package_github.txt")
+
+
+
 ```
 The required packages come in two flavors: those that are available through
 Bioconductor, and those that are available through a github website.
@@ -247,19 +250,29 @@ into the respective lists install as follows:
 # installing the latest versions of R, Rstudio 
 # and Bioconductor
 
-bioc = readLines("_R_package_list.txt")
-# bioc = setdiff(bioc, need) optional, it won't install it if you don't need it
-BiocManager::install(bioc)
+need = setdiff(need,git)
+```
+Before you tell `BiocManager` to install these packages, check to make sure that the format
+is correct. See here I have two errors I need to get rid of, `biomaRt` is surrounded by backslashes
+and dplyr has "warn.conflifts". So:
 
-git = readLines("_R_package_github.txt")
-# git = setdiff(git, need) optional, it won't install it if you don't need it
+```{r,eval=FALSE}
+need[1] ="dplyr"
+need[19] = "biomaRt"
+
+need = c(need, "gwascat")
+
+BiocManager::install(need)
+
+
 git = paste0("genomicsclass/",git)
 
 devtools::install_github(git)
 ```
-p.s. All of your needs should be met by bioc and git, i.e., you should have no "needs"
+p.s. All of your needs should be met by need and git, i.e., you should have no "needs"
 leftover! The `::` is a shortcut when you want to avoid loading a library, or when
-you have a potential function conflict with another library that is loaded. This shortened version of the script is in requireed_packages.R...so that's all you need to run.
+you have a potential function conflict with another library that is loaded. This shortened version of the script is in required_packages.R...so that's all you need to run.
+
 
 ### Finding help
 

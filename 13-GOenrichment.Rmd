@@ -785,8 +785,8 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
     res = res %>% arrange(p.adjust)
     mx = matrix(rep(NA,showCategory*showCategory),nrow=showCategory,ncol=showCategory)
     
-    colnames(mx) = res$ID[1:length(showCategory)]
-    rownames(mx) = res$ID[1:length(showCategory)]
+    colnames(mx) = res$ID[1:showCategory]
+    rownames(mx) = res$ID[1:showCategory]
     
     yGO= clusterProfiler:::get_GO_data(orgDb,ont,keytype)
     ygo = get("PATHID2EXTID",envir=yGO)
@@ -858,11 +858,11 @@ s[12]
 
 ```
 So the overlap coefficient got us down to just 200 terms. Still too
-big for visualization, but we've perserved the top annotations:
+big for visualization, but we've preserved the top annotations:
 
 ```{r}
-hse$Descrition[1:10]
-x$Description[1:10]
+hse$Description[1:10]
+h$Description[1:10]
 ```
 Here is a visualization from topGO
 that is useful because you see the GO
@@ -1512,6 +1512,7 @@ int = intersect(arg,gene)
 x = length(int)
 x
 n = N - m
+k = 191
 ```
 >>>>>>> 4ee818e (GO enrichment)
 >>>>>>> 43efd3b (GO enrichment)
