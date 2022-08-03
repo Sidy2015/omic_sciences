@@ -1,9 +1,12 @@
 book_filename: omic_sciences
 new_session: yes
 rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconducter.Rmd",
-"03-dplyr-tutorial.Rmd","04-linear-algebra.Rmd","05-linear-modeling-genomics.Rmd",
-  "06-distance-and-dimension-reduction.Rmd",
-"07-confounding.Rmd","08-NGS-pipeline.Rmd","09-annotation.Rmd",
-"10-RNA-seq_DESeq2.RMD","11-RNAseq-limma.Rmd","12-Chip-chip.Rmd",
-"13-GOenrichment.Rmd"]
+"03-dplyr-tutorial.Rmd","04-linear-algebra.Rmd","05-Inference.Rmd",
+"06-linear-modeling-genomics.Rmd","07-Multiple_testing_procedures.Rmd",
+ "08-Exploratory-Data-Analysis.Rmd", "09-distance-and-dimension-reduction.Rmd",
+
+
+"10-confounding.Rmd","11-NGS-pipeline.Rmd","12-annotation.Rmd",
+"13-RNA-seq_DESeq2.RMD","14-RNAseq-limma.Rmd","15-Chip-chip.Rmd",
+"16-GOenrichment.Rmd"]
 
