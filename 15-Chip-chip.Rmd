@@ -1,5 +1,8 @@
 ---
-# Introduction: Chip-Chip
+editor_options: 
+  markdown: 
+    wrap: 72
+---
 
 ```{r options, echo=FALSE}
 library(knitr)
@@ -11,6 +14,8 @@ suppressPackageStartupMessages({library(GenomicFeatures)
 library(GenomicRanges)
 library(IRanges)})
 ```
+
+# Introduction: Chip-Chip
 
 ## Interval data on Estrogen Receptor binding
 

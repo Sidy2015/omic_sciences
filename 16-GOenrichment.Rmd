@@ -1,9 +1,4 @@
 
----
-editor_options:
-  markdown:
-    wrap: 40
----
 # Gene Set Enrichment Analysis
 
 ```{r setup, include=FALSE}
