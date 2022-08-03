@@ -1458,9 +1458,6 @@ org.Sc.sgd_dbInfo()
 And I can see that the last update was in March. The yeast GMT file I generarted
 was in January -- that's 6 months ago, so time for me to update that file...
 
->>>>>>> 4ee818e (GO enrichment)
->>>>>>> 43efd3b (GO enrichment)
->>>>>>> debdc97 (GO enrichment)
 Then let's rerun goresp, and rerun compSCORE, it won't make
 too much difference but it serves to bring home the point of
 the importance of geneSets being updated, particularly in this
@@ -1484,12 +1481,7 @@ dfsig = dfsig[-wna,]
 table(dfsig$index)
 
 ```
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-=======
+
 So now for 'ARGININE BIOSYNTHETIC PROCESS' instead of a 
 P-value of 4.76e-11 we get a value of 2.02e-12
 
@@ -1514,9 +1506,7 @@ x
 n = N - m
 k = 191
 ```
->>>>>>> 4ee818e (GO enrichment)
->>>>>>> 43efd3b (GO enrichment)
->>>>>>> debdc97 (GO enrichment)
+
 
 We can use the phyper function, which gives the
 cumulative probability of the hypergeometric
