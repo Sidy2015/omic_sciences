@@ -1,8 +1,6 @@
 ---
-editor_options: 
-  markdown: 
-    wrap: 72
----
+
+# Introduction: Chip-Chip
 
 ```{r options, echo=FALSE}
 library(knitr)
@@ -15,7 +13,6 @@ library(GenomicRanges)
 library(IRanges)})
 ```
 
-# Introduction: Chip-Chip
 
 ## Interval data on Estrogen Receptor binding
 
@@ -243,21 +240,9 @@ reads of different strands (plus/minus also referred to as
 Watson/Crick), as shown in [Figure
 1](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2592715/figure/F1/) of
 the MACS manuscript: [Zhang 2008](#foot)
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 1fa4083a4e7a67d0e34bf8148d98d967d498e0ea
 
 ## Peak calling
 
-=======
-
-<<<<<<< HEAD
-=======
-##Peak calling
-
->>>>>>> cffaabd99a9c2c89174ddcbf041703287ec33661
->>>>>>> 1fa4083a4e7a67d0e34bf8148d98d967d498e0ea
 There are many different algorithms for calling peaks, which have
 varying performance on different kinds of experiments. As mentioned in
 the lecture, for ChIP of proteins with broad peaks (such as modified
