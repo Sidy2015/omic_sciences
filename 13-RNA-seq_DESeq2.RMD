@@ -438,7 +438,7 @@ The `contrast` argument allows users to specify what results table should be bui
 ```{r}
 results(dds, contrast=c("cell","N61311","N052611"))
 ```
-#######################################################################################################################################
+88888888888888888888888888888888888888888888888888
 ## Surrogate variable analysis for RNA-seq
 
 If we suppose that we didn't know about the different cell-lines in the experiment, but noticed some structure in the counts, we could use surrograte variable analysis (SVA) to detect this hidden structure (see PH525x Course 3 for details on the algorithm).
