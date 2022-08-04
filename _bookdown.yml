@@ -7,6 +7,6 @@ rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconducter.Rmd",
 
 
 "10-confounding.Rmd","11-NGS-pipeline.Rmd","12-annotation.Rmd",
-"13-RNA-seq_DESeq2.RMD","14-RNAseq-limma.Rmd","15-Chip-chip.Rmd",
+"13-RNAseq-DESeq2.Rmd","14-RNAseq-limma.Rmd","15-Chip-chip.Rmd",
 "16-GOenrichment.Rmd"]
 

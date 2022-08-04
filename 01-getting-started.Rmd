@@ -230,3 +230,33 @@ names(dat)
 There is an excellent introductory R book for graduate students here: [Guide-to-R-Book](https://bookdown.org/yih_huynh/Guide-to-R-Book/). 
 I highly recommend going through to ground yourself, it will really
 help as we will dive into thihgs pretty quickly.
+
+## Installing materical for course from Github 
+
+What is Github? Github is a system used for version control. It's fairly
+sophisticated and we are not going to learn a lot about it here but it is well
+worth your time to learn it if you don't know about it already.
+A good introduction to using Git with R can be found 
+[here](https://happygitwithr.com/clone.html). For this course we will
+use it primarily just to "clone" information from a "repository", i.e. 
+a webpage containing course material, into your local machine. 
+
+To clone a repository, where you just want a copy of someone else's 
+repository your create a new RStudio Project from this GitHub repo.
+
+In RStudio, start a new Project:
+
+File > New Project > Version Control > Git. In the “repository URL” paste the URL of your new GitHub repository. It will be  https://github.com/gurinina/omic_sciences
+Be intentional about where you create this Project.
+I suggest you “Open in new session”.
+Click “Create Project” to create a new directory, which will be all of these things:
+a directory or “folder” on your computer
+a Git repository, linked to a remote GitHub repository
+an RStudio Project
+
+This should be all you need to have the course material in this project.
+
+
+
+
+

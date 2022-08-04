@@ -56,6 +56,11 @@ ensembldb
 rols
 EnsDb.Hsapiens.v75
 GSEABase
+airway
+"dplyr"
+"ggplot2"
+vsn
+pheatmap
 Glimma
 Mus.musculus
 RNAseq123
