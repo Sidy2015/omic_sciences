@@ -6,9 +6,17 @@ rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconducter.Rmd",
  "08-Exploratory-Data-Analysis.Rmd", "09-distance-and-dimension-reduction.Rmd",
 
 
+<<<<<<< HEAD
 "10-confounding.Rmd","11-NGS-pipeline.Rmd",
 "12-RNAseq-DESeq2.Rmd","13-RNAseq-limma.Rmd","14-Chip-chip.Rmd",
 
 
 "15-GOenrichment.Rmd"]
+=======
+"10-confounding.Rmd","11-NGS-pipeline.Rmd","12-annotation.Rmd",
+"13-RNAseq-DESeq2.Rmd","14-RNAseq-limma.Rmd","15-Chip-chip.Rmd",
+
+
+"16-GOenrichment.Rmd"]
+>>>>>>> 25175c3939f389589e9d40bbd9a4f656c4658e80
 
