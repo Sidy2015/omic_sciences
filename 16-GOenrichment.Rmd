@@ -387,7 +387,7 @@ members. So lets look at that. The .gmt file is in a package
 I made foar tahe course, `GOenrichmet`. First we read in the
 rnk file:
 
-```{r, eval = FALSE}
+```{r, eval = TRUE}
 url <- "https://github.com/gurinina/omic.data/tree/master/csv/STable2_MesenvsImmuno_RNASeq_ranks.rnk"
 filename <- "STable2_MesenvsImmuno_RNASeq_ranks.rnk"
 library(downloader)
