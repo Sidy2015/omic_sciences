@@ -49,6 +49,13 @@ TxDb.Athaliana.BioMart.plantsmart22
 TxDb.Dmelanogaster.UCSC.dm3.ensGene
 KEGGREST
 KEGGgraph
+BSgenome.Hsapiens.NCBI.GRCh38
+GO.db
+DBI
+ensembldb
+rols
+EnsDb.Hsapiens.v75
+GSEABase
 airway
 "dplyr"
 "ggplot2"
