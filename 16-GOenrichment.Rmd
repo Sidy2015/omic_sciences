@@ -947,7 +947,7 @@ Biomart.
 ```{r}
 
 library("biomaRt")
-listMarts()
+
 ensembl=useMart("ensembl")
 listDatasets(ensembl)
 hensembl = useDataset("hsapiens_gene_ensembl",mart=ensembl)
