@@ -16,7 +16,6 @@ GenomicRanges
 GenomicAlignments
 Rsamtools
 ph525x
-dplyr, warn.conflicts = FALSE
 geneplotter
 DESeq2
 AnnotationDbi
@@ -57,8 +56,6 @@ rols
 EnsDb.Hsapiens.v75
 GSEABase
 airway
-"dplyr"
-"ggplot2"
 vsn
 pheatmap
 Glimma
@@ -75,4 +72,3 @@ ViSEAGO
 topGO
 org.Sc.sgd.db
 GOenrichment
-"biomaRt"

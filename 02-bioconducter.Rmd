@@ -209,16 +209,16 @@ The one script I will ask you to run once you've installed Bioconductor
 is called listPackages.R. This is an R script that includes the following:
 
 ```{r}
-library(dplyr, warn.conflicts = FALSE)
-pkgs <- local({
-        files <- dir(pattern = glob2rx("*.Rmd"))
-        code <- lapply(files, readLines) %>% unlist
-        r <- regexec("^library\\((.*?)\\)", code, perl = TRUE)
-        m <- regmatches(code, r)
-        u <- sapply(m, length) > 0
-        sapply(m[u], function(x) x[2]) %>% unique
-})
-writeLines(pkgs, "_R_package_list.txt")
+# library(dplyr, warn.conflicts = FALSE)
+# pkgs <- local({
+#         files <- dir(pattern = glob2rx("*.Rmd"))
+#         code <- lapply(files, readLines) %>% unlist
+#         r <- regexec("^library\\((.*?)\\)", code, perl = TRUE)
+#         m <- regmatches(code, r)
+#         u <- sapply(m, length) > 0
+#         sapply(m[u], function(x) x[2]) %>% unique
+# })
+pkgs= readLines("_R_package_list.txt")
 ```
 This little script runs through all the .Rmd files in your directory and just
 looks for the word library, grabs and and pulls it out. It doesn't do a 
@@ -254,13 +254,12 @@ need = setdiff(need,git)
 ```
 Before you tell `BiocManager` to install these packages, check to make sure that the format
 is correct. See here I have two errors I need to get rid of, `biomaRt` is surrounded by backslashes
-and dplyr has "warn.conflifts". So:
+and dplyr has "warn.conflifts". 
 
 ```{r,eval=FALSE}
-need[1] ="dplyr"
-need[19] = "biomaRt"
 
-need = c(need, "gwascat")
+
+need = c(need, "gwascat","ggupset","ggnewscale")
 
 BiocManager::install(need)
 
@@ -277,7 +276,7 @@ One final package that needs installation for the course is the following:
 devtools::install_github("gurinina/GOenrichment")
 ```
 
-All of your needs should be met by need and git, i.e., you should have no "needs"
+All of your package needs should be met by need and git, i.e., you should have no "needs"
 leftover! The `::` is a shortcut when you want to avoid loading a library, or when
 you have a potential function conflict with another library that is loaded. This shortened version of the script is in required_packages.R...so that's all you need to run.
 
