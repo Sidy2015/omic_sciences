@@ -268,8 +268,16 @@ BiocManager::install(need)
 git = paste0("genomicsclass/",git)
 
 devtools::install_github(git)
+
+
 ```
-p.s. All of your needs should be met by need and git, i.e., you should have no "needs"
+One final package that needs installation for the course is the following:
+
+```{r}
+devtools::install_github("gurinina/GOenrichment")
+```
+
+All of your needs should be met by need and git, i.e., you should have no "needs"
 leftover! The `::` is a shortcut when you want to avoid loading a library, or when
 you have a potential function conflict with another library that is loaded. This shortened version of the script is in required_packages.R...so that's all you need to run.
 
