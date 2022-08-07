@@ -702,6 +702,7 @@ and bottom of the list are weighted more heavily. The GO term set used right
 off the bat will be different; the scope of the over-representation analysis
 is limited to that of the genes in the querySet.
 
+## Trimming redundant GO terms
 This doesn't solve our problem though of handing the large number of GO
 terms and making sense of them, becausae we still wound up with ~700 terms
 at least for the positive end of the enrichment scores. Because GO is 
@@ -937,6 +938,7 @@ Level 4 goterms can be useful for filtering enriched terms from
 overexpression analysis, though you may miss the very top GO
 enrichments. Level 3 is too course.
 
+## More on GO reduyndancy
 Yet another way to avoid GO redundancy is to filter GO terms
 upfront. This can be done by using what is called "GO slim",
 literally a slimmed version of GO where all three ontologies
@@ -1063,7 +1065,8 @@ hpos$term[1:10]
 hneg$term[1:10]
 
 
-```
+``` 
+
 You can see that we also have other terms that are unfamiliar to us
 thus far, suchh as "nuxleotidytransferase activity", "hydrolase
 activity, acting on glycosyl bonds" -- these belong to molecular
@@ -1072,7 +1075,7 @@ chromosome" belong to cellular component, or CC GO terms. While
 these may be informative the MF and CC GO ontologies are in
 general not nearly as rich as the BP GO terms.
 
-So the take hom lesson is that in general we don't see 
+So the take home lesson is that in general we don't see 
 good agreement when we run GO enrichments from different 
 packages even if they are based on the same functions. 
 Why? We'd have to look into 
@@ -1151,6 +1154,8 @@ yanno = yanno[-wna,]
 tmp = yanno %>% group_by(GENENAME)%>% count(terms= length(term))
 hist(tmp$n)
 ```
+
+## The importance of geneSet sources
 So clearly one of the most important things to
 remember about geneSet analysis is that
 geneSets are constantly being updated.
@@ -1210,6 +1215,7 @@ The GO enrichment itself is basically
 over representation analysis, so we need a listdon't need to go over that
 bit in detail.
 
+## How visualizations can help
 Here, instead of using a ranked
 list however, to run the GO enrichment we use a list of
 "significant genes" and compared it to a
@@ -1342,7 +1348,7 @@ table(dfsig$index)
 
 
 
-
+## The hypergeometric test
 
 We define the parameters of the
 hypergeometric test in the following
@@ -1524,6 +1530,7 @@ goresp$enrichInfo$P[2]
 goresp$enrichInfo$nOverlap[2]
 ```
 
+## Fisher's test
 So we get the same value. We can look at it
 another way. 
 This is equivalent to setting up a
@@ -1662,7 +1669,7 @@ GO terms are collapsed into more general
 terms, but as far as I can tell the data
 is not that easy to manage.
 
-Visualization:
+## Visualization:
 
 ```{r}
 
@@ -1721,6 +1728,8 @@ w = which(hresp$enrichInfo$cluster == "#9900FF")
 hresp$enrichInfo$term[w]
 
 ```
+
+## Minimizing GO redundancy
 By modifying our calcOverlap function we could get rid of a 
 lot of the overlapping terms. So lets do that:
 
@@ -1804,6 +1813,8 @@ analysis: goprofiler2, clusterProfiler,
 GOfuncR, limma, goseq, topGO GSEA:
 fgsea, GSEA, ViSEAGO, RGSEA 
 
+
+## Take home
 I hope from this discussion you realize that it is important to try different
 GO analyses and different geneSets to turn your data around such that you 
 end up with results you have confidence in. Meaning the results will generally
@@ -1817,7 +1828,7 @@ were used as long as that geneSet is one broadly used set in the literature.
 Download dates need to be included obviously. I hope you've also recognized 
 when it is ok to slim down your GO enrichment terms, and when it 
 doesn't make sense and you lose too much information. I would definitely 
-keep gsea positive and gsea 
+keep GSEA positive and GSEA 
 negative results in different sets of data to clearly distinguish 
 between results. I think clusterProfiler is one of the best packages, that's
 why I've highlighted it here. It gives you a lot of options within the same
