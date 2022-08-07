@@ -231,7 +231,7 @@ There is an excellent introductory R book for graduate students here: [Guide-to-
 I highly recommend going through to ground yourself, it will really
 help as we will dive into thihgs pretty quickly.
 
-## Installing materical for course from Github 
+## Installing material for course from Github 
 
 What is Github? Github is a system used for version control. It's fairly
 sophisticated and we are not going to learn a lot about it here but it is well
