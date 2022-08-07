@@ -946,12 +946,15 @@ Biomart.
 
 ```{r}
 
-library("biomaRt")
+library(biomaRt)
 
-ensembl=useMart("ensembl")
-listDatasets(ensembl)
-hensembl = useDataset("hsapiens_gene_ensembl",mart=ensembl)
-yensembl = useDataset("scerevisiae_gene_ensembl",mart=ensembl)
+# ensembl=useMart("ensembl",  ensemblRedirect = FALSE)
+# listDatasets(ensembl)
+# hensembl = useDataset("hsapiens_gene_ensembl",mart=ensembl)
+# library(biomaRt)
+hensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
+yensembl <- useEnsembl(biomart = "genes", dataset = "scerevisiae_gene_ensembl")
+# yensembl = useDataset("scerevisiae_gene_ensembl",mart=ensembl)
 
 yslim <- getBM(attributes=c('ensembl_gene_id','external_gene_name',
         'sgd_gene',  "goslim_goa_accession", "goslim_goa_description" ),
