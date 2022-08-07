@@ -171,25 +171,25 @@ and of course more scientifically relevant questions.
 The `r Biocpkg("AnnotationHub")` package can be used to obtain `GRanges` or other suitably designed containers for institutionally curated annotation.
 `AnnotationHub` provides a resource of annotations that are available without requiring an annotation package. 
 
-```{r}
+```{r annotationhub}
 library(AnnotationHub)
 ah <- AnnotationHub()
 ```
 
-One example of such annotations are org-style data resources for less-model organisms. Discover available resources using the flexible query() command.
+One example of such annotations are org-style data resources for less-model organisms. Discover available resources using the flexible `query` command.
 
-```{r}
+```{r query}
 query(ah, "^org\\.")
 ```
-Find out more about a particular resource using [ to select just that resource, or use `mcols()` on a subset of resources. identifier, e.g.
+Find out more about a particular resource using `[` to select just that resource, or use `mcols` on a subset of resources. identifier, e.g.
 
-```{r}
+```{r AH102598}
 
 ah["AH102598"]
 ```
 
 Retrieve and use a resource by using `[[` with the corresponding
-```{r}
+```{r RETRIEVE}
 org <- ah[["AH102598"]]
 
 org
