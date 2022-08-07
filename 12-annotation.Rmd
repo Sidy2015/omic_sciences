@@ -184,6 +184,8 @@ query(ah, "^org\\.")
 
 Find out more about a particular resource using `[` to select just that resource, or use `mcols` on a subset of resources. identifier, e.g.
 
+Find out more about a particular resource using `[` to select just that resource, or use `mcols` on a subset of resources. identifier, e.g.
+
 ```{r AH102598}
 
 ah["AH102598"]
