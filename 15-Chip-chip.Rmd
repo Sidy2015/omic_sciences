@@ -322,15 +322,37 @@ head(ta$peaks[[1]])
 
 The following code chunk will count the reads from the BAM files
 specified in the `samples` slot:
+```{r,fig.height=300,fig.width=300,fig.cap ="correlation of samples"}
 
-```{r}
+par(mfrow=c(1,1))
+par(mar=c(1,1,1,1))
 ta$samples
 # this call does not actually work, because the BAM files are not included in the package
 #ta <- dba.count(ta, minOverlap=3)
 # instead we load the counts:
 data(tamoxifen_counts)
 ta2 <- tamoxifen
-plot(ta2)
+correlations <- DiffBind:::pv.occupancy(ta2,
+    Sort = "cor", bCorOnly = TRUE, CorMethod = "pearson")
+d=as.data.frame(correlations)
+mm=matrix(rep(NA,121),nrow=11,ncol=11)
+for(i in 1:55) mm[d$A[i],d$B[i]]=d$Cor[i]
+mm[lower.tri(mm)]=t(mm)[lower.tri(t(mm))]
+diag(mm)=1
+rownames(mm)=ta2$samples$SampleID
+colnames(mm)=ta2$samples$SampleID
+
+nn = ta2$samples[,c("Tissue","Replicate")]
+library(RColorBrewer)
+library(rafalib)
+reds = brewer.pal(4,"Reds")
+purps =  brewer.pal(3,"Purples")
+cols <- colorRampPalette(brewer.pal(9, "Greens"))(256)
+nn$Tissue =reds[as.fumeric(nn$Tissue)]
+nn$Replicate = purps[nn$Replicate]
+DiffBind:::heatmap.3(mm, dendrogram = "column", symm = TRUE, scale = "none",
+key=FALSE, col = cols,trace =  "none", margins = c(6,6), ColSideColors=as.matrix(nn),Colv=TRUE) 
+#dba.plotHeatmap(ta2,margin=c(10),dendrogram ="column",key=FALSE) 
 ```
 
 We can perform a test by specifying to contrast over the levels of

@@ -954,8 +954,10 @@ library(biomaRt)
 # listDatasets(ensembl)
 # hensembl = useDataset("hsapiens_gene_ensembl",mart=ensembl)
 # library(biomaRt)
-hensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl")
-yensembl <- useEnsembl(biomart = "genes", dataset = "scerevisiae_gene_ensembl")
+hensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl",   
+           verbose = TRUE,mirror = 'uswest')
+yensembl <- useEnsembl(biomart = "genes", dataset = "scerevisiae_gene_ensembl",
+            verbose = TRUE,mirror = 'uswest')
 # yensembl = useDataset("scerevisiae_gene_ensembl",mart=ensembl)
 
 yslim <- getBM(attributes=c('ensembl_gene_id','external_gene_name',
@@ -1156,9 +1158,46 @@ hist(tmp$n)
 ```
 
 ## The importance of geneSet sources
-So clearly one of the most important things to
+Now let's compare this file to the GO annotations 
+that I downloaded ~6 months ago from the Gene Ontology
+Consortium:
+
+```{r}
+length(intersect(yanno$GOALL,dfGOBP$GOID))
+
+anno=split(yanno$GENENAME,yanno$term)
+anno = lapply(anno,unique)
+anno = lapply(anno,sort)
+anno = anno[sort(names(anno))]
+
+lbp = sapply(yGOBP.gmt,length)
+wlanno = which(lanno <= max(lbp))
+length(lanno[wlanno])
+            
+i=intersect(names(anno),names(yGOBP.gmt))
+length(i)
+lanno = sapply(anno[wlanno],length)
+length(lbp)
+table(lanno[wlanno][i]==lbp[i])
+
+length(i)/length(lbp)
+length(i)/length(lanno[wlanno])
+table(lanno[wlanno][i]==lbp[i])/sum(table(lanno[wlanno][i]==lbp[i]))
+```
+About 85% of the GO geneSet downloaded six months ago and 
+about 60% of the March 2022 SGD GO geneSet overlaps the
+intersection of the two datasets. But there is a further discrepancy
+in that there is only a ~35% agreement in the GO term 
+memberships. 
+
+So **clearly** one of the most important things to
 remember about geneSet analysis is that
 geneSets are constantly being updated.
+I don't even want to think about looking at
+the clusterProfiler version of the GO geneSets.
+But that being said, the fact is that the GO enrichments would not change that
+much even so -- **if** you have a robust profile.
+
 Many of the R packages we are using, I
 have noticed! don't update their files
 to reflect this. Therefore the safest
@@ -1268,10 +1307,11 @@ stringent.
 go_input = dfGOBP
 bp_input = yGOBP.gmt
 
-goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
+go = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
       mat = sampleFitdata, coln = 1, sig = 1, bp_input = bp_input,go_input = go_input)
 ```
 Lets look at what is returned.
+
 
 There is an enrichInfo data.frame, and an edgeMat.
 enrichInfo has all the enriched terms, their FDR scores, overlapping genes, etc.
