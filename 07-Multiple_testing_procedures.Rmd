@@ -3,8 +3,7 @@
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-In the previous section we learned how p-values are no longer a useful quantity to interpret when dealing with high-dimensional data. This is because we are testing many _features_ at the same time. We refer to this as the _multiple comparison_ or _multiple testing_ or _multiplicity_ problem. The definition of a p-value does not provide a useful quantification here. Again, because when we test many hypotheses simultaneously, a list based simply on a small p-value cut-off of, say 0.01, can result in many false positives with high probability. Here we define terms that are more appropriate in the context of high-throughput data.
+This Rmd file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/07-Multiple_testing_procedures.Rmd). In the previous section we learned how p-values are no longer a useful quantity to interpret when dealing with high-dimensional data. This is because we are testing many _features_ at the same time. We refer to this as the _multiple comparison_, _multiple testing_ or _multiplicity_ problem. The definition of a p-value does not provide a useful quantification here. Again, because when we test many hypotheses simultaneously, a list based simply on a small p-value cut-off of, say 0.01, can result in many false positives with high probability. Here we define terms that are more appropriate in the context of high-throughput data.
 
 The most widely used approach to the multiplicity problem is to define a _procedure_ and then estimate or _control_ an informative _error rate_ for this procedure. What we mean by _control_ here is that we adapt the procedure to guarantee an _error rate_ below a predefined value. The procedures are typically flexible through parameters or cutoffs that let us control specificity and sensitivity. An example of a procedure is: 
 
@@ -15,7 +14,7 @@ Note that changing the $\alpha$ permits us to adjust specificity and sensitivity
 
 Next we define the _error rates_  that we will try to estimate and control.
 
-Error Rates
+**Error Rates**
 
 Throughout this section we will be using the type I error and type II error terminology. We will also refer to them as false positives and false negatives respectively. We also use the more general terms specificity, which relates to type I error, and sensitivity, which relates to type II errors.
 
@@ -36,8 +35,7 @@ Throughout this chapter we refer to _features_ as the units being tested. In gen
 
 This implies that there are $m_1-S$ type II errors or _false negatives_ (FN) and $m_0-V$ true negatives (TN). Keep in mind that if we only ran one test, a p-value is simply the probability that $V=1$ (FP) when $m=m_0=1$. Power is the probability of $S=1$ when $m=m_1=1$. In this very simple case, we wouldn't bother making the table above, but now we show how defining the terms in the table helps for the high-dimensional setting.
 
-  
-Data example
+**Data example**
 
 Let's compute these quantities with a data example. We will use a Monte Carlo simulation using our mice data to imitate a situation in which we perform tests for 10,000 different fad diets, none of them having an effect on weight. This implies that the null hypothesis is true for diets and thus $m=m_0=10,000$ and $m_1=0$. Let's run the tests with a sample size of $N=12$ and compute $R$. Our procedure will declare any diet achieving a p-value smaller than $\alpha=0.05$ as significant. 
 
@@ -72,6 +70,7 @@ This many false positives are not acceptable in most contexts.
 
 Here is more complicated code showing results where 10% of the diets are effective with an average effect size of $\Delta= 3$ ounces. 
 Studying this code carefully will help us understand the meaning of the table above.
+
 First let's define _the truth_:
 
 ```{r}
@@ -157,7 +156,6 @@ $$\mbox{Pr}(V>0) \leq \mbox{Pr}(V>0 \mid m_1=0)$$
 
 The Bonferroni procedure sets $k=\alpha/m$ since we can show that:
 
-
 $$\mbox{Pr}(V>0 \,\mid \, m_1=0) = \mbox{Pr}\left( \min_i \{p_i\} \leq \frac{\alpha}{m} \mid m_1=0 \right)$$
 $$\mbox{Pr}(V>0 \,\mid \, m_1=0) \leq \sum_{i=1}^m \mbox{Pr}\left(p_i \leq \frac{\alpha}{m} \right)$$
 $$\mbox{Pr}(V>0 \,\mid \, m_1=0) = m \frac{\alpha}{m}=\alpha$$
@@ -182,11 +180,9 @@ sum(pvals < 0.05/10000)
 
 are called significant after applying the Bonferroni procedure, despite having 1,000 diets that work. 
 
-
 ## False Discovery Rate 
 
 There are many situations for which requiring an FWER of 0.05 does not make sense as it is much too strict. For example, consider the very common exercise of running a preliminary small study to determine a handful of candidate genes. This is referred to as a _discovery_ driven project or experiment. We may be in search of an unknown causative gene and more than willing to perform follow-up studies with many more samples on just the candidates. If we develop a procedure that produces, for example, a list of 10 genes of which 1 or 2 pan out as important, the experiment is a resounding success. With a small sample size, the only way to achieve a $FWER \leq 0.05$ is with an empty list of genes. We already saw in the previous section that despite 1,000 diets being effective, we ended up with a list with just 2. Change the sample size to 6 and you very likely get 0.
-
 
 By requiring a FWER $\leq$ 0.05, we are practically assuring 0 power (sensitivity). In many applications, this specificity requirement is over-kill. A widely used alternative to the FWER is the false discovery rate (FDR). The idea behind FDR is to focus on the random variable $Q \equiv V/R$ with $Q=0$ when $R=0$ and $V=0$. Note that $R=0$ (nothing called significant) implies $V=0$ (no false positives). So $Q$ is a random variable that can take values between 0 and 1 and we can define a rate by considering the average of $Q$. To better understand this concept here, we compute $Q$ for the procedure: call everything p-value < 0.05 significant.
 

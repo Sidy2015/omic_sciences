@@ -5,7 +5,7 @@
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-An under-appreciated advantage of working with high-throughput data is that problems with the data are sometimes more easily exposed than with low-throughput data. The fact that we have thousands of measurements permits us to see problems that are not apparent when only a few measurements are available. A powerful way to detect these problems is with exploratory data analysis (EDA). Here we review some of the plots that allow us to detect quality problems.
+This Rmd file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/08-Exploratory-Data-Analysis.Rmd).An under-appreciated advantage of working with high-throughput data is that problems with the data are sometimes more easily exposed than with low-throughput data. The fact that we have thousands of measurements permits us to see problems that are not apparent when only a few measurements are available. A powerful way to detect these problems is with exploratory data analysis (EDA). Here we review some of the plots that allow us to detect quality problems.
 
 
 ## Volcano plots
@@ -93,9 +93,10 @@ We refer to this figure as a _kaboxplot_ because Karl Broman was the first we sa
 
 We can also plot all the histograms. Because we have so much data, we create histograms using small bins, then smooth the heights of the bars and then plot _smooth histograms_. We re-calibrate the height of these smooth curves so that if a bar is made with base of size "unit" and height given by the curve at $x_0$, the area approximates the number of points in region of size "unit" centered at $x_0$:
 
-```{r shist, fig.cap="Smooth histograms for each sample."} 
+```{r shist, fig.cap="Density for each sample."} 
 mypar(1,1)
-shist(ge,unit=0.5)
+plot(density(ge[,1]))
+for(i in 1:ncol(ge))lines(density(ge[,i]))
 ```
 
 ## MA plot

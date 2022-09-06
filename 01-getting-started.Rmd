@@ -1,3 +1,9 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
 # Getting Started
 
 ```{r options, echo=FALSE}
@@ -190,7 +196,7 @@ Many of the datasets we include in this book are available in custom-built packa
 
 To install packages from GitHub you will need to install the `devtools` package:
 
-```{r,eval=FALSE}
+```{r, eval = FALSE}
 install.packages("devtools")
 ```
 
@@ -198,7 +204,7 @@ Note to Windows users: to use devtools you will have to also install `Rtools`. I
 
 Now you are ready to install a package from GitHub. For this we use a different function:
 
-```{r,message=FALSE,eval=FALSE}
+```{r,message=FALSE, eval = FALSE,}
 library(devtools)
 install_github("genomicsclass/dagdata")
 ```

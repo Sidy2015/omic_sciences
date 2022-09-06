@@ -26,7 +26,7 @@ The confounder here is games played. Jeter played more games during the year he 
 
 ## Confounding: High-Throughput Example
 
-To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) that claimed that roughly 50% of genes where differentially expressed when comparing blood from two ethnic groups. We include the data in one of our data packages:
+To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) entitled "Common genetic variants account for differences in gene expression among ethnic groups" that claimed that roughly 50% of genes where differentially expressed when comparing blood from two ethnic groups. In response to this paper "On the design and analysis of gene expression studies in human populations" [this paper(https://pubmed.ncbi.nlm.nih.gov/17597765/) was published. We include the data in one of our data packages:
 
 ```{r,message=FALSE}
 library(rafalib)

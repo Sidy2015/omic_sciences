@@ -24,10 +24,10 @@ library(org.Hs.eg.db)})
 
 The .Rmd file for this chapter can be
 found
-[here](https://github.com/gurinina/omic_sciences/blob/main/13-GSEA.Rmd).
+[here](https://github.com/gurinina/omic_sciences/blob/main/16-GOenrichment.Rmd).
 To begin learning about GO set
-enrichmet analysis and the different
-methods that can be utiliazed to preform
+enrichment analysis and the different
+methods that can be utililized to preform
 these analysis a good jumping off start
 point is this Natural Protocols paper:
 
@@ -292,7 +292,6 @@ user-provided omics data . This is the
 main advantage of PathVisio as compared
 to EnrichmentMap and ClueGO.
 
-
 ## Development of the protocol
 
 This protocol covers pathway enrichment
@@ -432,8 +431,7 @@ plotEnrichment(pathways[[topPathways[1]]], ranks)
 
 ```
 
-Lets talk a little bit about how GSEA
-works.
+## Methodology GSEA
 
 Steps: 1. Sort genes by log fold change, or
 by any metric. 2. The score is calculated by walking 
@@ -446,8 +444,6 @@ deviation from zero encountered in the random walk.
 A large ES means that genes in the set are
 toward top of list. 3. Permute subject labels 
 to calculate signficance of the score.
-
-
 
 ![GSEA](figure/GSEA.jpeg) Let's look at
 the results. I wrote a function here to 
@@ -558,7 +554,14 @@ ego <- clusterProfiler::enrichGO(
 
 goplot(ego)
 dotplot(ego, showCategory=10) + ggtitle("positive enrichment")
-sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+
+
+if (file.exists("sapGO.rds")) {
+  sapGO <- readRDS("sapGO.rds")
+} else {
+  sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+  saveRDS(sapGO, "sapGO.rds")
+}
 hx = pairwise_termsim(ego, semData = sapGO)
 emapplot(hx, showCategory = 15)
 ```
@@ -619,7 +622,7 @@ based on the input fitness threshold cutoff set by `sig`, typically = 1.
 
 Just like for fgsea, we need a rank file, that is how we use ygene here:
 
-```{r, cache = TRUE}
+```{r}
 library(GOenrichment)
 dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
 head(dfsig)
@@ -645,10 +648,16 @@ OrgDb = "org.Sc.sgd.db",
 pAdjustMethod = "BH",
 by = "fgsea"
 )
-scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+
+if (file.exists("scGO.rds")) {
+  scGO <- readRDS("scGO.rds")
+} else {
+  scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+  saveRDS(scGO, "scGO.rds")
+}
 
 goplot(gse)
-scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
+
 
 x = pairwise_termsim(gse, semData  = scGO, showCategory = 200)
 emapplot(x, showCategory = 15,cex_category = 1.5)
@@ -702,7 +711,7 @@ and bottom of the list are weighted more heavily. The GO term set used right
 off the bat will be different; the scope of the over-representation analysis
 is limited to that of the genes in the querySet.
 
-## Trimming redundant GO terms
+## GO set redundancy
 This doesn't solve our problem though of handing the large number of GO
 terms and making sense of them, becausae we still wound up with ~700 terms
 at least for the positive end of the enrichment scores. Because GO is 
@@ -726,10 +735,17 @@ package, so that makes sense. There's a really nice book here
 The function `simplify` internally calls GOSemSim (Yu et al. 2010) to calculate semantic similarity among GO terms and remove those highly similar terms by keeping one representative term. The simplify() method apply select_fun (which can be a user defined function) to feature by to select one representative term from redundant terms (which have similarity higher than cutoff).
 
 
-```{r, cache = TRUE}
-sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+```{r}
+if (file.exists("sapGO.rds")) {
+  sapGO <- readRDS("sapGO.rds")
+} else {
+  sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+  saveRDS(sapGO, "sapGO.rds")
+}
+
 simp = clusterProfiler::simplify(hse,semData  = sapGO)
 simp$Description[1:10]
+dim(simp)
 ```
 
 But we're still left with nearly 500 terms.
@@ -822,15 +838,36 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
 Let's try this function to see how we can reduce the GO term redundancy in the
 gseGO enrichment for both the yeast and the human. First let's tackle the yeast:
 
-```{r, cache = TRUE}
-y = calcOverGOcoeff(res=gse,showCategory = nrow(data.frame(gse)),cutoff=1,select_fun = overlapcoeff,orgDb = "org.Sc.sgd.db",keytype="GENENAME")
-x = pairwise_termsim(y, semData = scGO,showCategory = nrow(y))
-treeplot(x, hclust_method = "ward.D2",showCategory = nrow(x),nCluster=6)
-
-```
 ```{r}
 
-h = calcOverGOcoeff(res=hse,showCategory = nrow(data.frame(hse)),cutoff=0.5,select_fun = overlapcoeff,orgDb = "org.Hs.eg.db",keytype="SYMBOL")
+if (file.exists("y.rds")) {
+  y <- readRDS("y.rds")
+} else {
+  y = calcOverGOcoeff(res=gse,showCategory = nrow(data.frame(gse)),cutoff=1,select_fun = overlapcoeff,orgDb = "org.Sc.sgd.db",keytype="GENENAME")
+  saveRDS(y, "y.rds")
+}
+
+x = pairwise_termsim(y, semData = scGO,showCategory = nrow(y))
+treeplot(x, hclust_method = "ward.D2",showCategory =nrow(x), nCluster=6)
+
+```
+
+```{r}
+if (file.exists("h.rds")) {
+  h <- readRDS("h.rds")
+} else {
+  h = calcOverGOcoeff(res=hse,showCategory = nrow(data.frame(hse)),cutoff=0.5,select_fun = overlapcoeff,orgDb = "org.Hs.eg.db",keytype="SYMBOL")
+  saveRDS(h, "h.rds")
+}
+
+if (file.exists("sapGO.rds")) {
+  sapGO <- readRDS("sapGO.rds")
+} else {
+  sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
+  saveRDS(sapGO, "sapGO.rds")
+}
+
+
 x = pairwise_termsim(h, semData = sapGO,showCategory = nrow(h))
 tp= treeplot(x, hclust_method = "ward.D2",showCategory = nrow(x),nCluster=12)
 dp=tp$data
@@ -946,14 +983,11 @@ are combined into a much broader annotation. We can look
 at how well that does by downloading the slim annotations from
 Biomart.
 
-```{r, cache = TRUE}
+```{r}
 
 library(biomaRt)
 
-# ensembl=useMart("ensembl",  ensemblRedirect = FALSE)
-# listDatasets(ensembl)
-# hensembl = useDataset("hsapiens_gene_ensembl",mart=ensembl)
-# library(biomaRt)
+
 hensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl",   
            verbose = TRUE,mirror = 'uswest')
 yensembl <- useEnsembl(biomart = "genes", dataset = "scerevisiae_gene_ensembl",
@@ -1098,10 +1132,9 @@ a GO term is associated with an evidence code.
 
 Let's look at a quick example. Using `AnnotationDbi' and
 the `select` function, we can pull down the GO annotaations
-by querying the yeast databasea `org.Sc.sgd.db`.
+by querying the yeast database `org.Sc.sgd.db`.
 
 ```{r, cache = TRUE}
-
 
 yanno = AnnotationDbi::select(org.Sc.sgd.db,
   keys=dfsig$gene,columns=c("ORF","GENENAME","GOALL",
@@ -1163,15 +1196,17 @@ that I downloaded ~6 months ago from the Gene Ontology
 Consortium:
 
 ```{r}
-length(intersect(yanno$GOALL,dfGOBP$GOID))
 
+library(GOenrichment)
 anno=split(yanno$GENENAME,yanno$term)
 anno = lapply(anno,unique)
 anno = lapply(anno,sort)
 anno = anno[sort(names(anno))]
-
+lanno = sapply(anno,length)
 lbp = sapply(yGOBP.gmt,length)
+
 wlanno = which(lanno <= max(lbp))
+
 length(lanno[wlanno])
             
 i=intersect(names(anno),names(yGOBP.gmt))
@@ -1254,7 +1289,7 @@ The GO enrichment itself is basically
 over representation analysis, so we need a listdon't need to go over that
 bit in detail.
 
-## How visualizations can help
+## How network visualizations can help
 Here, instead of using a ranked
 list however, to run the GO enrichment we use a list of
 "significant genes" and compared it to a
@@ -1307,7 +1342,7 @@ stringent.
 go_input = dfGOBP
 bp_input = yGOBP.gmt
 
-go = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
+goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
       mat = sampleFitdata, coln = 1, sig = 1, bp_input = bp_input,go_input = go_input)
 ```
 Lets look at what is returned.
@@ -1385,8 +1420,6 @@ dfsig = dfsig[-wna,]
 table(dfsig$index)
 
 ```
-
-
 
 ## The hypergeometric test
 
@@ -1659,7 +1692,7 @@ enrichment test vs a GSEA. Instead of
 ranks, we'll have to set a threshold.
 Lets use a threshold
 
-```{r, cache = TRUE}
+```{r}
 library(GOenrichment)
 
 mat = cbind(ranks,ranks)
@@ -1708,8 +1741,6 @@ similar to GO slim methods, where child
 GO terms are collapsed into more general
 terms, but as far as I can tell the data
 is not that easy to manage.
-
-## Visualization:
 
 ```{r}
 
@@ -1822,8 +1853,18 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, padj = "p
 }
 ```
 Use the hresp enrichInfo and plug it into this revised function:
-```{r, cache = TRUE}
+```{r}
+
+
+if (file.exists("newhresp.rds")) {
+  newhresp <- readRDS("newhresp.rds")
+} else {
+  
 newhresp = calcOverGOcoeff(select_fun=overlapcoeff,cutoff=0.7,res = hresp$enrichInfo,padj="FDR",term="term",goont=hGOBP.gmt)
+  saveRDS(newhresp, "newhresp.rds")
+}
+
+
 
 w=which(hresp$edgeMat$source%in% newhresp$id)
 ww=which(hresp$edgeMat$target[w]%in% newhresp$id)

@@ -95,7 +95,8 @@ qc_report(qc.path=qc.dir,
           result.file="reportFile", preview = TRUE)
 fastqc = list.files(qc.dir)
 fastqcfile = paste(qc.dir,fastqc,sep = "/")
-qc <- qc_read(fastqcfile[2])
+g = grep("gz",fastqcfile)
+qc <- qc_read(fastqcfile[g])
 names(qc)
 qc_plot(qc, "Per sequence GC content")
 qc_plot(qc, "Per base sequence quality")
@@ -107,9 +108,9 @@ reading FASTQ files in R
 
 ```{r echo = FALSE,warning=FALSE,  message = FALSE}
 library(ShortRead)
-fastqFile = fastqcfile[3]
+fastqFile = fastqcfile
 # read fastq file
-fq = readFastq(fastqFile)
+fq = readFastq(fastqFile[g])
 fq
 #class: ShortReadQ
 #length: 20000 reads; width: 72 cycles
