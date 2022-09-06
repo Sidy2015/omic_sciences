@@ -535,7 +535,7 @@ How do we make sense of them all?
 You could look at just the most extreme
 scores with the lowest adjusted pvalues:
 
-```{r, cache = TRUE}
+```{r ego, cache = TRUE}
 ### GO enrichment analysis
 plot(ranks)
 abline(v = 3500)
@@ -566,7 +566,7 @@ hx = pairwise_termsim(ego, semData = sapGO)
 emapplot(hx, showCategory = 15)
 ```
 We can also look at athe negative enrichment, or the repressed end:
-```{r}
+```{r nego}
 nego <- clusterProfiler::enrichGO(
         gene  = names(ranks)[13711:15211],
         OrgDb = "org.Hs.eg.db",
@@ -622,7 +622,7 @@ based on the input fitness threshold cutoff set by `sig`, typically = 1.
 
 Just like for fgsea, we need a rank file, that is how we use ygene here:
 
-```{r}
+```{r gse}
 library(GOenrichment)
 dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
 head(dfsig)
@@ -735,7 +735,7 @@ package, so that makes sense. There's a really nice book here
 The function `simplify` internally calls GOSemSim (Yu et al. 2010) to calculate semantic similarity among GO terms and remove those highly similar terms by keeping one representative term. The simplify() method apply select_fun (which can be a user defined function) to feature by to select one representative term from redundant terms (which have similarity higher than cutoff).
 
 
-```{r}
+```{r simp}
 if (file.exists("sapGO.rds")) {
   sapGO <- readRDS("sapGO.rds")
 } else {
@@ -838,7 +838,7 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, showCateg
 Let's try this function to see how we can reduce the GO term redundancy in the
 gseGO enrichment for both the yeast and the human. First let's tackle the yeast:
 
-```{r}
+```{r yoverlapGO}
 
 if (file.exists("y.rds")) {
   y <- readRDS("y.rds")
@@ -852,7 +852,7 @@ treeplot(x, hclust_method = "ward.D2",showCategory =nrow(x), nCluster=6)
 
 ```
 
-```{r}
+```{r hoverlapGO}
 if (file.exists("h.rds")) {
   h <- readRDS("h.rds")
 } else {
@@ -906,7 +906,7 @@ The `bitr` function here is in the clusterProfiler
 package, and is just an easy function for
 translating gene names.
 
-```{r}
+```{r topGO}
 Bioconductor<-ViSEAGO::Bioconductor2GO()
 myGENE2GO<-ViSEAGO::annotate(
 "org.Sc.sgd.db",
@@ -958,7 +958,7 @@ But this doesn't work that well because of the uneveness of
 the GO ontology. For example, we can use this on the output 
 of the GO over-representation analysis:
 
-```{r}
+```{r ego4}
 
 ego4 = gofilter(ego,level = 4)
 
@@ -983,7 +983,7 @@ are combined into a much broader annotation. We can look
 at how well that does by downloading the slim annotations from
 Biomart.
 
-```{r}
+```{r biomaRt}
 
 library(biomaRt)
 
@@ -1036,7 +1036,7 @@ yslim = yslim[-w,]
 Let's see how well these agree with the full 
 GO BP set:
 
-```{r}
+```{r yslim}
 ys=split(yslim$external_gene_name,yslim$goslim_goa_description)
 ys=lapply(ys,unique)
 ys=lapply(ys,sort)
@@ -1061,7 +1061,7 @@ pathway terms intersect with the yeast gseGO enrichment terms.
 Lets see how the human compares. Let's use the GOID this time,
 it's probably smarter than using the GO term.
 
-```{r}
+```{r hslim}
 hs=split(hslim$hgnc_symbol,hslim$goslim_goa_accession)
 hs=lapply(hs,unique)
 hs=lapply(hs,sort)
@@ -1134,7 +1134,7 @@ Let's look at a quick example. Using `AnnotationDbi' and
 the `select` function, we can pull down the GO annotaations
 by querying the yeast database `org.Sc.sgd.db`.
 
-```{r, cache = TRUE}
+```{r yanno, cache = TRUE}
 
 yanno = AnnotationDbi::select(org.Sc.sgd.db,
   keys=dfsig$gene,columns=c("ORF","GENENAME","GOALL",
@@ -1338,7 +1338,7 @@ sig is the significance threshold, fdrThresh is the FDR
 threshold, which we set fairly high as it is quite 
 stringent.
 
-```{r}
+```{r yGORESP}
 go_input = dfGOBP
 bp_input = yGOBP.gmt
 
@@ -1692,7 +1692,7 @@ enrichment test vs a GSEA. Instead of
 ranks, we'll have to set a threshold.
 Lets use a threshold
 
-```{r}
+```{r hGORESP}
 library(GOenrichment)
 
 mat = cbind(ranks,ranks)
@@ -1853,7 +1853,7 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, padj = "p
 }
 ```
 Use the hresp enrichInfo and plug it into this revised function:
-```{r}
+```{r newhresp}
 
 
 if (file.exists("newhresp.rds")) {

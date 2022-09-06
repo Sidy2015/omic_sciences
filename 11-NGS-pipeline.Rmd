@@ -1353,7 +1353,7 @@ colData(se) <- DataFrame(sample.table)
 
 A similar function in the **Rsubread** library can be used to construct a count matrix:
 
-```{r ir30}
+```{r ir30, eval = FALSE}
 # not available for Windows - use above method instead
 suppressPackageStartupMessages({library(Rsubread)})
 fc <- featureCounts(bam.files, annot.ext=gtf.file,
@@ -1365,10 +1365,12 @@ unname(fc$counts) # hide the colnames
 
 Plot the first column from each function against each other (after matching the rows of the **featureCounts** matrix to the one returned by **summarizeOverlaps**.
 
-```{r ir31 }
+```{r ir31, eval = FALSE }
 plot(assay(se)[,1], 
      fc$counts[match(rownames(se),rownames(fc$counts)),1])
 abline(0,1)
 ```
 
-So we see that we get the same counts using either function.
+So we see that we get the same counts using either function. If you 
+can't get the package RSubread installed, you'll just have to
+take our word for it.

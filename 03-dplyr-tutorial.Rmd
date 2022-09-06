@@ -7,64 +7,6 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
 The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English and we are therefore going to introduce two simple functions: one is used to subset and the other to select columns. The Rmd file for this section is available [here](https://github.com/gurinina/omic_sciences/blob/main/03-dplyr-tutorial.Rmd).
 
-```{r,echo=FALSE}
-url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
-filename <- "femaleMiceWeights.csv"
-library(downloader)
-if (!file.exists(filename)) download(url, filename)
-```
-Take a look at the dataset we read in:
-
-```{r}
-filename <- "femaleMiceWeights.csv"
-dat <- read.csv(filename) ## previously downloaded  
-head(dat) #In R Studio use View(dat)
-```
-There are two types of diets, which are denoted in the first column. If we want just the weights, we only need the second column. So if we want the weights for mice on the `chow` diet, we subset and filter like this:
-
-```{r,message=FALSE}
-library(dplyr) 
-chow <- filter(dat, Diet=="chow") #keep only the ones with chow diet
-head(chow)
-```
-
-And now we can select only the column with the values:
-
-```{r}
-chowVals <- select(chow,Bodyweight)
-head(chowVals)
-```
-
-A nice feature of the `dplyr` package is that you can perform consecutive tasks by using what is called a "pipe". In `dplyr` we use `%>%` to denote a pipe. This symbol tells the program to first do one thing and then do something else to the result of the first. Hence, we can perform several data manipulations in one line. For example:
-
-```{r}
-chowVals <- filter(dat, Diet=="chow") %>% select(Bodyweight)
-```
-
-In the second task, we no longer have to specify the object we are editing since it is whatever comes from the previous call. 
-
-Also, note that if `dplyr` receives a `data.frame` it will return a `data.frame`. 
-```{r}
-class(dat)
-class(chowVals)
-```
-
-For pedagogical reasons, we will often want the final result to be a simple `numeric` vector. To obtain such a vector with `dplyr`, we can apply the `unlist` function which turns `lists`, such as `data.frames`, into `numeric` vectors:
-
-```{r}
-chowVals <- filter(dat, Diet=="chow") %>% select(Bodyweight) %>% unlist
-class( chowVals )
-```
-
-
-To do this in R without `dplyr` the code is the following:
-
-```{r}
-chowVals <- dat[ dat$Diet=="chow", colnames(dat)=="Bodyweight"]
-```
-
-
-
 ## What is dplyr?
 
 dplyr is a powerful R-package to transform and summarize tabular data with rows and columns. For another explanation of dplyr see the dplyr package vignette: [Introduction to dplyr](http://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html)
@@ -91,6 +33,83 @@ To load dplyr:
 
 ```{r, message=FALSE}
 library(dplyr)
+```
+
+
+```{r,echo=FALSE}
+url <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/femaleMiceWeights.csv"
+filename <- "femaleMiceWeights.csv"
+library(downloader)
+if (!file.exists(filename)) download(url, filename)
+```
+Take a look at the dataset we read in:
+
+```{r}
+filename <- "femaleMiceWeights.csv"
+dat <- read.csv(filename) ## previously downloaded  
+head(dat) #In R Studio use View(dat)
+```
+There are two types of diets, which are denoted in the first column. If we want just the weights, we only need the second column. So if we want the weights for mice on the `chow` diet, we subset and filter like this:
+
+```{r,message=FALSE}
+
+chow <- filter(dat, Diet=="chow") #keep only the ones with chow diet
+head(chow)
+```
+
+And now we can select only the column with the values:
+
+```{r}
+chowVals <- select(chow,Bodyweight)
+head(chowVals)
+```
+
+A nice feature of the `dplyr` package is that you can perform consecutive tasks by using what is called a "pipe". In `dplyr` we use `%>%` to denote a pipe. This symbol tells the program to first do one thing and then do something else to the result of the first. 
+
+
+## Pipe Operator: %>%
+
+dplyr imports this operator from another package (magrittr).This operator allows you to pipe the output from one function to the input of another function. Instead of nesting functions (reading from the inside to the outside), the idea of piping is to read the functions from left to right. Hence, we can perform several data manipulations in one line. For example:
+
+
+```{r}
+chowVals <- filter(dat, Diet=="chow") %>% select(Bodyweight)
+```
+
+Now in this case, we will pipe the dat data frame to the function that will filter one column, then select one column and then pipe the new data frame to the function `head()`, which will return the head of the new data frame. 
+
+```{r}
+
+dat %>% filter(Diet=="chow") %>% select(Bodyweight) %>% head
+```
+
+You will soon see how useful the pipe operator is when we start to combine many functions.  
+
+
+```{r}
+chowVals <- dat %>% filter(Diet=="chow") %>% select(Bodyweight)
+```
+
+In the second and every task thereafter, we no longer have to specify the object we are editing since it is whatever comes from the previous call. 
+
+Also, note that if `dplyr` receives a `data.frame` it will return a `data.frame`. 
+```{r}
+class(dat)
+class(chowVals)
+```
+
+For pedagogical reasons, we will often want the final result to be a simple `numeric` vector. To obtain such a vector with `dplyr`, we can apply the `unlist` function which turns `lists`, such as `data.frames`, into `numeric` vectors:
+
+```{r}
+chowVals <- filter(dat, Diet=="chow") %>% select(Bodyweight) %>% unlist
+class( chowVals )
+```
+
+
+To do this in R without `dplyr` the code is the following:
+
+```{r}
+chowVals <- dat[ dat$Diet=="chow", colnames(dat)=="Bodyweight"]
 ```
 
 ## Data: Mammals Sleep
@@ -121,7 +140,6 @@ awake | amount of time spent awake, in hours
 brainwt | brain weight in kilograms
 bodywt | body weight in kilograms
 
-
 ## Important dplyr Verbs To Remember
 
 dplyr verbs | Description
@@ -130,7 +148,7 @@ dplyr verbs | Description
 `filter()` | filter rows
 `arrange()` | re-order or arrange rows
 `mutate()` | create new columns
-`summarise()` | summarise values
+`summarise()` | summarize values
 `group_by()` | allows for group operations in the "split-apply-combine" concept
 
 
@@ -144,6 +162,7 @@ Select a set of columns: the name and the sleep\_total columns.
 
 ```{r}
 sleepData <- select(msleep, name, sleep_total)
+sleepData <- msleep %>% select(name,sleep_total)
 head(sleepData)
 ```
 
@@ -179,46 +198,22 @@ Some additional options to select columns based on a specific criteria include:
 Filter the rows for mammals that sleep a total of more than 16 hours. 
 
 ```{r}
-filter(msleep, sleep_total >= 16)
+msleep %>% filter(sleep_total >= 16)%>% select(name,sleep_total,bodywt) %>% head
 ```
 
 Filter the rows for mammals that sleep a total of more than 16 hours *and* have a body weight of greater than 1 kilogram.
 
 ```{r}
-filter(msleep, sleep_total >= 16, bodywt >= 1)
+msleep %>% filter(sleep_total >= 16,bodywt >= 1)%>% select(name,sleep_total,bodywt) %>% head
 ```
 
 Filter the rows for mammals in the Perissodactyla and Primates taxonomic order
 
 ```{r}
-filter(msleep, order %in% c("Perissodactyla", "Primates"))
+select(name,genus,order) %>% head
 ```
 
 You can use the boolean operators (e.g. >, <, >=, <=, !=, %in%) to create the logical tests. 
-
-## Pipe Operator: %>%
-
-Before we go any further, let's introduce the pipe operator: %>%. dplyr imports this operator from another package (magrittr).This operator allows you to pipe the output from one function to the input of another function. Instead of nesting functions (reading from the inside to the outside), the idea of piping is to read the functions from left to right. 
-
-Here's an example you have seen:
-
-```{r}
-head(select(msleep, name, sleep_total))
-```
-
-Now in this case, we will pipe the msleep data frame to the function that will select two columns (name and sleep\_total) and then pipe the new data frame to the function `head()`, which will return the head of the new data frame. 
-
-```{r}
-msleep %>% 
-    select(name, sleep_total) %>% 
-    head
-```
-
-You will soon see how useful the pipe operator is when we start to combine many functions.  
-
-## Back To dplyr Verbs In Action
-
-Now that you know about the pipe operator (%>%), we will use it throughout the rest of this tutorial. 
 
 
 ## Arrange Or Re-order Rows Using `arrange()`
@@ -226,7 +221,7 @@ Now that you know about the pipe operator (%>%), we will use it throughout the r
 To arrange (or re-order) rows by a particular column, such as the taxonomic order, list the name of the column you want to arrange the rows by:
 
 ```{r}
-msleep %>% arrange(order) %>% head
+msleep %>% arrange(order) %>% select(name,genus,order) %>% head
 ```
 
 Now we will select three columns from msleep, arrange the rows by the taxonomic order and then arrange the rows by sleep\_total. Finally, show the head of the final data frame:
@@ -253,7 +248,7 @@ Something slightly more complicated: same as above, except arrange the rows in t
 msleep %>% 
     select(name, order, sleep_total) %>%
     arrange(order, desc(sleep_total)) %>% 
-    filter(sleep_total >= 16)
+    filter(sleep_total >= 16) 
 ```
 
 
@@ -264,8 +259,7 @@ The `mutate()` function will add new columns to the data frame. Create a new col
 
 ```{r}
 msleep %>% 
-    mutate(rem_proportion = sleep_rem / sleep_total) %>%
-    head
+    mutate(rem_proportion = sleep_rem / sleep_total) %>%          select(rem_proportion) %>% head
 ```
 
 You can many new columns using mutate (separated by commas). Here we add a second column called bodywt_grams which is the bodywt column in grams. 
@@ -273,8 +267,9 @@ You can many new columns using mutate (separated by commas). Here we add a secon
 ```{r}
 msleep %>% 
     mutate(rem_proportion = sleep_rem / sleep_total, 
-           bodywt_grams = bodywt * 1000) %>%
-    head
+           bodywt_grams = bodywt * 1000) %>%   
+    select(rem_proportion,bodywt_grams) %>% head()
+    
 ```
 
 ## Create summaries of the data frame using `summarise()`
@@ -311,4 +306,12 @@ msleep %>%
               max_sleep = max(sleep_total),
               total = n())
 ```
-
+Note that if you wanted to keep all of the data intact, you would simply use mutate and add the ungroup function at the end:
+```{r}
+msleep %>% 
+    group_by(order) %>%
+    mutate(avg_sleep = mean(sleep_total), 
+              min_sleep = min(sleep_total), 
+              max_sleep = max(sleep_total),
+              total = n()) %>% ungroup
+```

@@ -6,11 +6,12 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
 # R Bioconductor
 
-The Rmd file for this lesson is available [here](https://github.com/gurinina/omic_sciences/blob/main/02-bioconducter.Rmd)
+This Rmd file will walk you through the instructions for installing all of the packages you will need for the class. If you have a lot of trouble getting through this file successfully, I would recommend just installing the libraries as you need them. Rmarkdown code chunks for installing libraries with eval set to FALSE will be included for that purpose. R will usually tell you if you don't have a package necessary to run an Rmd file. The Rmd file for this lesson is available [here](https://github.com/gurinina/omic_sciences/blob/main/02-bioconducter.Rmd).
 
 ## Why R Bioconductor?
 
-Bioconductor is based on [R](www.r-project.org). Three key reasons for using are:
+The majority of packages that we will install are part of R Bioconductor. R Bioconductor is based on [R](www.r-project.org). 
+The Bioconductor project provides access to powerful statistical and graphical methods for the analysis of genomic data. Analysis packages address workflows for analysis of oligonucleotide arrays, sequence analysis, flow cytometry. and other high-throughput genomic data.Three key reasons for using are:
 
 - R is used by many statisticians and biostatisticians to create algorithms that advance our ability to understand complex experimental data.
 - R is highly interoperable, and fosters reuse of software components written in other languages. 
@@ -25,21 +26,29 @@ R combines functional and object-oriented programming paradigms.^[[Chambers 2014
 
 - In functional programming, notation and program activity mimic the
 concept of function in mathematics.  For example
-```
+```{r}
 square = function(x) x^2
+
 ```
 is valid R code that defines the symbol `square` as a function that
 computes the second power of its input.  The body of the function
 is the program code `x^2`, in which `x` is a "free variable".
 Once `square` has been defined in this way, `square(3)` has
-value `9`.  We say the `square` function has been evaluated on
+value `9`.  
+
+```{r}
+
+square(3)
+```
+
+We say the `square` function has been evaluated on
 argument `3`.  **In R, all computations proceed by evaluation of functions.**
 
 ## Installing Bioconductor
 
 In order to install Bioconductor, copy the following two lines into your R console.
 
-```{r, eval=FALSE}
+```{r, eval = FALSE}
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install()
@@ -55,9 +64,9 @@ http://bioconductor.org/install/
 
 ## Required packages
 
-The one script I will ask you to run once you've installed Bioconductor 
-is called listPackages.R. This is an R script that includes the following:
+All of the pkgs required for the course are in a file called "_R_package_list.txt". 
 
+Again, you want to set eval = TRUE for the next six chunks here on first run:
 ```{r, eval = FALSE}
 
 pkgs= readLines("_R_package_list.txt")
@@ -70,7 +79,7 @@ and subtracts them into the variable need.
 int <- installed.packages()[, 1]
 need <- setdiff(pkgs, int)
 
-git= readLines("_R_package_github.txt")
+git = readLines("_R_package_github.txt")
 
 ```
 The required packages come in two flavors: those that are available through
@@ -78,7 +87,7 @@ Bioconductor, and those that are available through a github website.
 I've written these out into two different textfiles: R_packages_github.txt and
 _R_package_list.txt. To get the ones available through Bioconductor, we substract 
 git from need, and these should be all the one we need from Bioconductor,
-and this will varyf from person to person.
+and this will vary from person to person.
 
 
 ```{r, eval = FALSE}
@@ -89,11 +98,12 @@ and this will varyf from person to person.
 
 need = setdiff(need,git)
 ```
-Before you tell `BiocManager` to install these packages, check to make sure that the format
-is correct.
+Before you tell `BiocManager` to install these packages, check to make sure that there aren't any typos and that the formatting looks
+correct.
 
 ```{r,eval=FALSE}
 
+need
 BiocManager::install(need)
 
 ```
@@ -115,8 +125,26 @@ devtools::install_github("gurinina/GOenrichment")
 
 All of your needs should be met by need and git, i.e., you should have no "needs"
 leftover! The `::` is a shortcut when you want to avoid loading a library, or when
-you have a potential function conflict with another library that is loaded. 
+you have a potential function conflict with another library that is loaded.
 
+If that all went successfully you are in great shape! If you want to be ambitious you can try publishing the website for the book yourself.
+
+```{r bookdown, eval = FALSE}
+library(bookdown)
+bookdown::render_book("index.Rmd")
+
+```
+If this process is successful, you can try publishing the book. First you need to create a [bookdown](https://bookdown.org/connect/) account. Then to publish to this account, simply run the following chunk:
+
+
+```{r publish, eval = FALSE}
+
+publish_book(account = "ggiaever")
+```
+R will walk you through setting up your account and you will have your very own copy of the course!
+
+88888888888888888888888888888888888888888888888
+## Why Bioconductor cont'd
 Let's load the packages we need for this lesson.
 
 ```{r,echo=FALSE}
@@ -127,37 +155,6 @@ library(ph525x)
 library(png)
 
 ```
-
-**Why Bioconductor cont'd**
-
-- In object-oriented programming, a strong focus is placed upon
-formalizing data structure, and defining methods that take
-advantage of guarantees established through the formalism.  This
-approach is quite natural but did not get well-established in
-practical computer programming until the 1990s.  As an
-advanced example with Bioconductor, we will consider an 
-approach to defining an "object" representing on the genome
-of *Homo sapiens*:
-```{r lkho}
-BiocManager::install("Homo.sapiens")
-library(Homo.sapiens)
-class(Homo.sapiens)
-methods(class=class(Homo.sapiens))
-```
-
-
-We say that `Homo.sapiens` is an **instance** of the `OrganismDb` 
-**class**.  Every instance of this class will respond meaningfully
-to the methods
-listed above.  Each method is implemented as an R function.
-What the function does depends upon the class of its arguments.
-Of special note at this juncture are the methods
-`genes`, `exons`, `transcripts` which will yield information about
-fundamental components of genomes.  
-These methods will succeed for human and
-for other model organisms such as *Mus musculus*, *S. cerevisiae*,
-*C. elegans*, and others for which the Bioconductor project and its 
-contributors have defined `OrganismDb` representations.
 
 ### R packages, modularity, continuous integration
 
@@ -229,7 +226,6 @@ includes a column "Installed pkgs", with entry 1857 for
 the linux platform.  This number varies between platforms
 and is generally increasing over time for the devel branch.
 
-
 ### Putting it together
 
 Bioconductor's core developer group works hard to develop
@@ -244,6 +240,39 @@ support the main phases of experimentation in genome scale biology:
 In this course we will review the objects and functions that
 you can use to perform these and related tasks in your own
 research.
+
+**Example**
+
+- In object-oriented programming, a strong focus is placed upon
+formalizing data structure, and defining methods that take
+advantage of guarantees established through the formalism.  This
+approach is quite natural but did not get well-established in
+practical computer programming until the 1990s.  As an
+advanced example with Bioconductor, we will consider an 
+approach to defining an "object" representing on the genome
+of *Homo sapiens*:
+
+```{r lkho}
+
+library(Homo.sapiens)
+class(Homo.sapiens)
+methods(class=class(Homo.sapiens))
+```
+
+We say that `Homo.sapiens` is an **instance** of the `OrganismDb` 
+**class**.  Every instance of this class will respond meaningfully
+to the methods
+listed above.  Each method is implemented as an R function.
+What the function does depends upon the class of its arguments.
+Of special note at this juncture are the methods
+`genes`, `exons`, `transcripts` which will yield information about
+fundamental components of genomes.  
+These methods will succeed for human and
+for other model organisms such as *Mus musculus*, *S. cerevisiae*,
+*C. elegans*, and others for which the Bioconductor project and its 
+contributors have defined `OrganismDb` representations.
+
+
 88888888888888888888888888888888888888888888888888888888888
 ### Finding help
 
@@ -256,23 +285,11 @@ example(mad)
 example(boxplot)
 ```
 
-Simply typing the name of the function, without parentheses, and hitting return will show the source code of the function.
-
 The manual page contains a **description**, example **usage**, explanation of all **arguments**, further **details**, explanation of the returned **value**, **references**, **see also** linking to other functions, and **examples**.
 
 If you have a question about a particular object in R, you might want to look up the help for the "class" of that object, which will tell you how to construct such an object and what methods are available for manipulating such objects. For example, we can find the name of the class of an object and look up help:
 
-
-Sometimes, the constructor function and the class name will point to the same help page, although this is not necessarily true for all packages.```
-
-
-Simply typing the name of the function, without parentheses, and hitting return will show the source code of the function.
-
-The manual page contains a **description**, example **usage**, explanation of all **arguments**, further **details**, explanation of the returned **value**, **references**, **see also** linking to other functions, and **examples**.
-
-If you have a question about a particular object in R, you might want to look up the help for the "class" of that object, which will tell you how to construct such an object and what methods are available for manipulating such objects. For example, we can find the name of the class of an object and look up help:
-
-```{r, eval=TRUE, tidy=FALSE}
+```{r, tidy=FALSE}
 class(6)
 ?numeric
 ?"numeric-class"
@@ -280,7 +297,7 @@ class(6)
 
 Sometimes, the constructor function and the class name will point to the same help page, although this is not necessarily true for all packages.
 
-```{r, eval=TRUE, tidy=FALSE}
+```{r, tidy=FALSE}
 library(Biobase)
 ?ExpressionSet
 ?"ExpressionSet-class"

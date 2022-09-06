@@ -9,6 +9,7 @@ BiocStyle
 biomaRt
 Biostrings
 bladderbatch
+bookdown
 BSgenome.Hsapiens.NCBI.GRCh38
 BSgenome.Hsapiens.UCSC.hg19
 clusterProfiler
@@ -71,6 +72,7 @@ rsconnect
 Rsubread
 rtracklayer
 ShortRead
+SpikeInSubset
 SummarizedExperiment
 sva
 swirl

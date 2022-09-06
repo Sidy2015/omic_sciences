@@ -435,6 +435,8 @@ plot(mds[,1], mds[,2])
 plot(mds[,1], mds[,2], col=km$cluster, pch=16)
 ```
 
+Multidimensional scaling (MDS) is a multivariate data analysis approach that is used to visualize the similarity/dissimilarity between samples by plotting points in two dimensional plots. We'll talk more about this later today.
+
 By tabulating the results, we see that we obtain a similar answer to that obtained with hierarchical clustering.
 
 ```{r tissuetable}
@@ -463,18 +465,18 @@ library(genefilter)
 While a `heatmap` function is included in R, we recommend the `heatmap.2` function from the `gplots` package on CRAN because it is a bit more customized. For example, it stretches to fill the window. Here we add colors to indicate the tissue on the top:
 
 ```{r heatmap2,message=FALSE,fig.cap="Heatmap created using the 40 most variable genes and the function heatmap.2.", fig.width=10.5,fig.height=5.25}
-library(RColorBrewer) 
-hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
+
 library(gplots) ##Available from CRAN
-library(genefilter)
+
 rv <- rowVars(e)
 idx <- order(-rv)[1:40]
 cols <- palette(brewer.pal(8, "Dark2"))[as.fumeric(tissue)]
 head(cbind(colnames(e),cols))
-heatmap.2(e[idx,], labCol=tissue,
+h=heatmap.2(e[idx,], labCol=tissue,
           trace="none", 
           ColSideColors=cols, 
           col=hmcol)
+names(h)
 ```
 
 We did not use tissue information to create this heatmap, and we can quickly see, with just 40 genes, good separation across tissues.
@@ -992,7 +994,7 @@ plot(mds[,1],mds[,2],col= cols,main = "MDS",
 xlab="First dimension",ylab="Second dimension")
 legend("bottomleft",levels(f),col=seq(along=levels(f)),pch=15, cex = 0.75)
 ```
-Little differences between PCA.SVD and MDS aside from sign flip.
+Little differences between PCA, SVD and MDS aside from sign flip.
 
 
 
