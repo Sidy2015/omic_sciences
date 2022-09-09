@@ -17,7 +17,7 @@ Imagine you are Galileo in the 16th century trying to describe the velocity of a
 
 ```{r}
 set.seed(1)
-g <- 9.8 ##meters per second
+g <- 9.8 ##meters per second squared
 n <- 25
 tt <- seq(0,3.4,len=n) ##time in secs, note: we use tt because t is a base function
 d <- 56.67  - 0.5*g*tt^2 + rnorm(n,sd=1) ##meters
@@ -850,15 +850,15 @@ X <- cbind(1,newtt,newtt^2)
 fitted <- X%*%betahat
 plot(tt,y,xlab="Time",ylab="Height")
 lines(newtt,fitted,col=2)
+
 ```
+
 
 And the resulting estimates are what we expect:
 
 ```{r}
 betahat
 ```
-
-  
 
 **The `lm` Function**
 R has a very convenient function that fits these models. We will learn more about this function later, but here is a preview:
@@ -874,5 +874,4 @@ Note that we obtain the same values as above.
 **Summary**
 
 We have shown how to write linear models using linear algebra. We are going to do this for several examples, many of which are related to designed experiments. We also demonstrated how to obtain least squares estimates. Nevertheless, it is important to remember that because $y$ is a random variable, these estimates are random as well. In a later section, we will learn how to compute standard error for these estimates and use this to perform inference.
-
 

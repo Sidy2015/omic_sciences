@@ -207,10 +207,11 @@ Filter the rows for mammals that sleep a total of more than 16 hours *and* have 
 msleep %>% filter(sleep_total >= 16,bodywt >= 1)%>% select(name,sleep_total,bodywt) %>% head
 ```
 
-Filter the rows for mammals in the Perissodactyla and Primates taxonomic order
+Filter the rows for mammals in the Perissodactyla and Primates taxonomic order:
 
 ```{r}
-select(name,genus,order) %>% head
+msleep %>% filter(order %in% c("Perissodactyla", "Primates"))%>% select(name,genus,order) %>% head
+
 ```
 
 You can use the boolean operators (e.g. >, <, >=, <=, !=, %in%) to create the logical tests. 
@@ -306,7 +307,7 @@ msleep %>%
               max_sleep = max(sleep_total),
               total = n())
 ```
-Note that if you wanted to keep all of the data intact, you would simply use mutate and add the ungroup function at the end:
+Note that if you wanted to keep all of the data intact, you would simply use mutate and add the `ungroup` function at the end:
 ```{r}
 msleep %>% 
     group_by(order) %>%
