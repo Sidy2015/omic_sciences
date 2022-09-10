@@ -26,7 +26,7 @@ The confounder here is games played. Jeter played more games during the year he 
 
 ## Confounding: High-Throughput Example
 
-To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) that claimed that roughly 50% of genes where differentially expressed when comparing blood from two ethnic groups. We include the data in one of our data packages:
+To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) which was published in Nature Genetics 2007, that claimed that roughly 50% of genes where differentially expressed when comparing blood from two ethnic groups. We include the data in one of our data packages:
 
 ```{r,message=FALSE}
 library(rafalib)
@@ -84,9 +84,10 @@ XLIM <- max(abs(c(res1$dm)))*c(-1,1)
 YLIM <- range(-log10(c(res1$p)))
 h=hist(q)
 mypar(1,2)
+par(pch=19)
 plot(res1$dm,-log10(res1$p),xlim=XLIM,ylim=YLIM,
      xlab="Effect size",ylab="-log10(p-value)",main="Populations")
-hist(h$data$pvals,freq=F,ylim=c(0,15))
+hist(h$data$pvals,freq=F,ylim=c(0,15), xlab="p-values",main="Comparison by ethnicity")
 
 
 round(length(wq)/nrow(res1)*100,1)
@@ -121,9 +122,10 @@ XLIM <- max(abs(c(res2$dm)))*c(-1,1)
 YLIM <- range(-log10(c(res2$p.value)))
 h2=hist(q2)
 mypar(1,2)
+par(pch=19)
 plot(res2$dm,-log10(res1$p),xlim=XLIM,ylim=YLIM,
      xlab="Effect size",ylab="-log10(p-value)",main="Populations")
-hist(h2$data$pvals,freq=F,ylim = c(0,15))
+hist(h2$data$pvals,freq=F,ylim = c(0,15), xlab="p-values",main="Comparison by year")
 
 round(length(wq2)/nrow(res2)*100,1)
 ```
@@ -160,9 +162,10 @@ XLIM <- max(abs(c(t2$logFC)))*c(-1,1)
 YLIM <- range(-log10(c(t2$P.Value)))
 hit2=hist(qit2)
 mypar(1,2)
+par(pch=19)
 plot(t2$logFC,-log10(t2$P.Value),xlim=XLIM,ylim=YLIM,
      xlab="Effect size",ylab="-log10(p-value)",main="Populations")
-hist(hit2$data$pvals,freq=F)
+hist(hit2$data$pvals,freq=F, xlab="p-values",main="Comparison by batch")
 
 
 round(length(wfit2)/nrow(t2)*100,1)
@@ -187,10 +190,11 @@ wp3 = which(res3$p.value<1e-5)
 XLIM <- max(abs(c(res3$dm)))*c(-1,1)
 YLIM <- range(-log10(c(res3$p)))
 mypar(1,2)
-h4 = hist(q3)
+par(pch=19)
+h3 = hist(q3)
 plot(res3$dm,-log10(res3$p),xlim=XLIM,ylim=YLIM,
-     xlab="Effect size",ylab="-log10(p-value)",main="2003 v 2002")
-hist(h4$data$pvals,freq=F,ylim=c(0,10)    )
+     xlab="Effect size",ylab="-log10(p-value)",main="CEU 2003 vs 2002")
+hist(h3$data$pvals,freq=F,ylim=c(0,10)    , xlab="p-values",main="CEU 2003 vs 2002")
 ind4 <- which(year%in%c("02","04") & eth=="CEU")
 res4 <- rowttests(geneExpression[-out,ind4],droplevels(year[ind4]))
 q4 = qvalue(res4$p.value)
@@ -198,8 +202,8 @@ wq4 = which(q4$qvalues < 0.05)
 
 
 ind5 <- which(year%in%c("02","05") & eth=="CEU")
-res5 <- rowttests(geneExpression[-out,ind4],droplevels(year[ind4]))
-q5 = qvalue(res4$p.value)
+res5 <- rowttests(geneExpression[-out,ind5],droplevels(year[ind5]))
+q5 = qvalue(res5$p.value)
 wq5 = which(q5$qvalues < 0.05)
 
 i = unique(c(wq3,wq4,wq5))
