@@ -26,7 +26,7 @@ The confounder here is games played. Jeter played more games during the year he 
 
 ## Confounding: High-Throughput Example
 
-To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) which was published in Nature Genetics 2007, that claimed that roughly 50% of genes where differentially expressed when comparing blood from two ethnic groups. We include the data in one of our data packages:
+To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) entitled "Common genetic variants account for differences in gene expression among ethnic groups", published in Nature Genetics 2007. In this study, Spielman et al. estimate the number of genes differentially expressed between individuals of European (CEU) and Asian (ASN) ancestry and suggest that these differences can be accounted for by measured genetic variants. Specifically, they claimed that roughly 50% of genes were differentially expressed when comparing blood from these two ethnic groups. We include the data in one of our data packages:
 
 ```{r,message=FALSE}
 library(rafalib)
@@ -49,7 +49,7 @@ Note that some samples were processed at different times.
 head(sampleInfo$date)
 ```
 
-This is an extraneous variable and should not affect the values in `geneExpression`. However, it does appear to have an effect. We will therefore explore this here.
+Date is an extraneous variable and should not affect the values in `geneExpression`. However, it does appear to have an effect. We will therefore explore this here.
 
 We can immediately see that year and ethnicity are almost completely confounded:
 
@@ -59,16 +59,18 @@ tab = table(year,sampleInfo$ethnicity)
 print(tab)
 ```
 
+In response to this paper, Akey, Biswas, Leek and Storey (Leek and Storey are heavy hitters in R bioinformatics and the microarray world) wrote a letter to the [Nature Genetics editor](https://pubmed.ncbi.nlm.nih.gov/17597765/): Spielman et al.(1) estimate the number of genes differentially expressed between individuals of European (CEU) and Asian (ASN) ancestry and suggest that these differences can be accounted for by measured genetic variants. We recently performed a similar study comparing differences in gene expression among individuals of European and Yoruban ancestry(2). Given the scientific, medical and societal implications of this research area, it is important for the scientific community to carefully revisit and critically evaluate the conclusions of such studies. To this end, we have reanalyzed the data in Spielman et al.(1) to provide a common basis for comparison with our study. In doing so, we found that important issues arise about the accuracy of their results. 
+
 The authors categorized genes as differentially expressed if they had P-values <1e-5, corresponding to a Sidak corrected P-value <0.05 for multiple hypothesis tests. At this significance threshold, they report that approximately 26% of genes are differentially expressed between the CEU and ASN samples (ASN denotes the combined HapMap Beijing Chinese (CHB) and Japanese (JPT) HapMap individuals1). As a Sidak correction is similar to a Bonferroni correction, the proportion of genes found to be significant is a conservative estimate of the true overall proportion of differentially expressed genes. A more widely used and less conservatively biased approach is to analyze the complete distribution of P-values, which provides a lower bound estimate of the proportion of truly differentially expressed genes (3,4). Applying this methodology to the distribution of P-values obtained by P-values obtained by t tests on genes expressed in lymphoblastoid cell lines as defined in Spielman et al.(1), we estimate that at least 78% of these genes are differentially expressed between the CEU and ASN samples. 
 
 Figure 1. Distribution of P-values for tests of differential expression. (a) P-values resulting from tests of P-values resulting from tests of P differential expression between the CEU and ASN samples. 
 
 Let's have a look at that:
 
-```{r volcano_plots, fig.cap="Volcano plots for gene expression data. Comparison by ethnicity", fig.width=7,fig.height=4}
+```{r Figure 1.(a), fig.cap="Comparison by ethnicity", fig.width=7,fig.height=4}
 
 library(qvalue)
-##remove control genes
+## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
 
 eth <- sampleInfo$ethnicity
@@ -93,27 +95,24 @@ hist(h$data$pvals,freq=F,ylim=c(0,15), xlab="p-values",main="Comparison by ethni
 round(length(wq)/nrow(res1)*100,1)
 ```
 
-It seemed implausible that as many as 78% of genes are differentially expressed between the CEU and ASN samples. For example, based on the complete distribution of P values, the authors estimated that approximately 17% of genes are differentially expressed between individuals of European and African ancestry(2). To rule out the possibility that this difference was related to the larger sample size of Spielman et al.1 and is thus not simply a power issue, we they sampled eight CEU and eight ASN individuals (corresponding to the sample size of Storey et al.(2) 1,000 times, and for each sample estimated the proportion of differentially expressed genes as described above. The average proportion was 43% (standard deviation (s.d.) = 8%, demonstrating that differences in power between our study and Spielman et al.(1) do not fully account for differences in the estimated proportion of differentially expressed genes among human populations. 
+It seemed implausible that as many as 78% of genes are differentially expressed between the CEU and ASN samples. For example, based on the complete distribution of P-values, the Akey et al. estimated that approximately 17% of genes are differentially expressed between individuals of European and African ancestry(2). To rule out the possibility that this difference was related to the larger sample size of Spielman et al.(1) and is thus not simply a power issue, they sampled eight CEU and eight ASN individuals (corresponding to the sample size of Storey et al.(2) 1,000 times, and for each sample estimated the proportion of differentially expressed genes as described above. The average proportion was 43% (standard deviation (s.d.) = 8%), demonstrating that differences in power between their study and Spielman et al.(1) did not fully account for differences in the estimated proportion of differentially expressed genes among the two human populations. 
 
-To explore these issues in more detail, the authors downloaded the raw CEL files from Gene Expression Omnibus (GSE5859) and extracted from the header line the date on which the file was created. Interestingly, the arrays used to measure expression for the CEU individuals were primarily processed from 2003 to 2004,whereas the arrays used to measure expression for the ASN individuals were all processed in 2005–2006. We tested for differential expression with respect to the year in which the microarrays were processed and found that at least 94% of genes are estimated to be differentially expressed (Fig. 1b).
+To explore these issues in more detail, the Akey et al. downloaded the raw CEL files from Gene Expression Omnibus (GSE5859) and extracted from the header line the date on which the file was created. Notably, the arrays used to measure expression for the CEU individuals were primarily processed from 2003 to 2004,whereas the arrays used to measure expression for the ASN individuals were all processed in 2005–2006 (see figure1). We tested for differential expression with respect to the year in which the microarrays were processed and found that at least 94% of genes are estimated to be differentially expressed. 
 
-![](figure/batch.png)
+![Figure 2.](figure/batch.png)
 
 Let's look at these arrays:
-(b) P-values resulting from tests of differential P-values resulting from tests of differential P expression with respect to year in which the microarrays were processed. 
-```{r volcano_plots, fig.cap="Volcano plots for gene expression data. Comparison by year", fig.width=7,fig.height=4}
+Figure 1.(b) P-values resulting from tests of differential P-values resulting from tests of differential P expression with respect to year in which the microarrays were processed. 
+```{r Figure 1.(b), fig.cap="Comparison by year", fig.width=7,fig.height=4}
 
-##remove control genes
+## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
 
-eth <- sampleInfo$ethnicity
-ind2<- which(eth%in%c("CEU","ASN") & year%in% c("02","03","04","05"))
-out <- rowout <- grep("AFFX",rownames(geneExpression))
 
 eth <- sampleInfo$ethnicity
-ind2<- which(eth%in%c("CEU","ASN") & year%in% c("02","03","04","05") )
+ind2<- which(eth%in%c("CEU","ASN") & year%in% c("02","03") )
 res2 <- rowttests(geneExpression[-out,ind2],droplevels(eth[ind2]))
-q2 = qvalue(res2$p.value)
+q2 = qvalue(res2$p.value,lambda=0)
 wq2 = which(q2$qvalues < 0.05)
 wp2 = which(res2$p.value<1e-5)
 
@@ -125,33 +124,67 @@ mypar(1,2)
 par(pch=19)
 plot(res2$dm,-log10(res1$p),xlim=XLIM,ylim=YLIM,
      xlab="Effect size",ylab="-log10(p-value)",main="Populations")
-hist(h2$data$pvals,freq=F,ylim = c(0,15), xlab="p-values",main="Comparison by year")
+hist(h2$data$pvals,freq=F,xlab="p-values",main="Comparison 2002 vs 2003")
 
-round(length(wq2)/nrow(res2)*100,1)
+
+ind4 <- which(year%in%c("02","04") & eth%in%c("CEU","ASN"))
+res4 <- rowttests(geneExpression[-out,ind4],droplevels(year[ind4]))
+
+q4 = qvalue(res4$p.value)
+h4=hist(q4)
+wq4 = which(q4$qvalues < 0.05)
+hist(h4$data$pvals,freq=F,ylim=c(0,10), xlab="p-values",main="Comparison 2002 vs 2004")
+
+ind5 <- which(year%in%c("02","05") & eth%in%c("CEU","ASN"))
+res5 <- rowttests(geneExpression[-out,ind5],droplevels(year[ind5]))
+q5 = qvalue(res5$p.value)
+h5=hist(q5)
+wq5 = which(q5$qvalues < 0.05)
+hist(h5$data$pvals,freq=F,xlab="p-values",main="Comparison 2002 vs 2005")
+
+
+ind6 <- which(year%in%c("02","06") & eth=="CEU")
+res6 <- rowttests(geneExpression[-out,ind6],droplevels(year[ind6]))
+q6 = qvalue(res6$p.value,lambda=0)
+h6=hist(q6)
+wq6 = which(q6$qvalues < 0.05)
+hist(h6$data$pvals,freq=F, xlab="p-values",main="Comparison 2002 vs 2006")
+i = unique(c(wq3,wq4,wq5,wq6))
+# of unique genes altered by year for CEU population
+round(length(i)/nrow(res6)*100,1)
+res= rbind(res2,res4,res5,res6)
+q = qvalue(res$p.value)
+
+
+h=hist(q)
+hist(h$data$pvals,freq=F, xlab="p-values",main="Summary by year")
+
+
+
 ```
 
 Typically, one would take these batch effects into account before performing any differential expression analyses.  When the authors used a standard method for batch correction they found no evidence for differential expression between populations.
 
-We have not yet discussed these methods, but we can model it none the less in the following way, though it's not clear if it is the correct way to model it.
+We have not yet discussed these methods, but we can model it none the less in the following way, though it's not clear if this is the correct way to model it.
 
-(c) P-values resulting from tests P-values differential expression between the CEU and ASN samples while controlling for the year in which the sample was processed.
-```{r volcano_plots, fig.cap="Volcano plots for gene expression data. Comparison by batch", fig.width=7,fig.height=4}
+Figure 1.(c) P-values resulting from tests P-values differential expression between the CEU and ASN samples while controlling for the year in which the sample was processed.
+```{r Figure 1.(c), fig.cap="Comparison by batch", fig.width=7,fig.height=4}
 
-##remove control genes
+## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
 
 eth <- sampleInfo$ethnicity
-ind2<- which(eth%in%c("CEU","ASN") & year%in% c("02","03","04","05") )
-mod = model.matrix()
+ind2<- which(eth%in%c("CEU","ASN") & year%in% c("02","03","04","05","06") )
+
 ex = geneExpression[-out,ind2]
 et = eth[ind2]
 yr =  year[ind2]
 et = droplevels(et)
 yr = droplevels(yr)
 library(limma)
-mod = model.matrix(et~yr)
-fit = lmFit(ex,mod)
-mod = mod[,1:5]
+mod = model.matrix(~et*yr) 
+#fit = lmFit(ex,mod) this throws an error
+mod = mod[,1:6]
 fit = lmFit(ex,mod)
 colnames(mod)[2]
 t2= topTable(eBayes(fit),coef = 2,number = nrow(ex),sort= "none")
@@ -177,9 +210,9 @@ Only ~3% of genes are differentially expressed between ASN and CEU, which is not
 Obviously, these findings do not mean that all differentially expressed genes in Spielman et al.1 are due to batch effects; rather, the source of population differences in expression cannot be uniquely attributed to biological causes. To gain insight into the magnitude of the batch effects in Spielman et al.1, we tested for differential expression within the CEU sample with respect to the year of processing. 
 
 (d) P-values resulting from tests of differential expression with respect to year P-values resulting from tests of differential expression with respect to year P in which the microarrays were processed only among the CEU samples.
-```{r volcano_plots, fig.cap="Volcano plots for gene expression data. Comparison by CEU eth and year", fig.width=7,fig.height=4}
+```{r Figure 1.(d), fig.cap="CEU ethnicity and year", fig.width=7,fig.height=4}
 
-##remove control genes
+## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
 
 ind3 <- which(year%in%c("02","03") & eth=="CEU")
@@ -206,9 +239,16 @@ res5 <- rowttests(geneExpression[-out,ind5],droplevels(year[ind5]))
 q5 = qvalue(res5$p.value)
 wq5 = which(q5$qvalues < 0.05)
 
-i = unique(c(wq3,wq4,wq5))
+
+
+ind6 <- which(year%in%c("02","06") & eth=="CEU")
+res6 <- rowttests(geneExpression[-out,ind6],droplevels(year[ind6]))
+q6 = qvalue(res6$p.value,lambda=0)
+wq6 = which(q6$qvalues < 0.05)
+
+i = unique(c(wq3,wq4,wq5,wq6))
 # of unique genes altered by year for CEU population
-round(length(i)/nrow(res5)*100,1)
+round(length(i)/nrow(res6)*100,1)
 
 
 
