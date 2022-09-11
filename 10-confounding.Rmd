@@ -272,8 +272,7 @@ The y-axis in each plot is drawn y-axis in each plot is drawn y to reflect a his
 By running a t-test and creating a volcano plot, we note that thousands of genes appear to be differentially expressed between ethnicities. Yet when we perform a similar comparison only on the CEU population between the years 2002 and 2003, we again obtain thousands of differentially expressed genes:
 
 
-
-888888888888888888888888888888888888888888888888888888888
+888888888888888888888888888888888888888888
 
 Motivation for Statistical Approaches to Correct for Batch Effects
 
@@ -514,7 +513,7 @@ cat("Total genes with q-value < 0.1: ",length(index),"\n",
     "Number of selected genes on chrY: ", sum(chr[index]=="chrY",na.rm=TRUE),"\n",
     "Number of selected genes on chrX: ", sum(chr[index]=="chrX",na.rm=TRUE),sep="")
 ```
-8888888888888888888888888888888888888888888888888
+888888888888888888888888888888888888888888
 
 
 ## A more subtle example:bladderbatch
@@ -561,6 +560,7 @@ table(pheno$cancer,pheno$batch)
 ```
 
 ![Figure 3.](figure/confounding.png)
+
 
 Not completely independent of batch...
 Adjusting for batch effects with Combat
