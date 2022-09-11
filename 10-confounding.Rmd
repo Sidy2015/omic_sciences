@@ -149,7 +149,7 @@ q6 = qvalue(res6$p.value,lambda=0)
 h6=hist(q6)
 wq6 = which(q6$qvalues < 0.05)
 hist(h6$data$pvals,freq=F, xlab="p-values",main="Comparison 2002 vs 2006")
-i = unique(c(wq3,wq4,wq5,wq6))
+i = unique(c(wq2,wq4,wq5,wq6))
 # of unique genes altered by year for CEU population
 round(length(i)/nrow(res6)*100,1)
 res= rbind(res2,res4,res5,res6)
@@ -531,8 +531,6 @@ suppressPackageStartupMessages({
 })
 ```
 
-
-
 The analyses performed in this experiment are based on gene expression measurements from a bladder cancer study: [Gene expression in the urinary bladder: a common carcinoma in situ gene expression signature exists disregarding histopathological classification.](http://cancerres.aacrjournals.org/content/64/11/4040.full.pdf) The data can be loaded from the [bladderbatch](http://bioconductor.org/packages/release/data/experiment/html/bladderbatch.html) data package. 
 
 ```{r}
@@ -561,6 +559,8 @@ This will only work if the batch effects aren't too highly correlated with the o
 ```{r}
 table(pheno$cancer,pheno$batch)
 ```
+
+![Figure 3.](figure/confounding.png)
 
 Not completely independent of batch...
 Adjusting for batch effects with Combat
@@ -639,9 +639,82 @@ plot(fitsv$coefficients[2,], fit$coefficients[2,],col=2,
 abline(c(0,1),col=1,lwd=3)
 ```
 
-lst = ls()
-rm(list = lst)
 
+## Applying the fsva function to remove batch effects for prediction
+The surrogate variable analysis functions have been developed for population-level analyses such as differential expression analysis in microarrays. In some cases, the goal of an analysis is prediction. In this case, data sets are generally composed a training set and a test set. For each sample in the training set, the outcome/class is known, but latent sources of variability are unknown. For the samples in the test set, neither the outcome/class or the latent sources of variability are known.
+“Frozen” surrogate variable analysis can be used to remove latent variation in the test data set. To illustrate these functions, the bladder data can be separated into a training and test set.
+
+
+```{r}
+
+library(RColorBrewer)
+data(bladderdata)
+library(pamr)
+library(limma)
+
+
+pheno = pData(bladderEset)
+edata = exprs(bladderEset)
+
+set.seed(10)
+trainIndicator = sample(1:57,size=30,replace=FALSE)
+testIndicator = (1:57)[-trainIndicator]
+trainData = edata[,trainIndicator]
+testData = edata[,testIndicator]
+trainPheno = pheno[trainIndicator,]
+testPheno = pheno[testIndicator,]
+
+
+
+```
+
+Using these data sets, the pamr package can be used to train a predictive model on the training data, as well as test that prediction on a test data set.
+
+```{r}
+
+mydata = list(x=trainData,y=trainPheno$cancer)
+mytrain = pamr.train(mydata)
+table(pamr.predict(mytrain,testData,threshold=2),testPheno$cancer)
+
+```
+
+
+Next, the sva function can be used to calculate surrogate variables for the training set.
+```{r}
+
+trainMod = model.matrix(~cancer,data=trainPheno)
+trainMod0 = model.matrix(~1,data=trainPheno)
+trainSv = sva(trainData,trainMod,trainMod0)
+```
+
+The fsva function can be used to adjust both the training data and the test data. The train- ing data is adjusted using the calculated surrogate variables. The testing data is adjusted using the “frozen” surrogate variable algorithm (to be submitted). The output of the fsva function is an adjusted training set and an adjusted test set. These can be used to train and test a second, more accurate, prediction function.
+
+```{r}
+
+fsvaobj = fsva(trainData,trainMod,trainSv,testData)
+mydataSv = list(x=fsvaobj$db,y=trainPheno$cancer)
+mytrainSv = pamr.train(mydataSv)
+table(pamr.predict(mytrainSv,fsvaobj$new,threshold=1),testPheno$cancer)
+
+```
+Furthermore, we can cluster both the corrected and uncorrected training samples. Before fsva is applied, the biopsy and normal samples do not all cluster together (Figure 1 left panel). After fsva adjustment, the clustering of the test set is improved, with only one cancer sample clustering with the normals and biopsies (Figure 1 right panel).
+
+```{r, fig.cap=Figure 4: "Clustering of the test samples in the bladder cancer study before (left) and after (right) adjustment with the fsva function. After using the fsva function, the normal and biopsy samples cluster together and only one cancer sample is misclustered"}
+
+mypar()
+tmp = apply(testData,1,var)
+keep = which(rank(-tmp) < 2000)
+hBefore = hclust(dist(t(testData[keep,])))
+tmp2 = apply(fsvaobj$new,1,var)
+keep2 = which(rank(-tmp2) < 2000)
+hAfter = hclust(dist(t(fsvaobj$new[keep2,])))
+par(mfrow=c(1,2))
+rafalib::myplclust(hBefore,lab=testPheno$cancer,
+ lab.col=as.numeric(testPheno$cancer),main="Before fsva",xlab="")
+rafalib::myplclust(hAfter,lab=testPheno$cancer,
+ lab.col=as.numeric(testPheno$cancer),main="After fsva",xlab="")
+
+```
 
 You can read more about batch effect corrections in the [sva package vignette](https://www.bioconductor.org/packages/release/bioc/html/sva.html).There are actually a large number of variants on the sva batch correction idea.
 
