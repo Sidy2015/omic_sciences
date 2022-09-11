@@ -1,13 +1,13 @@
-# RNA-seq with edgeR and limma
+# RNA-seq with edgeR
 
 RNA-seq analysis is easy as 1-2-3 with limma, Glimma and edgeR
-Charity Law^1, Monther Alhamdoosh^2, Shian Su^3, Xueyi Dong^3, Luyi Tian^1, Gordon K. Smyth^4 and Matthew E. Ritchie^5
+Charity Law$^1$, Monther Alhamdoosh$^2$, Shian Su$^3$, Xueyi Dong$^3$, Luyi Tian$^1$, Gordon K. Smyth$^4$ and Matthew E. Ritchie$^5$
 
-^1The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
-^2CSL Limited, Bio21 Institute, 30 Flemington Road, Parkville, Victoria 3010, Australia
-^3The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia
-^4The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
-^5The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
+$^1$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
+$^2$CSL Limited, Bio21 Institute, 30 Flemington Road, Parkville, Victoria 3010, Australia
+$^3$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia
+$^4$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
+$^5$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
 
 The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/11-RNAseq-limma.Rmd).
 Contents
@@ -57,7 +57,8 @@ library(edgeR)
 library(Mus.musculus)
 })
 ```
-## Data packaging
+
+## Data 
 
 ### Reading in count-data
 To get started with this analysis, download the file GSE63310_RAW.tar available online from https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE63310&format=file, and extract the relevant files from this archive. The code below will do this, or you can do this step manually and then move on.
@@ -99,8 +100,7 @@ Our DGEList-object contains a samples data frame that stores both cell type (or 
 ```{r}
 samplenames <- substring(colnames(x), 12, nchar(colnames(x)))
 samplenames
-## [1] "10_6_5_11" "9_6_5_11"  "purep53"   "JMS8-2"    "JMS8-3"    "JMS8-4"    "JMS8-5"   
-## [8] "JMS9-P7c"  "JMS9-P8c"
+
 colnames(x) <- samplenames
 group <- as.factor(c("LP", "ML", "Basal", "Basal", "ML", "LP", 
                      "Basal", "ML", "LP"))
@@ -109,6 +109,7 @@ lane <- as.factor(rep(c("L004","L006","L008"), c(3,4,2)))
 x$samples$lane <- lane
 x$samples
 ```
+
 ### Organising gene annotations
 A second data frame named genes in the DGEList-object is used to store gene-level information associated with rows of the counts matrix. This information can be retrieved using organism specific packages such as Mus.musculus (Bioconductor Core Team 2016b) for mouse (or Homo.sapiens (Bioconductor Core Team 2016a) for human) or the biomaRt package (Durinck et al. 2005, 2009) which interfaces the Ensembl genome databases in order to perform gene annotation.
 
@@ -117,14 +118,16 @@ The type of information that can be retrieved includes gene symbols, gene names,
 The Entrez gene IDs available in our dataset were annotated using the Mus.musculus package to retrieve associated gene symbols and chromosome information.
 ```{r}
 geneid <- rownames(x)
-genes <- select(Mus.musculus, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
+genes <- AnnotationDbi::select(Mus.musculus, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
                 keytype="ENTREZID")
 head(genes)
 ```
+
 As with any gene ID, Entrez gene IDs may not map one-to-one to the gene information of interest. It is important to check for duplicated gene IDs and to understand the source of duplication before resolving them. Our gene annotation contains 28 genes that map to multiple chromosomes (e.g. gene Gm1987 is associated with chr4 and chr4_JH584294_random and microRNA Mir5098 is associated with chr2, chr5, chr8, chr11 and chr17). To resolve duplicate gene IDs one could combine all chromosome information from the multi-mapped genes, such that gene Gm1987 would be is assigned to chr4 and chr4_JH584294_random, or select one of the chromosomes to represent the gene with duplicate annotation. For simplicity we do the latter, keeping only the first occurrence of each gene ID.
 ```{r}
 genes <- genes[!duplicated(genes$ENTREZID),]
 ```
+
 In this example, the gene order is the same in both the annotation and the data object. If this is not the case due to missing and/or rearranged gene IDs, the match function can be used to order genes correctly. The data frame of gene annotations is then added to the data object and neatly packaged in a DGEList-object containing raw count data with associated sample information and gene annotations.
 ```{r}
 x$genes <- genes
@@ -132,6 +135,7 @@ x
 ```
 
 ## Data pre-processing
+
 ### Transformations from the raw-scale
 For differential expression and related analyses, gene expression is rarely considered at the level of raw counts since libraries sequenced at a greater depth will result in higher counts. Rather, it is common practice to transform raw counts onto a scale that accounts for such library size differences. Popular transformations include counts per million (CPM), log2-counts per million (log-CPM), reads per kilobase of transcript per million (RPKM), and fragments per kilobase of transcript per million (FPKM).
 
@@ -142,9 +146,10 @@ Here raw counts are converted to CPM and log-CPM values using the cpm function i
 cpm <- cpm(x)
 lcpm <- cpm(x, log=TRUE)
 ```
+
 A CPM value of 1 for a gene equates to having 20 counts in the sample with the lowest sequencing depth (JMS0-P8c, library size approx. 20 million) or 76 counts in the sample with the greatest sequencing depth (JMS8-3, library size approx. 76 million).
 
-The log-CPM values will be used for exploratory plots. When log=TRUE, the cpm function adds an offset to the CPM values before converting to the log2-scale. By default, the offset is 2/L where 2 is the “prior count” and L is the average library size in millions, so the log-CPM values are related to the CPM values by log2(CPM + 2/L). This calculation ensures that any two read counts with identical CPM values will also have identical log-CPM values. The prior count avoids taking the logarithm of zero, and also reduces spurious variability for genes with very low counts by shrinking all the inter-sample log-fold-changes towards zero, something that is helpful for exploratory plotting. For this dataset, the average library size is about 45.5 million, so L approx. 45.5 and the minimum log-CPM value for each sample becomes log2(2/45.5) = -4.51. In other words, a counr of zero for this data maps to a log-CPM value of -4.51 after adding the prior count or offset:
+The log-CPM values will be used for exploratory plots. When log=TRUE, the cpm function adds an offset to the CPM values before converting to the log2-scale. By default, the offset is 2/L where 2 is the “prior count” and L is the average library size in millions, so the log-CPM values are related to the CPM values by log2(CPM + 2/L). This calculation ensures that any two read counts with identical CPM values will also have identical log-CPM values. The prior count avoids taking the logarithm of zero, and also reduces spurious variability for genes with very low counts by shrinking all the inter-sample log-fold-changes towards zero, something that is helpful for exploratory plotting. For this dataset, the average library size is about 45.5 million, so L approx. 45.5 and the minimum log-CPM value for each sample becomes log2(2/45.5) = -4.51. In other words, a count of zero for this data maps to a log-CPM value of -4.51 after adding the prior count or offset:
 ```{r}
 L <- mean(x$samples$lib.size) * 1e-6
 M <- median(x$samples$lib.size) * 1e-6
@@ -152,6 +157,7 @@ c(L, M)
 
 summary(lcpm)
 ```
+
 Log-CPM values are also used in downstream linear modeling via limma’s voom function, although voom recomputes its own log-CPM values internally with a smaller prior count.
 
 ### Removing genes that are lowly expressed
@@ -159,6 +165,7 @@ All datasets will include a mix of genes that are expressed and those that are n
 ```{r}
 table(rowSums(x$counts==0)==9)
 ```
+
 Plotting the distribution log-CPM values shows that a sizeable proportion of genes within each sample are either unexpressed or lowly-expressed with log-CPM values that are small or negative (Figure 1A).
 
 Genes that do not have a worthwhile number of reads in any sample should be filtered out of the downstream analyses. There are several reasons for this. From a biological point of view, genes that not expressed at a biologically meaningful level in any condition are not of interest and are therefore best ignored. From a statistical point of view, removing low count genes allows the mean-variance relationship in the data to be estimated with greater reliability and also reduces the number of statistical tests that need to be carried out in downstream analyses looking at differential expression.
@@ -169,6 +176,7 @@ keep.exprs <- filterByExpr(x, group=group)
 x <- x[keep.exprs,, keep.lib.sizes=FALSE]
 dim(x)
 ```
+
 By default, the function keeps genes with about 10 read counts or more in a minimum number of samples, where the number of samples is chosen according to the minimum group sample size. The actual filtering uses CPM values rather than counts in order to avoid giving preference to samples with large library sizes. For this dataset, the median library size is about 51 million and 10/51 approx. 0.2, so the filterByExpr function keeps genes that have a CPM of 0.2 or more in at least three samples. A biologically interesting gene should be expressed in at least three samples because all the cell type groups have three replicates. The cutoffs used depend on the sequencing depth and on the experimental design. If the library sizes had been larger then a lower CPM cutoff would have been chosen, because larger library sizes provide better resolution to explore more genes at lower expression levels. Alternatively, smaller library sizes decrease our ability to explore marginal genes and hence would have led to a higher CPM cutoff.
 
 Using this criterion, the number of genes is reduced to 16,624, about 60% of the number that we started with (panel B of the next figure). Note that subsetting the entire DGEList-object removes both the counts and the associated gene information for the filtered genes. The filtered DGEList-object keeps the gene information and the counts for the retained genes correctly associated.
@@ -198,6 +206,7 @@ lines(den$x, den$y, col=col[i], lwd=2)
 }
 legend("topright", samplenames, text.col=col, bty="n")
 ```
+
 The density of log-CPM values for raw pre-filtered data (A) and post-filtered data (B) are shown for each sample. Dotted vertical lines mark the log-CPM threshold (equivalent to a CPM value of about 0.2) used in the filtering step.
 Figure 1: The density of log-CPM values for raw pre-filtered data (A) and post-filtered data (B) are shown for each sample
 Dotted vertical lines mark the log-CPM threshold (equivalent to a CPM value of about 0.2) used in the filtering step.
@@ -212,6 +221,7 @@ Nonetheless, normalisation by the method of trimmed mean of M-values (TMM) (Robi
 x <- calcNormFactors(x, method = "TMM")
 x$samples$norm.factors
 ```
+
 To give a better visual representation of the effects of normalisation, the data was duplicated then adjusted so that the counts of the first sample are reduced to 5% of their original values, and in the second sample they are inflated to be 5-times larger.
 ```{r}
 x2 <- x
@@ -219,6 +229,7 @@ x2$samples$norm.factors <- 1
 x2$counts[,1] <- ceiling(x2$counts[,1]*0.05)
 x2$counts[,2] <- x2$counts[,2]*5
 ```
+
 The figure below shows the expression distribution of samples for unnormalised and normalised data, where distributions are noticeably different pre-normalisation and are similar post-normalisation. Here the first sample has a small TMM scaling factor of 0.06, whereas the second sample has a large scaling factor of 6.08 – neither values are close to 1.
 ```{r}
 par(mfrow=c(1,2))
@@ -232,9 +243,9 @@ lcpm <- cpm(x2, log=TRUE)
 boxplot(lcpm, las=2, col=col, main="")
 title(main="B. Example: Normalised data",ylab="Log-cpm")
 ```
+
 Example data: Boxplots of log-CPM values showing expression distributions for unnormalised data (A) and normalised data (B) for each sample in the modified dataset where the counts in samples 1 and 2 have been scaled to 5% and 500% of their original values respectively.
 Figure 2: Example data: Boxplots of log-CPM values showing expression distributions for unnormalised data (A) and normalised data (B) for each sample in the modified dataset where the counts in samples 1 and 2 have been scaled to 5% and 500% of their original values respectively
-
 
 ### Unsupervised clustering of samples
 
@@ -263,20 +274,21 @@ title(main="A. Sample groups")
 plotMDS(lcpm, labels=lane, col=col.lane, dim=c(3,4))
 title(main="B. Sequencing lanes")
 ```
+
 MDS plots of log-CPM values over dimensions 1 and 2 with samples coloured and labeled by sample groups (A) and over dimensions 3 and 4 with samples coloured and labeled by sequencing lane (B). Distances on the plot correspond to the leading fold-change, which is the average (root-mean-square) log2-fold-change for the 500 genes most divergent between each pair of samples by default.
 Figure 3: MDS plots of log-CPM values over dimensions 1 and 2 with samples coloured and labeled by sample groups (A) and over dimensions 3 and 4 with samples coloured and labeled by sequencing lane (B)
 Distances on the plot correspond to the leading fold-change, which is the average (root-mean-square) log2-fold-change for the 500 genes most divergent between each pair of samples by default.
 
-Alternatively, the Glimma package offers the convenience of an interactive MDS plot where multiple dimensions can be explored. The glMDSPlot function generates an html page (that is opened in a browser if launch=TRUE) with an MDS plot in the left panel and a barplot showing the proportion of variation explained by each dimension in the right panel. Clicking on the bars of the bar plot changes the pair of dimensions plotted in the MDS plot, and hovering over the individual points reveals the sample label. The colour scheme can be changed as well to highlight cell population or sequencing lane (batch). An interactive MDS plot of this dataset can be found at http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MDS-Plot.html.
+Alternatively, the Glimma package offers the convenience of an interactive MDS plot where multiple dimensions can be explored. The glMDSPlot function generates an html page (that is opened in a browser if launch=TRUE) with an MDS plot in the left panel and a barplot showing the proportion of variation explained by each dimension in the right panel. Clicking on the bars of the bar plot changes the pair of dimensions plotted in the MDS plot, and hovering over the individual points reveals the sample label. The color scheme can be changed as well to highlight cell population or sequencing lane (batch). An interactive MDS plot of this dataset can be found at [Link to Interactive MDS plot]( http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MDS-Plot.html).
 ```{r}
 glMDSPlot(lcpm, labels=paste(group, lane, sep="_"), 
           groups=x$samples[,c(2,5)], launch=FALSE)
 ```
-Link to Interactive MDS plot
+
 
 ## Differential expression analysis
 
-### 1Creating a design matrix and contrasts
+### Creating a design matrix and contrasts
 In this study, it is of interest to see which genes are expressed at different levels between the three cell populations profiled. In our analysis, linear models are fitted to the data with the assumption that the underlying data is normally distributed. To get started, a design matrix is set up with both the cell population and sequencing lane (batch) information.
 ```{r}
 design <- model.matrix(~0+group+lane)
@@ -311,22 +323,22 @@ par(mfrow=c(1,2))
 v <- voom(x, design, plot=TRUE)
 v
 ```
-```{r}
-vfit <- lmFit(v, design)
-vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
-efit <- eBayes(vfit)
-plotSA(efit, main="Final model: Mean-variance trend")
-```
-Means (x-axis) and variances (y-axis) of each gene are plotted to show the dependence between the two before `voom` is applied to the data (left panel) and how the trend is removed after `voom` precision weights are applied to the data (right panel). The plot on the left is created within the `voom` function which extracts residual variances from fitting linear models to log-CPM transformed data. Variances are then rescaled to quarter-root variances (or square-root of standard deviations) and plotted against the average log2 count for each gene. The plot on the right is created using `plotSA` which plots log2 residual standard deviations against mean log-CPM values. In both plots, each black dot represents a gene. On the left plot, the red curve shows the estimated mean-variance trend used to compute the voom weights. On the right plot, the average log2 residual standard deviation estimated by the empirical Bayes algorithm is marked by a horizontal blue line. 
-
-Figure 4: Means (x-axis) and variances (y-axis) of each gene are plotted to show the dependence between the two before voom is applied to the data (left panel) and how the trend is removed after voom precision weights are applied to the data (right panel)
-
-The plot on the left is created within the voom function which extracts residual variances from fitting linear models to log-CPM transformed data. Variances are then rescaled to quarter-root variances (or square-root of standard deviations) and plotted against the average log2 count for each gene. The plot on the right is created using plotSA which plots log2 residual standard deviations against mean log-CPM values. In both plots, each black dot represents a gene. On the left plot, the red curve shows the estimated mean-variance trend used to compute the voom weights. On the right plot, the average log2 residual standard deviation estimated by the empirical Bayes algorithm is marked by a horizontal blue line.
 
 Note that the other data frames stored within the DGEList-object that contain gene- and sample-level information, are retained in the EList-object v created by voom. The v$genes data frame is equivalent to x$genes, v$targets is equivalent to x$samples, and the expression values stored in v$E is analogous to x$counts, albeit on a transformed scale. In addition to this, the voom EList-object has a matrix of precision weights v$weights and stores the design matrix in v$design.
 
 ### Fitting linear models for comparisons of interest
 Linear modelling in limma is carried out using the lmFit and contrasts.fit functions originally written for application to microarrays. The functions can be used for both microarray and RNA-seq data and fit a separate model to the expression values for each gene. Next, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability (Smyth 2004). The model’s residual variances are plotted against average expression values in the next figure. It can be seen from this plot that the variance is no longer dependent on the mean expression level.
+
+
+```{r, fig.height=8,fig.width=6}
+vfit <- lmFit(v, design)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+efit <- eBayes(vfit)
+par(mfrow = c(2,1))
+v <- voom(x, design, plot=TRUE)
+plotSA(efit, main="Final model: Mean-variance trend")
+```
+Figure 4: Means (x-axis) and variances (y-axis) of each gene are plotted to show the dependence between the two before `voom` is applied to the data (top panel) and how the trend is removed after `voom` precision weights are applied to the data (bottom panel). The plot on the top is created within the `voom` function which extracts residual variances from fitting linear models to log-CPM transformed data. Variances are then rescaled to quarter-root variances (or square-root of standard deviations) and plotted against the average log2 count for each gene. The plot on the bottom is created using `plotSA` which plots log2 residual standard deviations against mean log-CPM values. In both plots, each black dot represents a gene. On the top plot, the red curve shows the estimated mean-variance trend used to compute the voom weights. On the bottom plot, the average log2 residual standard deviation estimated by the empirical Bayes algorithm is marked by a horizontal blue line. 
 
 ### Examining the number of DE genes
 
@@ -352,12 +364,14 @@ head(tfit$genes$SYMBOL[de.common], n=20)
 
 vennDiagram(dt[,1:2], circle.col=c("turquoise", "salmon"))
 ```
+
 Venn diagram showing the number of genes DE in the comparison between basal versus LP only (left), basal versus ML only (right), and the number of genes that are DE in both comparisons (center). The number of genes that are not DE in either comparison are marked in the bottom-right.
 Figure 5: Venn diagram showing the number of genes DE in the comparison between basal versus LP only (left), basal versus ML only (right), and the number of genes that are DE in both comparisons (center)
 The number of genes that are not DE in either comparison are marked in the bottom-right.
-```{r}
+```{r, eval = FALSE}
 write.fit(tfit, dt, file="results.txt")
 ```
+
 ### Examining individual DE genes from top to bottom
 
 The top DE genes can be listed using topTreat for results using treat (or topTable for results using eBayes). By default topTreat arranges genes from smallest to largest adjusted p-value with associated gene information, log-FC, average log-CPM, moderated t-statistic, raw and adjusted p-value for each gene. The number of top genes displayed can be specified, where n=Inf includes all genes. Genes Cldn7 and Rasef are amongst the top DE genes for both basal versus LP and basal versus ML.
@@ -369,6 +383,7 @@ head(basal.vs.lp)
 
 head(basal.vs.ml)
 ```
+
 ### Useful graphical representations of differential expression results
 To summarise results for all genes visually, mean-difference plots, which display log-FCs from the linear model fit against the average log-CPM values can be generated using the plotMD function, with the differentially expressed genes highlighted.
 ```{r}
@@ -381,20 +396,18 @@ Glimma extends this functionality by providing an interactive mean-difference pl
 glMDPlot(tfit, coef=1, status=dt, main=colnames(tfit)[1],
          side.main="ENTREZID", counts=lcpm, groups=group, launch=FALSE)
 ```
-Link to Interactive MD plot
+[Link to Interactive MD](http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MD-Plot.html)
 
 Interactive mean-difference plot generated using Glimma. Summary data (log-FCs versus log-CPM values) are shown in the left panel which is linked to the individual values per sample for a selected gene in the right panel. A table of results is also displayed below these figures, along with a search bar to allow users to look up a particular gene using the annotation information available, e.g. the Gene symbol identifier Clu.
-Interactive mean-difference plot generated using Glimma. Summary data (log-FCs versus log-CPM values) are shown in the left panel which is linked to the individual values per sample for a selected gene in the right panel. A table of results is also displayed below these figures, along with a search bar to allow users to look up a particular gene using the annotation information available, e.g. the Gene symbol identifier Clu.
 
-The mean-difference plot generated by the command above is available online (see http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MD-Plot.html). The interactivity provided by the Glimma package allows additional information to be presented in a single graphical window. Glimma is implemented in R and Javascript, with the R code generating the data which is converted into graphics using the Javascript library D3 (https://d3js.org), with the Bootstrap library handling layouts and Datatables generating the interactive searchable tables. This allows plots to be viewed in any modern browser, which is convenient for including them as linked files from an Rmarkdown report of the analysis.
+The interactivity provided by the Glimma package allows additional information to be presented in a single graphical window. Glimma is implemented in R and Javascript, with the R code generating the data which is converted into graphics using the Javascript library D3 (https://d3js.org), with the Bootstrap library handling layouts and Datatables generating the interactive searchable tables. This allows plots to be viewed in any modern browser, which is convenient for including them as linked files from an Rmarkdown report of the analysis.
 
 Plots shown previously include either all of the genes that are expressed in any one condition (such as the Venn diagram of common DE genes or mean-difference plot) or look at genes individually (log-CPM values shown in right panel of the interactive mean-difference plot). Heatmaps allow users to look at the expression of a subset of genes. This can be give useful insight into the expression of individual groups and samples without losing perspective of the overall study when focusing on individual genes, or losing resolution when examining patterns averaged over thousands of genes at the same time.
 
 A heatmap is created for the top 100 DE genes (as ranked by adjusted p-value) from the basal versus LP contrast using the heatmap.2 function from the gplots package. The heatmap correctly clusters samples by cell type and reorders the genes into blocks with similar expression patterns. From the heatmap, we observe that the expression of ML and LP samples are very similar for the top 100 DE genes between basal and LP.
 ```{r}
 
-#margin=c(6,4), lhei=c(2,10), 
-#dev.off()
+
 library(gplots)
 basal.vs.lp.topgenes <- basal.vs.lp$ENTREZID[1:100]
 i <- which(v$genes$ENTREZID %in% basal.vs.lp.topgenes)
@@ -404,36 +417,247 @@ heatmap.2(lcpm[i,], scale="row",
    col=mycol, trace="none", density.info="none", 
    dendrogram="column")
 ```
-Heatmap of log-CPM values for top 100 genes DE in basal versus LP. Expression across each gene (or row) have been scaled so that mean expression is zero and standard deviation is one. Samples with relatively high expression of a given gene are marked in red and samples with relatively low expression are marked in blue. Lighter shades and white represent genes with intermediate expression levels. Samples and genes have been reordered by the method of hierarchical clustering. A dendrogram is shown for the sample clustering.
 
 Figure 6: Heatmap of log-CPM values for top 100 genes DE in basal versus LP
+Heatmap of log-CPM values for top 100 genes DE in basal versus LP. Expression across each gene (or row) have been scaled so that mean expression is zero and standard deviation is one. Samples with relatively high expression of a given gene are marked in red and samples with relatively low expression are marked in blue. Lighter shades and white represent genes with intermediate expression levels. Samples and genes have been reordered by the method of hierarchical clustering. A dendrogram is shown for the sample clustering.
 
-Expression across each gene (or row) have been scaled so that mean expression is zero and standard deviation is one. Samples with relatively high expression of a given gene are marked in red and samples with relatively low expression are marked in blue. Lighter shades and white represent genes with intermediate expression levels. Samples and genes have been reordered by the method of hierarchical clustering. A dendrogram is shown for the sample clustering.
+## Gene set testing with clusterProfiler and fgsea
 
-## Gene set testing with camera
+We finish off this analysis with (some gene set testing by applying the fgsea method using the [c2 gene signatures gene sets](http://bioinf.wehi.edu.au/software/MSigDB/) from the Broad Institute’s MSigDB c2 collection (Subramanian et al. 2005) that have been adapted for mouse and are available as Rdata objects. We also do an enrichment using the classical GO ontology biological processes with clusterProfiler.
+```{r}
+library(clusterProfiler)
+rank = -log10(basal.vs.ml$P.Value)*sign(basal.vs.ml$logFC)
+names(rank)=basal.vs.ml$ENTREZID
+rank = rank[order(rank,decreasing=T)]
+hse <- clusterProfiler::gseGO(
+  geneList = rank,
+  ont = "BP",
+  keyType = "ENTREZID",
+  eps = 0,
+  minGSSize = 15,
+  maxGSSize = 200,
+  pAdjustMethod = "BH",
+  pvalueCutoff = 0.05,
+  verbose = TRUE,
+  OrgDb = "org.Mm.eg.db",
+  by = "fgsea"
+)
 
-We finish off this analysis with some gene set testing by applying the camera method (Wu and Smyth 2012) to the c2 gene signatures from Broad Institute’s MSigDB c2 collection (Subramanian et al. 2005) that have been adapted for mouse and are available as Rdata objects from http://bioinf.wehi.edu.au/software/MSigDB/. Other useful gene sets derived from MSigDB for both human and mouse, such as the hallmark gene sets, are also available from this site. C2 gene sets have been curated from online databases, publications and domain experts, and hallmark gene sets are selected from MSigDB to have well-defined biological states or processes.
+```
+
+
+We can use fgsea with the gene set from 
+The camera function performs a competitive test to assess whe cther the genes in a given set are highly ranked in terms of differential expression relative to genes that are not in the set. It uses limma’s linear model framework, taking both the design matrix and contrast matrix (if present) and accommodates the observational-level weights from voom in the testing procedure. After adjusting the variance of the resulting gene set test statistic by a variance inflation factor, that depends on the gene-wise correlation (which is set to 0.01 by default, but can be estimated from the data) and the size of the set, a p-value is returned and adjusted for multiple testing.
+
+
+
 ```{r}
 library(RNAseq123)
+
 load(system.file("extdata", "mouse_c2_v5p1.rda", package = "RNAseq123"))
-idx <- ids2indices(Mm.c2,id=rownames(v))
-cam.BasalvsLP <- camera(v,idx,design,contrast=contr.matrix[,1])
-head(cam.BasalvsLP,5)
+library(fgsea)
+fgseaRes = fgseaSimple(pathways = Mm.c2,stats=rank,nperm=1000,maxSize = 200,minSize = 15)
 
-cam.BasalvsML <- camera(v,idx,design,contrast=contr.matrix[,2])
-head(cam.BasalvsML,5)
 
-cam.LPvsML <- camera(v,idx,design,contrast=contr.matrix[,3])
-head(cam.LPvsML,5)
 ```
 
-The camera function performs a competitive test to assess whether the genes in a given set are highly ranked in terms of differential expression relative to genes that are not in the set. It uses limma’s linear model framework, taking both the design matrix and contrast matrix (if present) and accommodates the observational-level weights from voom in the testing procedure. After adjusting the variance of the resulting gene set test statistic by a variance inflation factor, that depends on the gene-wise correlation (which is set to 0.01 by default, but can be estimated from the data) and the size of the set, a p-value is returned and adjusted for multiple testing.
 
-This experiment is the RNA-seq equivalent of the dataset generated by Lim et al. (2010) (Lim et al. 2010), who used Illumina microarrays to profile the same sorted cell populations, so it is reassuring to see the gene signatures from this earlier publication coming up at the top of the list for each contrast. We make a barcodeplot of the Lim et al. (2010) Mature Luminal gene sets (Up and Down) in the LP versus ML contrast. Note that these sets go in the opposite direction in our dataset due to our parameterization which compares LP against ML rather than the other way around (if the contrast were reversed, the directions would be consistent).
+
+
 ```{r}
-barcodeplot(efit$t[,3], index=idx$LIM_MAMMARY_LUMINAL_MATURE_UP, 
-            index2=idx$LIM_MAMMARY_LUMINAL_MATURE_DN, main="LPvsML")
+mygseatidy = function(result){
+nam=names(data.frame(result))
+wnam = which(nam== "enrichmentScore")
+if(length(wnam)>0) nam[wnam]="ES"
+wnam = which(nam== "p.adjust")
+if(length(wnam)>0) nam[wnam]="padj"
+pres = data.frame(result) %>% filter(ES>=0)%>% arrange(padj,desc(ES),pathway)
+nres = data.frame(result) %>% filter(ES<0)%>% arrange(padj,ES,pathway)
+return(list(nres=nres,pres=pres))
+}
+
+
 ```
+
+```{r}
+fnegsea = mygseatidy(fgseaRes)$nres
+fposgsea = mygseatidy(fgseaRes)$pres
+
+```
+
+
+
+```{r mGORESP}
+library(GOenrichment)
+
+mat = cbind(rank,rank)
+colnames(mat)[1]="Basal vs ML"
+colnames(mat)[2]="Basal vs ML"
+
+mresp = GOenrichment::runGORESP(fdrThresh = 0.05,mat=mat,
+    coln=1,curr_exp = colnames(mat)[1], sig = rank[1500], 
+    bp_input = Mm.c2,go_input = NULL,minSetSize = 15, 
+    maxSetSize = 200)
+intersect(fposgsea$pathway[1:20],mresp$enrichInfo$term[1:20])
+```
+Looks familiar right? That's because we used the same
+geneSets.
+
+So now we're going to use the results
+from the hypergeometric tests to do some
+visualization and construct a network of
+GO enrichments. So right now our data is
+in the form of an enrichment dataframe
+with lots of nice annotation -- FDR
+values, geneSetSize and all those nice
+details we just looked at.
+
+The other piece of the data that got
+generated in this "runGORESP" function
+was an edge matrix, and I am not going
+to go through all the details here, you
+can go through the code on your own
+time, its pretty straight forward.
+Basically what it does is it takes all
+of the enriched geneSets and it walks
+throgh them systematically comparing all
+pairwise combinations to calculate the
+overlap coefficient between them. So
+here again is yet another method for
+simplifying the output and trying to
+minimize the rendundancy between terms.
+We saw it with the collapsePathways in
+fgsea, and the packages GOSemSim, DOSE,
+enrichplot and meshes have implemented a
+variety of tools based on semantic
+similarity of genes or gene products
+using [Gene Ontology, Disease Ontology
+and Medical Subject Headings]
+(<https://yulab-smu.top/biomedical-knowledge-mining-book/index.html>).
+The GO semanitic similarities are
+similar to GO slim methods, where child
+GO terms are collapsed into more general
+terms, but as far as I can tell the data
+is not that easy to manage.
+
+```{r}
+
+#####
+vis = visSetup(enrichInfo = mresp$enrichInfo,edgeMat = mresp$edgeMat)
+############
+# generates a network based on node and edge parameters
+############
+
+runNetwork(nodes = vis$nodes,edges=vis$edges)
+```
+
+Lets do the same for the human results:
+
+```{r}
+vis = visSetup(mresp$enrichInfo,mresp$edgeMat)
+runNetwork(vis$nodes,vis$edges)
+```
+
+## Minimizing GO redundancy
+By modifying our calcOverlap function we could get rid of a 
+lot of the overlapping terms. So lets do that:
+
+```{r}
+calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, padj = "p.adjust",term = "ID", goont) { 
+    library(dplyr)
+  
+  
+    gs = res
+    res = data.frame(res,stringsAsFactors = F)
+    
+    mx = matrix(rep(NA,nrow(res)*nrow(res)),nrow=nrow(res),ncol = nrow(res))
+    
+    colnames(mx) = res[,term]
+    rownames(mx) = res[,term]
+    
+    GO = goont
+    
+    
+    mx[upper.tri(mx)]=888
+    m = reshape2::melt(mx, value.name = "overlap",as.is = TRUE,varnames = c("go1","go2"),na.rm = T)
+    m1 = match(m$go1,names(GO))
+    m2 = match(m$go2,names(GO))
+    
+    m$overlap = mapply(select_fun,GO[m1],GO[m2])
+    
+    
+    wm = which(m$overlap < cutoff)
+    if(length(wm) > 0) m = m[-wm,]
+    
+    m1=match(m$go1,res[,term])
+    m$padj1=res[m1,padj]
+    m1=match(m$go2,res[,term])
+    m$padj2=res[m1,padj]
+    m=m%>% dplyr::mutate(gotoremove= m%>%dplyr::select(padj1,padj2)%>% apply(MARGIN = 1, FUN =      function(x) which.max(x)))
+    
+    
+   
+    w1 = which(m$gotoremove == 1)
+    w2 = which(m$gotoremove == 2)
+    if(length(w1) > 0) m$gotoremove[w1]=m$go1[w1]
+    if(length(w2) > 0) m$gotoremove[w2]=m$go2[w2]
+    wres = c(w1,w2)
+    if(length(wres) > 0) {w = which(res[,term]%in% m$gotoremove)
+    res = res[-w,]}
+    
+    if(class(gs)=="gseaResult"|class(gs)=="enrichResult") {gs@result=res
+    return(gs)} else {return(res)}
+    
+}
+
+
+overlapcoeff <- function (x, y) {
+
+    lenx = length(x)
+    leny = length(y)
+
+    len = c(lenx,leny)
+    mn = which.min(len)
+    int = length(intersect(x, y))
+    overcoeff = int/len[mn]
+    overcoeff
+}
+  jaccard <- function (x, y) {
+
+    lenx = length(x)
+    leny = length(y)
+
+    len = c(lenx,leny)
+    
+    int = length(intersect(x, y))
+    un  = length(union(x,y))
+    jaccard = int/un
+    jaccard
+}
+```
+Use the mresp enrichInfo and plug it into this revised function:
+```{r newmresp}
+
+
+if (file.exists("newmresp.rds")) {
+  newmresp <- readRDS("newmresp.rds")
+} else {
+  
+newmresp = calcOverGOcoeff(select_fun=overlapcoeff,cutoff=0.7,res = mresp$enrichInfo,padj="FDR",term="term",goont=Mm.c2)
+  saveRDS(newmresp, "newmresp.rds")
+}
+
+
+
+w=which(mresp$edgeMat$source%in% newmresp$id)
+ww=which(mresp$edgeMat$target[w]%in% newmresp$id)
+newedge = mresp$edgeMat[w[ww],]
+
+v = visSetup(newmresp,newedge)
+
+runNetwork(v$nodes,v$edges)
+```
+This experiment is the RNA-seq equivalent of the dataset generated by Lim et al. (2010) (Lim et al. 2010), who used Illumina microarrays to profile the same sorted cell populations, so it is reassuring to see the gene signatures from this earlier publication coming up at the top of the list for each contrast. We make a barcodeplot of the Lim et al. (2010) Mature Luminal gene sets (Up and Down) in the LP versus ML contrast. Note that these sets go in the opposite direction in our dataset due to our parameterization which compares LP against ML rather than the other way around (if the contrast were reversed, the directions would be consistent).
 
 Barcode plot of `LIM_MAMMARY_LUMINAL_MATURE_UP` (red bars, top of plot) and `LIM_MAMMARY_LUMINAL_MATURE_DN` (blue bars, bottom of plot) gene sets in the LP versus ML contrast. For each set, an enrichment line that shows the relative enrichment of the vertical bars in each part of the plot is displayed. The experiment of Lim et al. (Lim et al. 2010) is very similar to the current one, with the same sorting strategy used to obtain the different cell populations, except that microarrays were used instead of RNA-seq to profile gene expression. Note that the inverse correlation (the up gene set is down and the down gene set is up) is a result of the way the contrast has been set up (LP versus ML) -- if reversed, the directionality would agree.
 
