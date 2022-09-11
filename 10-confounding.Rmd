@@ -204,7 +204,7 @@ hist(hit2$data$pvals,freq=F, xlab="p-values",main="Comparison by batch")
 round(length(wfit2)/nrow(t2)*100,1)
 ```
 
-```
+
 Only ~3% of genes are differentially expressed between ASN and CEU, which is not surprising, given that microarray batch effects seem to be completely confounded with population effects.
 
 Obviously, these findings do not mean that all differentially expressed genes in Spielman et al.1 are due to batch effects; rather, the source of population differences in expression cannot be uniquely attributed to biological causes. To gain insight into the magnitude of the batch effects in Spielman et al.1, we tested for differential expression within the CEU sample with respect to the year of processing. 
@@ -699,7 +699,7 @@ table(pamr.predict(mytrainSv,fsvaobj$new,threshold=1),testPheno$cancer)
 ```
 Furthermore, we can cluster both the corrected and uncorrected training samples. Before fsva is applied, the biopsy and normal samples do not all cluster together (Figure 1 left panel). After fsva adjustment, the clustering of the test set is improved, with only one cancer sample clustering with the normals and biopsies (Figure 1 right panel).
 
-```{r, fig.cap=Figure 4: "Clustering of the test samples in the bladder cancer study before (left) and after (right) adjustment with the fsva function. After using the fsva function, the normal and biopsy samples cluster together and only one cancer sample is misclustered"}
+```{r, fig.cap="Clustering of the test samples in the bladder cancer study before (left) and after (right) adjustment with the fsva function. After using the fsva function, the normal and biopsy samples cluster together and only one cancer sample is misclustered"}
 
 mypar()
 tmp = apply(testData,1,var)
