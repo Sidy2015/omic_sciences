@@ -742,8 +742,13 @@ if (file.exists("sapGO.rds")) {
   sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
   saveRDS(sapGO, "sapGO.rds")
 }
+if (file.exists("sapGO.rds")) {
+  simp <- readRDS("simp.rds")
+} else {
+ simp = clusterProfiler::simplify(hse,semData  = sapGO)
+  saveRDS(simp, "simp.rds")
+}
 
-simp = clusterProfiler::simplify(hse,semData  = sapGO)
 simp$Description[1:10]
 dim(simp)
 ```
@@ -1134,11 +1139,14 @@ Let's look at a quick example. Using `AnnotationDbi' and
 the `select` function, we can pull down the GO annotaations
 by querying the yeast database `org.Sc.sgd.db`.
 
-```{r yanno, cache = TRUE}
-
+```{r yanno}
+if (file.exists("yanno.rds")) {
+  yanno <- readRDS("yanno.rds")
+} else {
+  
 yanno = AnnotationDbi::select(org.Sc.sgd.db,
   keys=dfsig$gene,columns=c("ORF","GENENAME","GOALL",
-  "ONTOLOGYALL"),keytype="GENENAME")
+  "ONTOLOGYALL"),keytype="GENENAME")}
 names(yanno)
 
 
