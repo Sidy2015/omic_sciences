@@ -1353,7 +1353,7 @@ colData(se) <- DataFrame(sample.table)
 
 A similar function in the **Rsubread** library can be used to construct a count matrix:
 
-```{r ir30, eval = FALSE}
+```{r ir30}
 # not available for Windows - use above method instead
 suppressPackageStartupMessages({library(Rsubread)})
 fc <- featureCounts(bam.files, annot.ext=gtf.file,
