@@ -25,6 +25,7 @@ you can try the following resources:
 
 * [Installing R on Windows](https://cran.r-project.org/bin/windows/base/) 
 * [Installing R on Mac](http://youtu.be/Icawuhf0Yqo)
+* Note: if you have a Mac M1 arm64 computer, DON'T install the                 * R-4.2.1-arm64.pkg, install R-4.2.1 for Intel because the arm64 version       * doesn't support Bioconductoro packages
 
 ## Installing RStudio
 
