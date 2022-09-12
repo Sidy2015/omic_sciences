@@ -1,7 +1,12 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 # Linear Algebra
 
 The Rmd file for this section is
-available [here](https://github.com/gurinina/omic_sciences/blob/main/04-linear-algebra.Rmd). In this book we try to minimize mathematical notation as much as possible. Furthermore, we avoid using calculus to motivate statistical concepts. However, Matrix Algebra (also referred to as Linear Algebra) and its mathematical notation greatly facilitates the exposition of the advanced data analysis techniques covered in the remainder of this book. We therefore dedicate a chapter of this book to introducing Matrix Algebra. We do this in the context of data analysis and using one of the main applications: Linear Models.
+available [here](https://github.com/gurinina/omic_sciences/blob/main/04-linear-algebra.Rmd). In this course we try to minimize mathematical notation as much as possible. Furthermore, we avoid using calculus to motivate statistical concepts. However, Matrix Algebra (also referred to as Linear Algebra) and its mathematical notation greatly facilitates the exposition of the advanced data analysis techniques covered in the remainder of this book. Moreover, it is fundamental to understanding linear models and exposing the detail behind R functions. We therefore dedicate a chapter of this book to introducing Matrix Algebra. We do this in the context of data analysis and using one of the main applications: Linear Models.
 
 We will describe three examples from the life sciences: one from physics, one related to genetics, and one from a mouse experiment. They are very different, yet we end up using the same statistical technique: fitting linear models. Linear models are typically taught and described in the language of matrix algebra. 
 
@@ -11,23 +16,24 @@ library(rafalib)
 
 ## Motivating Examples
 
-#### Falling objects
-
+### Falling objects:
 Imagine you are Galileo in the 16th century trying to describe the velocity of a falling object. An assistant climbs the Tower of Pisa and drops a ball, while several other assistants record the position at different times. Let's simulate some data using the equations we know today and adding some measurement error:
 
-```{r}
-set.seed(1)
-g <- 9.8 ##meters per second squared
+```{r simulate_drop_data}
+g <- 9.8 ##meters per second
 n <- 25
-tt <- seq(0,3.4,len=n) ##time in secs, note: we use tt because t is a base function
-d <- 56.67  - 0.5*g*tt^2 + rnorm(n,sd=1) ##meters
+tt <- seq(0,3.4,len=n) ##time in secs, t is a base function
+f <- 56.67  - 0.5*g*tt^2
+y <-  f + rnorm(n,sd=1)
 ```
 
 The assistants hand the data to Galileo and this is what he sees:
 
-```{r gravity, fig.cap="Simulated data for distance travelled versus time of falling object measured with error."}
+```{r simulate_drop_data_with_fit, fig.cap="Fitted model for simulated data for distance travelled versus time of falling object measured with error."}
 mypar()
-plot(tt,d,ylab="Distance in meters",xlab="Time in seconds")
+par(pch=19)
+plot(tt,y,ylab="Distance in meters",xlab="Time in seconds")
+lines(tt,f,col=2)
 ```
 
 He does not know the exact equation, but by looking at the plot above he deduces that the position should follow a parabola. So he models the data with:
@@ -36,7 +42,66 @@ $$ Y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon_i, i=1,\dots,n $$
 
 With $Y_i$ representing location, $x_i$ representing the time, and $\varepsilon_i$ accounting for measurement error. This is a linear model because it is a linear combination of known quantities (the $x$'s) referred to as predictors or covariates and unknown parameters (the $\beta$'s).
 
-#### Father & son heights
+Thanks to high school, we know that the equation for the trajectory of a falling object is: 
+
+$$d = h_0 + v_0 t -  0.5 \times 9.8 t^2$$
+with $h_0$ and $v_0$ the starting height and velocity respectively. The data we simulated above followed this equation and added measurement error to simulate `n` observations for dropping the ball $(v_0=0)$ from the tower of Pisa $(h_0=56.67)$. 
+
+How do we estimate the covariates?
+
+#### The `lm` function
+
+In R we can fit this model by simply using the `lm` function. We will describe this function in detail later, but here is a preview:
+
+```{r}
+tt2 <-tt^2
+fit <- lm(y~tt+tt2)
+summary(fit)$coef
+```
+
+It gives us the least squares estimate, as well as standard errors and p-values. The quantity obtained when evaluating the least squares equation at the estimates is called the residual sum of squares (RSS). 
+
+The main part of what we do in this section is to explain the mathematics behind this function. 
+
+Let's look at the output for a second to understand it.
+
+```{r}
+fit$coefficients
+
+
+```
+We can use the coefficients to calculate the residual sum of the squares, which is the error left over when evaluating the LSE equation. In other words, evaluating the accuracy of the prediction. To predict y, we just take the coefficients and plug them back into our equation:
+
+```{r}
+fit$model
+fit$fitted.values
+plot(fit)
+ypred = fit$coefficients[1]+fit$coefficients[2]*tt+fit$coefficients[3]*tt^2
+```
+
+
+Let's write a function that computes the RSS for any vector $\beta$:
+```{r}
+rss <- function(Beta0,Beta1,Beta2){
+  r <- y - (Beta0+Beta1*tt+Beta2*tt^2)
+  return(sum(r^2))
+}
+```
+
+So for any three dimensional vector we get an RSS. Here is a plot of the RSS as a function of $\beta_2$ when we keep the other two fixed. 
+
+```{r rss_versus_estimate, fig.cap="Residual sum of squares obtained for several values of the parameters."}
+Beta2s<- seq(-10,0,len=100)
+plot(Beta2s,sapply(Beta2s,rss,Beta0=55,Beta1=0),
+     ylab="RSS",xlab="Beta2",type="l")
+##Let's add another curve fixing another pair:
+Beta2s<- seq(-10,0,len=100)
+lines(Beta2s,sapply(Beta2s,rss,Beta0=65,Beta1=0),col=2)
+```
+
+So guessing what Beta2 is by trial and error here is not going to work. Instead, we can use calculus: take the partial derivatives, set them to 0 and solve. Of course, if we have many parameters, these equations can get rather complex. Linear algebra provides a compact and general way of solving this problem. 
+
+### Father & son heights
 Now imagine you are Francis Galton in the 19th century and you collect paired height data from fathers and sons. You suspect that height is inherited. Your data:
 
 ```{r,message=FALSE}
@@ -48,7 +113,10 @@ y=father.son$sheight
 looks like this:
 
 ```{r galton_data, fig.cap="Galton's data. Son heights versus father heights."}
+par(pch=19)
 plot(x,y,xlab="Father's height",ylab="Son's height")
+abline(a=0,b=1)
+
 ```
 
 The sons' heights do seem to increase linearly with the fathers' heights. In this case, a model that describes the data is as follows:
@@ -57,7 +125,7 @@ $$ Y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, i=1,\dots,N $$
 
 This is also a linear model with $x_i$ and $Y_i$, the father and son heights respectively, for the $i$-th pair and $\varepsilon_i$ a term to account for the extra variability. Here we think of the fathers' heights as the predictor and being fixed (not random) so we use lower case. Measurement error alone can't explain all the variability seen in $\varepsilon_i$. This makes sense as there are other variables not in the model, for example, mothers' heights, genetic randomness, and environmental factors.
 
-#### Random samples from multiple populations
+### Random samples from multiple populations
 
 Here we read-in mouse body weight data from mice that were fed two different diets: high fat and control (chow). We have a random sample of 12 mice for each. We are interested in determining if the diet has an effect on weight. Here is the data:
 
@@ -72,10 +140,10 @@ if (!file.exists(filename)) download(url,destfile=filename)
 ```{r mice_weights,fig.cap="Mouse weights under two diets."}
 dat <- read.csv("femaleMiceWeights.csv")
 mypar(1,1)
-stripchart(Bodyweight~Diet,data=dat,vertical=TRUE,method="jitter",pch=1,main="Mice weights")
+stripchart(Bodyweight~Diet,data=dat,vertical=TRUE,method="jitter",pch=19,main="Mice weights")
 ```
 
-We want to estimate the difference in average weight between populations. We demonstrated how to do this using t-tests and confidence intervals, based on the difference in sample averages. We can obtain the same exact results using a linear model:
+We want to estimate the difference in average weight between populations. We can do this using t-tests and confidence intervals, based on the difference in sample averages. We can obtain the same exact results using a linear model:
 
 $$ Y_i = \beta_0 + \beta_1 x_{i} + \varepsilon_i$$
 
@@ -93,9 +161,7 @@ $$ Y_i = \beta_0 + \sum_{j=1}^p \beta_j x_{i,j} + \varepsilon_i, i=1,\dots,n $$
 
 Note that we have a general number of predictors $p$. Matrix algebra provides a compact language and mathematical framework to compute and make derivations with any linear model that fits into the above framework.
 
-<a name="estimates"></a>
-
-#### Estimating parameters
+### Estimating parameters
 
 For the models above to be useful we have to estimate the unknown $\beta$ s. In the first example, we want to describe a physical process for which we can't have unknown parameters. In the second example, we better understand inheritance by estimating how much, on average, the father's height affects the son's height. In the final example, we want to determine if there is in fact a difference: if $\beta_1 \neq 0$. 
 
@@ -105,79 +171,13 @@ $$ \sum_{i=1}^n \left\{  Y_i - \left(\beta_0 + \sum_{j=1}^p \beta_j x_{i,j}\righ
 
 Once we find the minimum, we will call the values the least squares estimates (LSE) and denote them with $\hat{\beta}$. The quantity obtained when evaluating the least squares equation at the estimates is called the residual sum of squares (RSS). Since all these quantities depend on $Y$, *they are random variables*. The $\hat{\beta}$ s are random variables and we will eventually perform inference on them.
 
-#### Falling object example revisited
-Thanks to my high school physics teacher, I know that the equation for the trajectory of a falling object is: 
-
-$$d = h_0 + v_0 t -  0.5 \times 9.8 t^2$$
-
-with $h_0$ and $v_0$ the starting height and velocity respectively. The data we simulated above followed this equation and added measurement error to simulate `n` observations for dropping the ball $(v_0=0)$ from the tower of Pisa $(h_0=56.67)$. This is why we used this code to simulate data:
-
-```{r simulate_drop_data}
-g <- 9.8 ##meters per second
-n <- 25
-tt <- seq(0,3.4,len=n) ##time in secs, t is a base function
-f <- 56.67  - 0.5*g*tt^2
-y <-  f + rnorm(n,sd=1)
-```
-
-Here is what the data looks like with the solid line representing the true trajectory:
-
-```{r simulate_drop_data_with_fit, fig.cap="Fitted model for simulated data for distance travelled versus time of falling object measured with error."}
-plot(tt,y,ylab="Distance in meters",xlab="Time in seconds")
-lines(tt,f,col=2)
-```
-
-But we were pretending to be Galileo and so we don't know the parameters in the model. The data does suggest it is a parabola, so we model it as such:
-
-$$ Y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \varepsilon_i, i=1,\dots,n $$
-
-How do we find the LSE?
-
-#### The `lm` function
-
-In R we can fit this model by simply using the `lm` function. We will describe this function in detail later, but here is a preview:
-
-```{r}
-tt2 <-tt^2
-fit <- lm(y~tt+tt2)
-summary(fit)$coef
-```
-
-It gives us the LSE, as well as standard errors and p-values. 
-
-Part of what we do in this section is to explain the mathematics behind this function. 
-
-#### The least squares estimate (LSE)
-
-Let's write a function that computes the RSS for any vector $\beta$:
-```{r}
-rss <- function(Beta0,Beta1,Beta2){
-  r <- y - (Beta0+Beta1*tt+Beta2*tt^2)
-  return(sum(r^2))
-}
-```
-
-So for any three dimensional vector we get an RSS. Here is a plot of the RSS as a function of $\beta_2$ when we keep the other two fixed:
-
-```{r rss_versus_estimate, fig.cap="Residual sum of squares obtained for several values of the parameters."}
-Beta2s<- seq(-10,0,len=100)
-plot(Beta2s,sapply(Beta2s,rss,Beta0=55,Beta1=0),
-     ylab="RSS",xlab="Beta2",type="l")
-##Let's add another curve fixing another pair:
-Beta2s<- seq(-10,0,len=100)
-lines(Beta2s,sapply(Beta2s,rss,Beta0=65,Beta1=0),col=2)
-```
-
-Trial and error here is not going to work. Instead, we can use calculus: take the partial derivatives, set them to 0 and solve. Of course, if we have many parameters, these equations can get rather complex. Linear algebra provides a compact and general way of solving this problem. 
-
-
 #### More on Galton (Advanced)
 
 When studying the father-son data, Galton made a fascinating discovery using exploratory analysis.
 
 ![Galton's plot.](http://upload.wikimedia.org/wikipedia/commons/b/b2/Galton's_correlation_diagram_1875.jpg) 
 
-He noted that if he tabulated the number of father-son height pairs and followed all the x,y values having the same totals in the table, they formed an ellipse. In the plot above, made by Galton, you see the ellipse formed by the pairs having 3 cases. This then led to modeling this data as correlated bivariate normal which we described earlier: 
+He noted that if he tabulated the number of father-son height pairs and followed all the x,y values having the same totals in the table, they formed an ellipse. In the plot above, made by Galton, you see the ellipse formed by the pairs having 3 cases. This then led to modeling this data as correlated bivariate normal: 
 
 $$ 
 Pr(X<a,Y<b) =
@@ -196,13 +196,8 @@ $$
 }
 $$
 
-We described how we can use math to show that if you keep $X$ fixed (condition to be $x$) the distribution of $Y$ is normally distributed with mean: $\mu_x +\sigma_y \rho \left(\frac{x-\mu_x}{\sigma_x}\right)$ and standard deviation $\sigma_y \sqrt{1-\rho^2}$. Note that $\rho$ is the correlation between $Y$ and $X$, which implies that if we fix $X=x$, $Y$ does in fact follow a linear model. The $\beta_0$ and $\beta_1$ parameters in our simple linear model can be expressed in terms of $\mu_x,\mu_y,\sigma_x,\sigma_y$, and $\rho$.
+You can show that if you keep $X$ fixed (condition to be $x$) the distribution of $Y$ is normally distributed with mean: $\mu_x +\sigma_y \rho \left(\frac{x-\mu_x}{\sigma_x}\right)$ and standard deviation $\sigma_y \sqrt{1-\rho^2}$. Note that $\rho$ is the correlation between $Y$ and $X$, which implies that if we fix $X=x$, $Y$ does in fact follow a linear model. The $\beta_0$ and $\beta_1$ parameters in our simple linear model can be expressed in terms of $\mu_x,\mu_y,\sigma_x,\sigma_y$, and $\rho$.
 
-
-```{r, echo=FALSE}
-library(knitr)
-knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
-```
 ## Matrix Notation
 
 Here we introduce the basics of matrix notation. Initially this may seem over-complicated, but once we discuss examples, you will appreciate the power of using this notation to both explain and derive solutions, as well as implement them as R code. 
@@ -359,56 +354,6 @@ Finally, we define a scalar. A scalar is just a number, which we call a scalar b
 
 ## Matrix Operations
 
-In a previous section, we motivated the use of matrix algebra with this system of equations:
-
-
-$$
-\begin{aligned}
-a + b + c &= 6\\
-3a - 2b + c &= 2\\
-2a + b  - c &= 1
-\end{aligned}
-$$
-
-We described how this system can be rewritten and solved using matrix algebra:
-
-$$
-\,
-\begin{pmatrix}
-1&1&1\\
-3&-2&1\\
-2&1&-1
-\end{pmatrix}
-\begin{pmatrix}
-a\\
-b\\
-c
-\end{pmatrix} =
-\begin{pmatrix}
-6\\
-2\\
-1
-\end{pmatrix}
-\implies
-\begin{pmatrix}
-a\\
-b\\
-c
-\end{pmatrix}=
-\begin{pmatrix}
-1&1&1\\
-3&-2&1\\
-2&1&-1
-\end{pmatrix}^{-1}
-\begin{pmatrix}
-6\\
-2\\
-1
-\end{pmatrix}
-$$
-
-Having described matrix notation, we will explain the operation we perform with them. For example, above we have matrix multiplication and we also have a symbol representing the inverse of a matrix. The importance of these operations and others will become clear once we present specific examples related to data analysis.
- 
 
 **Multiplying by a scalar**
 
@@ -439,7 +384,6 @@ print(X)
 a <- 2
 print(a*X)
 ```
-
 
 **The transpose**
 
@@ -546,6 +490,7 @@ $$  = \begin{pmatrix}
 $$
 
 You can only take the product if the number of columns of the first matrix $A$ equals the number of rows of the second one $X$. Also, the final matrix has the same row numbers as the first $A$ and the same column numbers as the second $X$. 
+
 After you study the example below, you may want to come back and re-read the sections above.
 
 **The identity matrix**
@@ -607,7 +552,7 @@ y <- matrix(c(6,2,1),3,1)
 solve(X)%*%y #equivalent to solve(X,y)
 ```
 
-Please note that `solve` is a function that should be used with caution as it is not generally numerically stable. We explain this in much more detail in the QR factorization section. 
+Please note that `solve` is a function that should be used with caution as it is not generally numerically stable. 
 
 88888888888888888888888888888888888888888888888888888888888888
 
@@ -689,11 +634,6 @@ r <- y - barY
 crossprod(r)/N
 ```
 
-Which is almost equivalent to:
-```{r}
-library(rafalib)
-popvar(y) 
-```
 
 **Linear models**
 

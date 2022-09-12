@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 # RNA-seq with edgeR
 
 RNA-seq analysis is easy as 1-2-3 with limma, Glimma and edgeR

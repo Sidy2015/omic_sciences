@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 
 # Confounding
 
@@ -8,7 +13,7 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
 The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/07-confounding.Rmd). Batch effects have the most devastating effects when they are _confounded_ with outcomes of interest. Here we describe confounding and how it relates to data interpretation.
 
-"Correlation is not causation" is one of the most important lessons you should take from this or any other data analysis course. A common example for why this statement is so often true is confounding. Simply stated confounding occurs when we observe a correlation or association between $X$ and $Y$, but  this is strictly the result of both $X$ and $Y$ depending on an extraneous variable $Z$. Here we describe Simpson's paradox, a phenomenon in probability and statistics in which a trend appears in several groups of data but disappears or reverses when the groups are combined due. 
+"Correlation is not causation" is one of the most important lessons you should take from this or any other data analysis course. A common example for why this statement is so often true is confounding. Simply stated confounding occurs when we observe a correlation or association between $X$ and $Y$, but  this is strictly the result of both $X$ and $Y$ depending on an extraneous variable $Z$. Here we describe Simpson's paradox, a phenomenon in probability and statistics in which a trend appears in several groups of data but disappears or reverses when the groups are combined. 
 
 
 Simpson's Paradox in baseball
@@ -61,7 +66,7 @@ print(tab)
 
 In response to this paper, Akey, Biswas, Leek and Storey (Leek and Storey are heavy hitters in R bioinformatics and the microarray world) wrote a letter to the [Nature Genetics editor](https://pubmed.ncbi.nlm.nih.gov/17597765/): Spielman et al.(1) estimate the number of genes differentially expressed between individuals of European (CEU) and Asian (ASN) ancestry and suggest that these differences can be accounted for by measured genetic variants. We recently performed a similar study comparing differences in gene expression among individuals of European and Yoruban ancestry(2). Given the scientific, medical and societal implications of this research area, it is important for the scientific community to carefully revisit and critically evaluate the conclusions of such studies. To this end, we have reanalyzed the data in Spielman et al.(1) to provide a common basis for comparison with our study. In doing so, we found that important issues arise about the accuracy of their results. 
 
-The authors categorized genes as differentially expressed if they had P-values <1e-5, corresponding to a Sidak corrected P-value <0.05 for multiple hypothesis tests. At this significance threshold, they report that approximately 26% of genes are differentially expressed between the CEU and ASN samples (ASN denotes the combined HapMap Beijing Chinese (CHB) and Japanese (JPT) HapMap individuals1). As a Sidak correction is similar to a Bonferroni correction, the proportion of genes found to be significant is a conservative estimate of the true overall proportion of differentially expressed genes. A more widely used and less conservatively biased approach is to analyze the complete distribution of P-values, which provides a lower bound estimate of the proportion of truly differentially expressed genes (3,4). Applying this methodology to the distribution of P-values obtained by P-values obtained by t tests on genes expressed in lymphoblastoid cell lines as defined in Spielman et al.(1), we estimate that at least 78% of these genes are differentially expressed between the CEU and ASN samples. 
+Spielman et al categorized genes as differentially expressed if they had P-values <1e-5, corresponding to a Sidak corrected P-value <0.05 for multiple hypothesis tests. At this significance threshold, they report that approximately 26% of genes are differentially expressed between the CEU and ASN samples (ASN denotes the combined HapMap Beijing Chinese (CHB) and Japanese (JPT) HapMap individuals). As a Sidak correction is similar to a Bonferroni correction, the proportion of genes found to be significant is a conservative estimate of the true overall proportion of differentially expressed genes. A more widely used and less conservatively biased approach is to analyze the complete distribution of P-values, which provides a lower bound estimate of the proportion of truly differentially expressed genes (3,4). Applying this methodology to the distribution of P-values obtained by P-values obtained by t tests on genes expressed in lymphoblastoid cell lines as defined in Spielman et al.(1), we estimate that at least 78% of these genes are differentially expressed between the CEU and ASN samples. 
 
 Figure 1. Distribution of P-values for tests of differential expression. (a) P-values resulting from tests of P-values resulting from tests of P differential expression between the CEU and ASN samples. 
 
@@ -207,7 +212,7 @@ round(length(wfit2)/nrow(t2)*100,1)
 
 Only ~3% of genes are differentially expressed between ASN and CEU, which is not surprising, given that microarray batch effects seem to be completely confounded with population effects.
 
-Obviously, these findings do not mean that all differentially expressed genes in Spielman et al.1 are due to batch effects; rather, the source of population differences in expression cannot be uniquely attributed to biological causes. To gain insight into the magnitude of the batch effects in Spielman et al.1, we tested for differential expression within the CEU sample with respect to the year of processing. 
+Obviously, these findings do not mean that all differentially expressed genes in Spielman et al.1 are due to batch effects; rather, the source of population differences in expression cannot be uniquely attributed to biological causes. To gain insight into the magnitude of the batch effects in Spielman et al.(1), we tested for differential expression within the CEU sample with respect to the year of processing. 
 
 (d) P-values resulting from tests of differential expression with respect to year P-values resulting from tests of differential expression with respect to year P in which the microarrays were processed only among the CEU samples.
 ```{r Figure 1.(d), fig.cap="CEU ethnicity and year", fig.width=7,fig.height=4}
@@ -264,12 +269,6 @@ The genotype-phenotype correlations made with the data set of Spielman et al. sh
 In summary, characterizing patterns of gene expression variation within and among human populations is an important and interesting problem. However, it is critical that experimental design and statistical analyses be carefully thought out and implemented in order for accurate conclusions to be drawn. In particular, components of variation from both measured and unmeasured variables must be taken into account, for example, by balancing or randomizing the study design with respect to sex, time of sample preparation and processing and microarray batch. 
 
 Joshua M Akey^1, Shameek Biswas^1, Jeffrey T Leek^2 & John D Storey^{1,2}
-
- 
-
-
-The y-axis in each plot is drawn y-axis in each plot is drawn y to reflect a histogram density, where the total area of all rectangles is 1. Under the null hypothesis of no differential expression, we expect the P-values to be uniformly distributed between 0 and 1, forming P-values to be uniformly distributed between 0 and 1, forming P a histogram with frequencies following the dashed black line. Using well-established methodology(3,4), we estimate the proportion of differentially expressed genes in a–d to be 78%, 94%, 0% and 79%, respectively. The odd shape of the histogram in c is attributable to the almost complete confounding of year of processing and population, illustrating the underlying problem with the study design.
-By running a t-test and creating a volcano plot, we note that thousands of genes appear to be differentially expressed between ethnicities. Yet when we perform a similar comparison only on the CEU population between the years 2002 and 2003, we again obtain thousands of differentially expressed genes:
 
 
 888888888888888888888888888888888888888888
@@ -515,6 +514,7 @@ cat("Total genes with q-value < 0.1: ",length(index),"\n",
 ```
 888888888888888888888888888888888888888888
 
+![Figure 3.](figure/confounding.png){width=940px,height = 3760px}
 
 ## A more subtle example:bladderbatch
 
@@ -559,7 +559,6 @@ This will only work if the batch effects aren't too highly correlated with the o
 table(pheno$cancer,pheno$batch)
 ```
 
-![Figure 3.](figure/confounding.png)
 
 
 Not completely independent of batch...
