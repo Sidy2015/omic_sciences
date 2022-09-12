@@ -56,6 +56,7 @@ MASS
 Mus.musculus
 org.Hs.eg.db
 org.Sc.sgd.db
+pamr
 pasillaBamSubset
 ph525x
 pheatmap
@@ -65,7 +66,6 @@ rafalib
 RColorBrewer
 rlang
 rmarkdown
-RNAseq123
 rols
 Rsamtools
 rsconnect
