@@ -1,0 +1,1267 @@
+
+# Data visualisation with ggplot2
+
+```{r}
+library(ggplot2)
+```
+
+
+## Individual geoms {#individual-geoms}
+
+## Basic plot types {#basics}
+
+These geoms are the fundamental building blocks of ggplot2. They are useful in their own right, but are also used to construct more complex geoms. Most of these geoms are associated with a named plot: when that geom is used by itself in a plot, that plot has a special name.
+
+Each of these geoms is two dimensional and requires both `x` and `y` aesthetics. All of them understand `colour` (or `color`) and `size` aesthetics, and the filled geoms (bar, tile and polygon) also understand `fill`.
+
+*   `geom_area()` draws an __area plot__, which is a line plot filled to the 
+    y-axis (filled lines). Multiple groups will be stacked on top of each 
+    other. \index{Area plot} \indexf{geom\_area}
+  
+*   `geom_bar(stat = "identity")` makes a __bar chart__. We need 
+    `stat = "identity"` because the default stat automatically counts values 
+    (so is essentially a 1d geom, see Section \@ref(distributions). 
+    The identity stat leaves the data unchanged. Multiple bars in the same
+    location will be stacked on top of one another.\index{Barchart}
+    \indexf{geom\_bar}
+  
+*   `geom_line()` makes a __line plot__.  The `group` aesthetic determines 
+    which observations are connected; see Chapter \@ref(collective-geoms) for more 
+    detail. `geom_line()` connects points from left to right; `geom_path()` is 
+    similar but connects points in the order they appear in the data.
+    Both `geom_line()` and `geom_path()` also understand the aesthetic 
+    `linetype`, which maps a categorical variable to solid, dotted and dashed
+    lines. \index{Line plot} \indexf{geom\_line} \indexf{geom\_path}
+    
+*   `geom_point()` produces a __scatterplot__. `geom_point()` also understands
+    the `shape` aesthetic. \indexf{geom\_point}
+
+*   `geom_polygon()` draws polygons, which are filled paths. Each vertex of the 
+    polygon requires a separate row in the data.  It is often useful to merge 
+    a data frame of polygon coordinates with the data just prior to plotting.
+    Section \@ref(maps) illustrates this concept in more detail for map 
+    data. \indexf{geom\_polygon}
+
+*   `geom_rect()`, `geom_tile()` and `geom_raster()` draw rectangles. 
+    `geom_rect()` is parameterised by the four corners of the rectangle,
+    `xmin`, `ymin`, `xmax` and `ymax`. `geom_tile()` is exactly the same,
+    but parameterised by the center of the rect and its size, `x`, `y`, 
+    `width` and `height`. `geom_raster()` is a fast special case of 
+    `geom_tile()` used when all the tiles are the same size.
+    \index{Image plot} \index{Level plot} \indexf{geom\_tile}. 
+    \indexf{geom\_rect} \indexf{geom\_raster}
+    
+A graphing template
+Let’s turn this code into a reusable template for making graphs with ggplot2. To make a graph, replace the bracketed sections in the code below with a dataset, a geom function, or a collection of mappings.
+
+ggplot(data = <DATA>, mapping = aes(<MAPPINGS>)) + 
+  <GEOM_FUNCTION>()
+  
+The rest of this chapter will show you how to complete and extend this template to make different types of graphs. We will begin with the <MAPPINGS> component.
+
+
+Each geom is shown in the code below. Observe the different axis ranges for the bar, area and tile plots: these geoms take up space outside the range of the data, and so push the axes out.
+
+
+```{r geom-basic} 
+df <- data.frame(
+  x = c(3, 1, 5), 
+  y = c(2, 4, 6), 
+  label = c("a","b","c")
+)
+p <- ggplot(df, aes(x, y, label = label))  
+  
+p
+```
+
+
+We get nothing but the plot layout -- a ggplot with no aesthetics just shows a grey square, since it produces a background with no graph on it because we haven't added the geometry.
+
+So let's add them.
+
+```{r}
+p + geom_point() + ggtitle("point")
+p + geom_text() + ggtitle("text")
+p + geom_bar(stat = "identity") + ggtitle("bar")
+p + geom_tile() + ggtitle("raster")
+```
+
+
+```{r}
+p + geom_line() + ggtitle("line")
+p + geom_area() + ggtitle("area")
+p + geom_path() + ggtitle("path")
+p + geom_polygon() + ggtitle("polygon")
+```
+
+### Exercises
+**_Question 1_** What geoms would you use to draw each of the following named plots?
+1. Scatterplot
+2. Line chart
+3. Histogram
+4. Bar chart
+
+
+**_Question 2_** What’s the difference between geom path() and geom_polygon()? What’s the
+difference between geom_path() and geom_line()?
+
+# Collective geoms {#collective-geoms}
+
+Geoms can be roughly divided into individual and collective geoms. An __individual__ geom draws a distinct graphical object for each observation (row). For example, the point geom draws one point per row. A __collective__ geom displays multiple observations with one geometric object. This may be a result of a statistical summary, like a boxplot, or may be fundamental to the display of the geom, like a polygon. Lines and paths fall somewhere in between: each line is composed of a set of straight segments, but each segment represents two points. How do we control the assignment of observations to graphical elements?  This is the job of the `group` aesthetic. \index{Grouping} \indexc{group} \index{Geoms!collective}
+
+By default, the `group` aesthetic is mapped to the interaction of all discrete variables in the plot. This often partitions the data correctly, but when it does not, or when no discrete variable is used in a plot, you'll need to explicitly define the grouping structure by mapping group to a variable that has a different value for each group.
+
+## Matching aesthetics to graphic objects {#matching}
+
+An important issue with collective geoms is how the aesthetics of the individual observations are mapped to the aesthetics of the complete entity. What happens when different aesthetics are mapped to a single geometric element? \index{Aesthetics!matching to geoms}
+
+In ggplot2, this is handled differently for different collective geoms. Lines and paths operate on a "first value" principle: each segment is defined by two observations, and ggplot2 applies the aesthetic value (e.g., colour) associated with the *first* observation when drawing the segment. That is, the aesthetic for the first observation is used when drawing the first segment, the second observation is used when drawing the second segment and so on. The aesthetic value for the last observation is not used.
+
+These issues are most relevant when mapping aesthetics to continuous variables. For discrete variables, the default behaviour of ggplot2 is to treat the variable as part of the group aesthetic. This has the effect of splitting the collective geom into smaller pieces. This works particularly well for bar and area plots, because stacking the individual pieces produces the same shape as the original ungrouped data:
+
+
+```{r bar-split-disc}
+ggplot(mpg, aes(class)) + 
+  geom_bar()
+ggplot(mpg, aes(class, fill = drv)) + 
+  geom_bar()
+```
+
+If you try to map the fill aesthetic to a continuous variable (e.g., `hwy`) in the same way, it doesn't work. The default grouping will only be based on `class`, so each bar is now associated with multiple colours (depending on the value of `hwy` for the observations in each class). Because a bar can only display one colour, ggplot2 reverts to the default grey in this case. To show multiple colours, we need multiple bars for each `class`, which we can get by overriding the grouping:
+
+```{r bar-split-cont}
+ggplot(mpg, aes(class, fill = hwy)) + 
+  geom_bar()
+ggplot(mpg, aes(class, fill = hwy, group = hwy)) + 
+  geom_bar()
+```
+
+In the plot on the right, the "shaded bars" for each `class` have been constructed by stacking many distinct bars on top of each other, each filled with a different shade based on the value of `hwy`. Note that when you do this, the bars are stacked in the order defined by the grouping variable (in this example `hwy`). If you need fine control over this behaviour, you'll need to create a factor with levels ordered as needed.
+
+## Exercises
+
+**_Question 1_** Use mpg to draw a boxplot of hwy for each value of cyl, without turning cyl into a
+factor. What extra aesthetic do you need to set?
+
+**_Question 2_** Modify the following plot so that you get one boxplot per integer value of
+displ.
+
+```{r q2, eval=FALSE}
+ggplot(mpg, aes(displ, cty)) +
+geom_boxplot()
+```
+
+
+
+**_Question 3_** How many bars are in each of the following plots?
+```{r}
+ggplot(mpg, aes(drv)) + geom_bar()
+ggplot(mpg, aes(drv, fill = hwy, group = hwy)) + geom_bar()
+library(dplyr)
+mpg2 <- mpg %>% arrange(hwy) %>% mutate(id = seq_along(hwy))
+ggplot(mpg2, aes(drv, fill = hwy, group = id)) + geom_bar()
+```
+
+All have 3 bars.
+
+
+## Statistical summaries {#statistical-summaries}
+
+### Diamonds data {#diamonds}
+
+To demonstrate tools for large datasets, we'll use the built in `diamonds` dataset, which consists of price and quality information for ~54,000 diamonds:
+
+```{r}
+diamonds 
+```
+
+The data contains the four C's of diamond quality: carat, cut, colour and clarity; and five physical measurements: depth, table, x, y and z, as described in Figure \@ref(fig:diamond-dim). \index{Data!diamonds@\texttt{diamonds}}
+
+```{r diamond-dim, echo = FALSE, out.width = "100%", fig.cap="How the variables x, y, z, table and depth are measured."}
+knitr::include_graphics("figure/diamond-dimensions.png", dpi = 300)
+```
+
+The dataset has not been well cleaned, so as well as demonstrating interesting facts about diamonds, it also shows some data quality problems. 
+
+## Displaying distributions {#distributions}
+
+There are a number of geoms that can be used to display distributions, depending on the dimensionality of the distribution, whether it is continuous or discrete, and whether you are interested in the conditional or joint distribution. \index{Distributions}
+
+For 1d continuous distributions the most important geom is the histogram, `geom_histogram()`: \indexf{geom\_histogram} 
+
+
+```{r geom-1d-con} 
+ggplot(diamonds, aes(depth)) + 
+  geom_histogram()
+ggplot(diamonds, aes(depth)) + 
+  geom_histogram(binwidth = 0.1) + 
+  xlim(55, 70)
+```
+
+It is important to experiment with binning to find a revealing view. You can change the `binwidth`, specify the number of `bins`, or specify the exact location of the `breaks`. Never rely on the default parameters to get a revealing view of the distribution. Zooming in on the x axis, `xlim(55, 70)`, and selecting a smaller bin width, `binwidth = 0.1`, reveals far more detail. \index{Histogram!choosing bins} 
+
+When publishing figures, don't forget to include information about important parameters (like bin width) in the caption.
+
+If you want to compare the distribution between groups, you have a few options: 
+
+* Show small multiples of the histogram, `facet_wrap(~ var)`.
+* Use colour and a frequency polygon, `geom_freqpoly()`. 
+  \index{Frequency polygon} \indexf{geom\_freqpoly}
+* Use a "conditional density plot", `geom_histogram(position = "fill")`. 
+  \index{Conditional density plot} 
+
+The frequency polygon and conditional density plots are shown below. The conditional density plot uses `position_fill()` to stack each bin, scaling it to the same height. This plot is perceptually challenging because you need to compare bar heights, not positions, but you can see the strongest patterns. \indexf{position\_fill}
+
+
+```{r compare-dist} 
+ggplot(diamonds, aes(depth)) + 
+  geom_freqpoly(aes(colour = cut), binwidth = 0.1, na.rm = TRUE) +
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+ggplot(diamonds, aes(depth)) + 
+  geom_histogram(aes(fill = cut), binwidth = 0.1, position = "fill",
+    na.rm = TRUE) +
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+```
+
+(I've suppressed the legends to focus on the display of the data.)
+
+Both the histogram and frequency polygon geom use the same underlying statistical transformation: `stat = "bin"`. This statistic produces two output variables: `count` and `density`. By default, count is mapped to y-position, because it's most interpretable. The density is the count divided by the total count multiplied by the bin width, and is useful when you want to compare the shape of the distributions, not the overall size. \indexf{stat\_bin}
+
+An alternative to a bin-based visualisation is a density estimate. `geom_density()` places a little normal distribution at each data point and sums up all the curves. It has desirable theoretical properties, but is more difficult to relate back to the data. Use a density plot when you know that the underlying density is smooth, continuous and unbounded. You can use the `adjust` parameter to make the density more or less smooth. \index{Density plot} \indexf{geom\_density}
+  
+```{r geom-density} 
+ggplot(diamonds, aes(depth)) +
+  geom_density(na.rm = TRUE) + 
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+ggplot(diamonds, aes(depth, fill = cut, colour = cut)) +
+  geom_density(alpha = 0.2, na.rm = TRUE) + 
+  xlim(58, 68) + 
+  theme(legend.position = "none")
+```
+    
+Note that the area of each density estimate is standardised to one so that 
+you lose information about the relative size of each group.
+
+The histogram, frequency polygon and density display a detailed view of the distribution. However, sometimes you want to compare many distributions, and it's useful to have alternative options that sacrifice quality for quantity. Here are three options:
+
+*   `geom_boxplot()`: the box-and-whisker plot shows five summary statistics 
+    along with individual "outliers". It displays far less 
+    information than a histogram, but also takes up much less space.
+    \index{Boxplot}  \indexf{geom\_boxplot}
+    
+    You can use boxplot with both categorical and continuous x. For continuous
+    x, you'll also need to set the group aesthetic to define how the x variable
+    is broken up into bins. A useful helper function is `cut_width()`: 
+    \indexf{cut\_width}
+
+    
+    ```{r geom-boxplot} 
+    ggplot(diamonds, aes(clarity, depth)) + 
+      geom_boxplot()
+    ggplot(diamonds, aes(carat, depth)) + 
+      geom_boxplot(aes(group = cut_width(carat, 0.1))) + 
+      xlim(NA, 2.05)
+    ```
+  
+*   `geom_violin()`: the violin plot is a compact version of the density plot.
+    The underlying computation is the same, but the results are displayed in a
+    similar fashion to the boxplot: \indexf{geom\_violion} \index{Violin plot}
+  
+    ```{r}
+    ggplot(diamonds, aes(clarity, depth)) + 
+      geom_violin()
+    ggplot(diamonds, aes(carat, depth)) + 
+      geom_violin(aes(group = cut_width(carat, 0.1))) + 
+      xlim(NA, 2.05)
+    ```
+  
+*   `geom_dotplot()`: draws one point for each observation, carefully adjusted in 
+    space to avoid overlaps and show the distribution. It is useful for 
+    smaller datasets.  \indexf{geom\_dotplot} \index{Dot plot}
+
+### Exercises
+
+**_Question 1_** What binwidth tells you the most interesting story about the distribution
+of carat?
+```{r e.3.11.1_plot1}
+ggplot(diamonds, aes(carat)) +
+  geom_histogram(binwidth = 0.01) +
+  xlim(0.4, 2)
+diamonds %>% 
+  ggplot(aes(carat)) +
+  geom_histogram(binwidth = 0.2)
+
+```
+
+
+**_Question 2_** Draw a histogram of price. What interesting patterns do you see?
+
+```{r e.3.11.1.2}
+ggplot(diamonds, aes(price)) +
+  geom_histogram(binwidth = 30) +
+  xlim(0, 10000)
+
+diamonds %>% 
+  ggplot(aes(price)) +
+  geom_histogram(binwidth = 500)
+
+
+```
+
+
+**_Question 3_** How does the distribution of price vary with clarity?
+
+```{r e.3.11.1.3_1}
+ggplot(diamonds, aes(clarity, price)) +
+  geom_boxplot()
+```
+
+```{r e.3.11.3_2}
+ggplot(diamonds, aes(clarity, price)) +
+  geom_violin()
+
+diamonds %>% 
+  ggplot(aes(clarity, price)) +
+  geom_boxplot()
+
+
+```
+
+
+## Facets
+One way to add additional variables is with aesthetics. Another way, particularly useful for categorical variables, is to split your plot into facets, subplots that each display one subset of the data.
+
+To facet your plot by a single variable, use facet_wrap(). The first argument of facet_wrap() should be a formula, which you create with ~ followed by a variable name (here “formula” is the name of a data structure in R, not a synonym for “equation”). The variable that you pass to facet_wrap() should be discrete.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2)
+```
+
+
+To facet your plot on the combination of two variables, add facet_grid() to your plot call. The first argument of facet_grid() is also a formula. This time the formula should contain two variable names separated by a ~.
+
+```{r}
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy)) + 
+  facet_grid(drv ~ cyl)
+```
+
+
+If you prefer to not facet in the rows or columns dimension, use a . instead of a variable name, e.g. + facet_grid(. ~ cyl).
+
+### Exercises Facets
+
+**_Question 1_**
+What happens if you facet on a continuous variable?
+
+
+**_Question 2_**
+What do the empty cells in plot with `facet_grid(drv ~ cyl)` mean?
+
+
+**_Question 3_**
+What plots does the following code make? What does `.` do?
+`.` is just a placeholder so that we can have a facet in only one dimension. 
+**_Question 4_**
+What are the advantages to using faceting instead of the colour aesthetic? What are the disadvantages? How might the balance change if you had a larger dataset?
+
+
+**_Question 5_**
+Read `?facet_wrap`. What does `nrow` do? What does `ncol` do? What other options control the layout of the individual panels? Why doesn't `facet_grid()` have `nrow` and `ncol` variables?
+
+**_Question 6_**
+When using `facet_grid()` you should usually put the variable with more unique levels in the columns. Why?
+
+## Annotations
+
+When constructing a data visualisation, it is often necessary to make annotations to
+the data displayed. Conceptually, an annotation supplies *metadata* for the plot: that is,
+it provides additional information about the data being displayed. From a practical 
+standpoint, however, metadata is just another form of data. Because of this, the 
+annotation tools in ggplot2 reuse the same geoms that are used to create other plots. 
+However, to meet the specific needs that users often have when annotating plots, there
+are some helper functions in ggplot2 itself, and a number of other packages have 
+extended ggplot2 in ways you may find helpful. 
+
+
+## Plot and axis titles
+
+When customizing a plot, it is often useful to modify the titles associated with the plot, axes, and legends. To assist with this task ggplot2 provides the `labs()` helper function, which lets you set the various titles using name-value pairs like `title = My plot title"`,  `x = "X axis"` or `fill = "fill legend"`: 
+
+```{r guide-names-helper}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = factor(cyl))) + 
+  labs(
+    x = "Engine displacement (litres)", 
+    y = "Highway miles per gallon", 
+    colour = "Number of cylinders",
+    title = "Mileage by engine size and cylinders",
+    subtitle = "Source: http://fueleconomy.gov"
+  )
+```
+
+The values supplied to `labs()` are typically text strings, with `\n` used to specify line breaks, but you can also supply mathematical expressions wrapped in `quote()`. The rules by which these expressions are interpreted can be found by typing `?plotmath`.
+\index{Axis!title} \index{Legend!title}
+    
+
+```{r guide-names}
+values <- seq(from = -2, to = 2, by = .01)
+df <- data.frame(x = values, y = values ^ 3)
+ggplot(df, aes(x, y)) + 
+  geom_path() + 
+  labs(y = quote(f(x) == x^3))
+```
+
+There are two ways to remove the axis label. Setting `labs(x = "")` omits the label but still allocates space; setting `labs(x = NULL)` removes the label and its space. 
+
+## Text labels {#text-labels}
+\index{Labels} \index{Text} \indexf{geom\_text}
+
+Adding text to a plot is one of the most common forms of annotation. Most plots 
+will not benefit from adding text to every single observation on the plot,
+but labeling outliers and other important points is very useful. However, text
+annotation can be tricky due to the way that R handles fonts. The ggplot2 package doesn't have all the answers, but it does provide some tools to make your life a little easier. The main tool for labeling plots is `geom_text()`, which adds `label` text at the specified `x` and `y` positions. `geom_text()` has the most aesthetics of any geom, because there are so many ways to control the appearance of a text:
+
+*   The `family` aesthetic provides the name of a font. This aesthetic *does* allow you to use the name of a system font, but some care is required. There are only three fonts that are guaranteed to work everywhere: "sans" (the default), "serif", or "mono". To illustrate these: 
+    
+    
+    ```{r text-family}
+    df <- data.frame(x = 1, y = 3:1, family = c("sans", "serif", "mono"))
+    ggplot(df, aes(x, y)) + 
+      geom_text(aes(label = family, family = family))
+    ```
+    
+    The reason that it can be tricky to use system fonts in a plot is that
+    text drawing is handled differently by each graphics device (GD). There are 
+    two groups of GDs: screen devices such as `windows()` (for Windows), `quartz()`
+    (for Macs), `x11()` (mostly for Linux) and `RStudioGD()` (within RStudio) draw
+    the plot to the screen, whereas file devices such as `png()` and `pdf()` write
+    the plot to a file. Unfortunately, the devices do not specify fonts in the 
+    same way so if you want a font to work everywhere you need to configure
+    the devices in different ways. Two packages simplify the quandary a bit: 
+    
+    * showtext, <https://github.com/yixuan/showtext>, by Yixuan Qiu, makes 
+      GD-independent plots by rendering all text as polygons. 
+    
+    * extrafont, <https://github.com/wch/extrafont>, by Winston Chang, 
+      converts fonts to a standard format that all devices can use. 
+    
+    Both approaches have pros and cons, so you will to need to try both of 
+    them and see which works best for your needs. \index{Font!family}
+    
+*   The `fontface` aesthetic specifies the face, and can take three values: "plain" (the default), "bold" or "italic". For example:
+    \index{Font!face}
+
+    ```{r text-face}
+    df <- data.frame(x = 1, y = 3:1, face = c("plain", "bold", "italic"))
+    ggplot(df, aes(x, y)) + 
+      geom_text(aes(label = face, fontface = face))
+    ```
+
+*   You can adjust the alignment of the text with the `hjust` ("left", "center", 
+    "right", "inward", "outward") and `vjust` ("bottom", "middle", "top", 
+    "inward", "outward") aesthetics. By default the aligment is centered, but there
+    are often good reasons to override this. One of the most useful alignments is "inward". 
+    It aligns text towards the middle of the plot, which ensures that
+    labels remain within the plot limits: \index{Font!justification}
+    
+    ```{r text-justification}
+    df <- data.frame(
+      x = c(1, 1, 2, 2, 1.5),
+      y = c(1, 2, 1, 2, 1.5),
+      text = c(
+        "bottom-left", "top-left",  
+        "bottom-right", "top-right", "center"
+      )
+    )
+    ggplot(df, aes(x, y)) +
+      geom_text(aes(label = text))
+    ggplot(df, aes(x, y)) +
+      geom_text(aes(label = text), vjust = "inward", hjust = "inward")
+    ```
+
+*   The font size is controlled by the `size` aesthetic. Unlike most tools, 
+    ggplot2 specifies the size in millimeters (mm), rather than the usual 
+    points (pts). The reason for this choice is that it makes it the units for
+    font sizes consistent with how other sizes are specified in ggplot2. 
+    (There are 72.27 pts in a inch, so to convert from points to mm, just 
+    multiply by 72.27 / 25.4). \index{Font!size}
+
+*   `angle` specifies the rotation of the text in degrees.
+
+The ggplot2 package does allow you to map data values to the aesthetics used by `geom_text()`, but you should use restraint: it is hard to perceive the relationship between variables mapped to these aesthetics, and rarely useful to do so. 
+
+In addition to the various aesthetics, `geom_text()` has three parameters that you can specify. Unlike the aesthetics these only take single values, so they must be the same for all labels:
+
+*   Often you want to label existing points on the plot, but you don't want the
+    text to overlap with the points (or bars etc). In this situation it's useful 
+    to offset the text a little, which you can do with the `nudge_x` and `nudge_y` 
+    parameters:
+    
+    ```{r text-nudge}
+    df <- data.frame(trt = c("a", "b", "c"), resp = c(1.2, 3.4, 2.5))
+    ggplot(df, aes(resp, trt)) + 
+      geom_point() + 
+      geom_text(aes(label = paste0("(", resp, ")")), nudge_y = -0.25) + 
+      xlim(1, 3.6)
+    ```
+    
+    (Note that I manually tweaked the x-axis limits to make sure all the 
+    text fit on the plot.)
+
+A variation on `geom_text()` is `geom_label()`: it draws a rounded rectangle behind the text. This makes it useful for adding labels to plots with busy backgrounds: \indexf{geom\_label}
+
+
+```{r label}
+label <- data.frame(
+  waiting = c(55, 80), 
+  eruptions = c(2, 4.3), 
+  label = c("peak one", "peak two")
+)
+
+ggplot(faithfuld, aes(waiting, eruptions)) +
+  geom_tile(aes(fill = density)) + 
+  geom_label(data = label, aes(label = label))
+```
+
+
+## Arranging plots
+The grammar presented in ggplot2 is concerned with creating single plots. While the faceting system provides the means to produce several subplots all of these are part of the same main visualization, sharing layers, data, and scales. However, it is often necessary to use multiple disparate plots to tell a story or make an argument. These can of course be created individually and assembled in a layout program, but it is beneficial to do this in code to avoid time consuming and non-reproducible manual labor. A range of packages have risen to the occasion and provide different approaches to arranging separate plots. While this chapter will focus on the patchwork package you may also find some of the same functionalities in the cowplot, gridExtra and ggpubr packages.
+
+This chapter will be split into two parts. The first will be concerned with arranging plots side by side with no overlap, while the second will be concerned with arranging plots on top of each other. While these two scenarios are not necessarily in opposition to each other, the former scenario will often benefit from functionality that makes little sense in the latter, e.g. alignment of plotting regions.
+
+## Laying out plots side by side
+Often, one wants to show two or more plots side by side to show different aspects of the same story in a compelling way. This is the scenario that patchwork was build to solve. At it's heart, patchwork is a package that extends ggplot2's use of the `+` operator to work between multiple plots, as well as add additional operators for specialized compositions and working with compositions of plots.
+
+As an example of the most basic use of patchwork, we'll use the following 4 plots of the `mpg` dataset
+
+```{r}
+p1 <- ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy))
+
+p2 <- ggplot(mpg) + 
+  geom_bar(aes(x = as.character(year), fill = drv), position = "dodge") + 
+  labs(x = "year")
+
+p3 <- ggplot(mpg) + 
+  geom_density(aes(x = hwy, fill = drv), colour = NA) + 
+  facet_grid(rows = vars(drv))
+
+p4 <- ggplot(mpg) + 
+  stat_summary(aes(x = drv, y = hwy, fill = drv), geom = "col", fun.data = mean_se) +
+  stat_summary(aes(x = drv, y = hwy), geom = "errorbar", fun.data = mean_se, width = 0.5)
+```
+
+The most simple use of patchwork is to use `+` to add plots together thus creating an assemble of plots to display together:
+```{r}
+library(patchwork)
+
+p1 + p2
+```
+
+`+` does not specify any specific layout, only that the plots should be displayed together. In the absence of a layout the same algorithm that governs the number of rows and columns in `facet_wrap()` will decide the number of rows and columns. This means that adding 3 plots together will create a 1x3 grid while adding 4 plots together will create a 2x2 grid.
+
+```{r}
+p1 + p2 + p3 + p4
+```
+
+As can be seen from the two examples above, patchwork takes care of aligning the different parts of the plots with each other. You can see that all plotting regions are aligned, even in the presence of faceting. Further, you can see that the y-axis titles in the two left-most plots are aligned despite the axis text in the bottom left plot being wider.
+
+### Taking control of the layout
+It is often that the automatically created grid is not what you want and it is of course possible to control it. The most direct and powerful way is to do this is to add a `plot_layout()` specification to the plot:
+
+```{r}
+p1 + p2 + p3 + plot_layout(ncol = 2)
+```
+
+A common scenario is wanting to force a single row or column. patchwork provides two operators, `/` and `|` respectively, to facilitate this (under the hood they simply set number of rows or columns in the layout to 1).
+```{r}
+p1 / p2
+```
+
+```{r}
+# Basically the same as using `+` but the intend is clearer
+p3 | p4
+```
+
+patchwork allows nesting layouts which means that it is possible to create some very intricate layouts using just these two operators
+
+```{r}
+p3 | (p2 / (p1 | p4))
+```
+
+Alternatively, for very complex layouts, it is possible to specify non-tabular layouts with a textual representation in the `design` argument in `plot_layout()`.
+
+```{r}
+layout <- "
+AAB
+C#B
+CDD
+"
+
+p1 + p2 + p3 + p4 + plot_layout(design = layout)
+```
+
+## Scales
+
+Introduction
+Scales control the mapping from data to aesthetics. They take your data and turn it into something that you can see, like size, colour, position or shape. Scales also provide the tools that let you read the plot: the axes and legends. Formally, each scale is a function from a region in data space (the domain of the scale) to a region in aesthetic space (the range of the scale). The axis or legend is the inverse function: it allows you to convert visual properties back to data.
+
+You can generate many plots without knowing how scales work, but understanding scales and learning how to manipulate them will give you much more control. The basics of working with scales is described in scale usage. Guides discusses the common parameters that control the axes and legends. Legends are particularly complicated so have an additional set of options as described in legends. Limits shows how to use limits to both zoom into interesting parts of a plot, and to ensure that multiple plots have matching legends and axes. Scale details gives an overview of the different types of scales available in ggplot2, which can be roughly divided into four categories: continuous position scales, colour scales, manual scales and identity scales.
+
+Modifying scales
+A scale is required for every aesthetic used on the plot. When you write:
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class))
+```
+
+What actually happens is this:
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class)) +
+  scale_x_continuous() + 
+  scale_y_continuous() + 
+  scale_colour_discrete()
+```
+
+Default scales are named according to the aesthetic and the variable type: scale_y_continuous(), scale_colour_discrete(), etc.
+
+It would be tedious to manually add a scale every time you used a new aesthetic, so ggplot2 does it for you. But if you want to override the defaults, you’ll need to add the scale yourself, like this:
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class)) + 
+  scale_x_continuous("A really awesome x axis label") +
+  scale_y_continuous("An amazingly great y axis label")
+```
+
+The use of + to “add” scales to a plot is a little misleading. When you + a scale, you’re not actually adding it to the plot, but overriding the existing scale. This means that the following two specifications are equivalent:
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() + 
+  scale_x_continuous("Label 1") +
+  scale_x_continuous("Label 2")
+```
+
+#> Scale for 'x' is already present. Adding another scale for 'x', which
+#> will replace the existing scale.
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() + 
+  scale_x_continuous("Label 2")
+```
+
+Note the message: if you see this in your own code, you need to reorganize your code specification to only add a single scale.
+
+You can also use a different scale altogether:
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point(aes(colour = class)) +
+  scale_x_sqrt() + 
+  scale_colour_brewer()
+```
+
+You’ve probably already figured out the naming scheme for scales, but to be concrete, it’s made up of three pieces separated by “_“:
+
+scale
+The name of the aesthetic (e.g., colour, shape or x)
+The name of the scale (e.g., continuous, discrete, brewer).
+
+### Exercises Scale
+**_Question 1_** What happens if you pair a discrete variable to a continuous scale? What
+happens if you pair a continuous variable to a discrete scale?
+
+**_Question 2_** Simplify the following plot specifications to make them easier to understand.
+```{r, eval=FALSE}
+ggplot(mpg, aes(displ)) +
+scale_y_continuous("Highway mpg") +
+scale_x_continuous() +
+geom_point(aes(y = hwy))
+```
+
+```{r, eval=FALSE}
+ggplot(mpg, aes(y = displ, x = class)) +
+scale_y_continuous("Displacement (l)") +
+scale_x_discrete("Car type") +
+scale_x_discrete("Type of car") +
+scale_colour_discrete() +
+geom_point(aes(colour = drv)) +
+scale_colour_discrete("Drive\ntrain")
+```
+
+## Guides: legends and axes
+The component of a scale that you’re most likely to want to modify is the guide, the axis or legend associated with the scale. Guides allow you to read observations from the plot and map them back to their original values. In ggplot2, guides are produced automatically based on the layers in your plot. This is very different to base R graphics, where you are responsible for drawing the legends by hand. In ggplot2, you don’t directly control the legend; instead you set up the data so that there’s a clear mapping between data and aesthetics, and a legend is generated for you automatically. This can be frustrating when you first start using ggplot2, but once you get the hang of it, you’ll find that it saves you time, and there is little you cannot do. If you’re struggling to get the legend you want, it’s likely that your data is in the wrong form. Read tidying to find out the right form.
+
+You might find it surprising that axes and legends are the same type of thing, but while they look very different there are many natural correspondences between the two, as shown in table below and in Figure .
+
+\begin{figure}[htbp] \centering \includegraphics[width=\linewidth]{figure/scale-guides.pdf} \caption{Axis and legend components} \label{fig:guides} \end{figure}
+
+Axis	Legend	Argument name
+Label	Title	name
+Ticks & grid line	Key	breaks
+Tick label	Key label	labels
+The following sections covers each of the name, breaks and labels arguments in more detail.
+
+Scale title
+The first argument to the scale function, name, is the axes/legend title. You can supply text strings (using \n for line breaks) or mathematical expressions in quote() (as described in ?plotmath):
+
+```{r}
+df <- data.frame(x = 1:2, y = 1, z = "a")
+p <- ggplot(df, aes(x, y)) + geom_point()
+p + scale_x_continuous("X axis")
+p + scale_x_continuous(quote(a + mathematical ^ expression))
+
+```
+
+
+Because tweaking these labels is such a common task, there are three helpers that save you some typing: xlab(), ylab() and labs():
+```{r}
+
+p <- ggplot(df, aes(x, y)) + geom_point(aes(colour = z))
+p + 
+  xlab("X axis") + 
+  ylab("Y axis")
+p + labs(x = "X axis", y = "Y axis", colour = "Colour\nlegend")
+```
+
+There are two ways to remove the axis label. Setting it to "" omits the label, but still allocates space; NULL removes the label and its space. Look closely at the left and bottom borders of the following two plots. I’ve drawn a grey rectangle around the plot to make it easier to see the difference.
+```{r}
+p <- ggplot(df, aes(x, y)) + 
+  geom_point() + 
+  theme(plot.background = element_rect(colour = "grey50"))
+p + labs(x = "",  y = "")
+p + labs(x = NULL, y = NULL)
+```
+
+### What does labs() do? Read the documentation.
+
+The labs function adds axis titles, plot titles, and a caption to the plot.
+```{r}
+ggplot(data = mpg, mapping = aes(x = class, y = hwy)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(
+    y = "Highway MPG",
+    x = "Class",
+    title = "Highway MPG by car class",
+    subtitle = "1999-2008",
+    caption = "Source: http://fueleconomy.gov"
+  )
+```
+
+### Breaks and labels
+The breaks argument controls which values appear as tick marks on axes and keys on legends. Each break has an associated label, controlled by the labels argument. If you set labels, you must also set breaks; otherwise, if data changes, the breaks will no longer align with the labels.
+
+The following code shows some basic examples for both axes and legends.
+```{r}
+
+df <- data.frame(x = c(1, 3, 5) * 1000, y = 1)
+axs <- ggplot(df, aes(x, y)) + 
+  geom_point() + 
+  labs(x = NULL, y = NULL)
+axs
+axs + scale_x_continuous(breaks = c(2000, 4000))
+axs + scale_x_continuous(breaks = c(2000, 4000), labels = c("2k", "4k"))
+
+
+leg <- ggplot(df, aes(y, x, fill = x)) + 
+  geom_tile() + 
+  labs(x = NULL, y = NULL)
+leg
+leg + scale_fill_continuous(breaks = c(2000, 4000))
+leg + scale_fill_continuous(breaks = c(2000, 4000), labels = c("2k", "4k"))
+```
+
+If you want to relabel the breaks in a categorical scale, you can use a named labels vector:
+```{r}
+df2 <- data.frame(x = 1:3, y = c("a", "b", "c"))
+ggplot(df2, aes(x, y)) + 
+  geom_point()
+ggplot(df2, aes(x, y)) + 
+  geom_point() + 
+  scale_y_discrete(labels = c(a = "apple", b = "banana", c = "carrot"))
+
+```
+
+To suppress breaks (and for axes, grid lines) or labels, set them to NULL:
+```{r}
+axs + scale_x_continuous(breaks = NULL)
+axs + scale_x_continuous(labels = NULL)
+
+
+leg + scale_fill_continuous(breaks = NULL)
+leg + scale_fill_continuous(labels = NULL)
+```
+
+Additionally, you can supply a function to breaks or labels. The breaks function should have one argument, the limits (a numeric vector of length two), and should return a numeric vector of breaks. The labels function should accept a numeric vector of breaks and return a character vector of labels (the same length as the input). The scales package provides a number of useful labelling functions:
+
+scales::comma_format() adds commas to make it easier to read large numbers.
+
+scales::unit_format(unit, scale) adds a unit suffix, optionally scaling.
+
+scales::dollar_format(prefix, suffix) displays currency values, rounding to two decimal places and adding a prefix or suffix.
+
+scales::wrap_format() wraps long labels into multiple lines.
+
+See the documentation of the scales package for more details.
+
+You can adjust the minor breaks (the faint grid lines that appear between the major grid lines) by supplying a numeric vector of positions to the minor_breaks argument. This is particularly useful for log scales:
+```{r}
+df <- data.frame(x = c(2, 3, 5, 10, 200, 3000), y = 1)
+ggplot(df, aes(x, y)) + 
+  geom_point() + 
+  scale_x_log10()
+
+mb <- as.numeric(1:10 %o% 10 ^ (0:4))
+ggplot(df, aes(x, y)) + 
+  geom_point() + 
+  scale_x_log10(minor_breaks = log10(mb))
+```
+
+Note the use of %o% to quickly generate the multiplication table, and that the minor breaks must be supplied on the transformed scale.
+
+## Legends
+While the most important parameters are shared between axes and legends, there are some extra options that only apply to legends. Legends are more complicated than axes because:
+
+A legend can display multiple aesthetics (e.g. colour and shape), from multiple layers, and the symbol displayed in a legend varies based on the geom used in the layer.
+
+Axes always appear in the same place. Legends can appear in different places, so you need some global way of controlling them.
+
+Legends have considerably more details that can be tweaked: should they be displayed vertically or horizontally? How many columns? How big should the keys be?
+
+The following sections describe the options that control these interactions.
+
+## Layers and legends
+
+Sometimes you want the geoms in the legend to display differently to the geoms in the plot. This is particularly useful when you’ve used transparency or size to deal with moderate overplotting and also used colour in the plot. You can do this using the override.aes parameter of guide_legend(), which you’ll learn more about shortly.
+
+```{r}
+norm <- data.frame(x = rnorm(1000), y = rnorm(1000))
+norm$z <- cut(norm$x, 3, labels = c("a", "b", "c"))
+ggplot(norm, aes(x, y)) + 
+  geom_point(aes(colour = z), alpha = 0.1)
+ggplot(norm, aes(x, y)) + 
+  geom_point(aes(colour = z), alpha = 0.1) + 
+  guides(colour = guide_legend(override.aes = list(alpha = 1)))
+```
+
+
+In order for legends to be merged, they must have the same name. So if you change the name of one of the scales, you’ll need to change it for all of them.
+
+### Legend layout
+A number of settings that affect the overall display of the legends are controlled through the theme system. You’ll learn more about that in themes, but for now, all you need to know is that you modify theme settings with the theme() function.
+
+The position and justification of legends are controlled by the theme setting legend.position, which takes values “right”, “left”, “top”, “bottom”, or “none” (no legend).
+
+```{r}
+df <- data.frame(x = 1:3, y = 1:3, z = c("a", "b", "c"))
+base <- ggplot(df, aes(x, y)) + 
+  geom_point(aes(colour = z), size = 3) + 
+  xlab(NULL) + 
+  ylab(NULL)
+
+base + theme(legend.position = "right") # the default 
+base + theme(legend.position = "bottom")
+base + theme(legend.position = "none")
+```
+
+Switching between left/right and top/bottom modifies how the keys in each legend are laid out (horizontal or vertically), and how multiple legends are stacked (horizontal or vertically). If needed, you can adjust those options independently:
+
+legend.direction: layout of items in legends (“horizontal” or “vertical”).
+
+legend.box: arrangement of multiple legends (“horizontal” or “vertical”).
+
+legend.box.just: justification of each legend within the overall bounding box, when there are multiple legends (“top”, “bottom”, “left”, or “right”).
+
+Alternatively, if there’s a lot of blank space in your plot you might want to place the legend inside the plot. You can do this by setting legend.position to a numeric vector of length two. The numbers represent a relative location in the panel area: c(0, 1) is the top-left corner and c(1, 0) is the bottom-right corner. You control which corner of the legend the legend.position refers to with legend.justification, which is specified in a similar way. Unfortunately positioning the legend exactly where you want it requires a lot of trial and error.
+
+```{r}
+base <- ggplot(df, aes(x, y)) + 
+  geom_point(aes(colour = z), size = 3)
+
+base + theme(legend.position = c(0, 1), legend.justification = c(0, 1))
+base + theme(legend.position = c(0.5, 0.5), legend.justification = c(0.5, 0.5))
+base + theme(legend.position = c(1, 0), legend.justification = c(1, 0))
+```
+
+## Exercises Legends
+
+**_Question 1_** How do you make legends appear to the left of the plot?
+
+
+**_Question 2_** What’s gone wrong with this plot? How could you fix it?
+
+```{r}
+ggplot(mpg, aes(displ, hwy)) +
+geom_point(aes(colour = drv, shape = drv)) +
+scale_colour_discrete("Drive train")
+```
+
+## Limits
+The limits, or domain, of a scale are usually derived from the range of the data. There are two reasons you might want to specify limits rather than relying on the data:
+
+You want to make limits smaller than the range of the data to focus on an interesting area of the plot.
+
+You want to make the limits larger than the range of the data because you want multiple plots to match up.
+
+It’s most natural to think about the limits of position scales: they map directly to the ranges of the axes. But limits also apply to scales that have legends, like colour, size, and shape. This is particularly important to realise if you want your colours to match up across multiple plots in your paper.
+
+You can modify the limits using the limits parameter of the scale:
+
+For continuous scales, this should be a numeric vector of length two. If you only want to set the upper or lower limit, you can set the other value to NA.
+
+For discrete scales, this is a character vector which enumerates all possible values.
+
+```{r}
+df <- data.frame(x = 1:3, y = 1:3)
+base <- ggplot(df, aes(x, y)) + geom_point() 
+
+base
+base + scale_x_continuous(limits = c(1.5, 2.5))
+#> Warning: Removed 2 rows containing missing values (geom_point).
+base + scale_x_continuous(limits = c(0, 4))
+```
+
+Because modifying the limits is such a common task, ggplot2 provides some helper to make this even easier: xlim(), ylim() and lims() These functions inspect their input and then create the appropriate scale, as follows:
+
+xlim(10, 20): a continuous scale from 10 to 20
+ylim(20, 10): a reversed continuous scale from 20 to 10
+xlim("a", "b", "c"): a discrete scale
+xlim(as.Date(c("2008-05-01", "2008-08-01"))): a date scale from May 1 to August 1 2008.
+
+```{r}
+
+base + xlim(0, 4)
+base + xlim(4, 0)
+base + lims(x = c(0, 4))
+
+```
+
+
+If you have eagle eyes, you’ll have noticed that the range of the axes actually extends a little bit past the limits that you’ve specified. This ensures that the data does not overlap the axes. To eliminate this space, set expand = c(0, 0). This is useful in conjunction with geom_raster():
+
+```{r}
+ggplot(faithfuld, aes(waiting, eruptions)) + 
+  geom_raster(aes(fill = density)) + 
+  theme(legend.position = "none")
+ggplot(faithfuld, aes(waiting, eruptions)) + 
+  geom_raster(aes(fill = density)) + 
+  scale_x_continuous(expand = c(0,0)) + 
+  scale_y_continuous(expand = c(0,0)) +
+  theme(legend.position = "none")
+```
+
+By default, any data outside the limits is converted to NA. This means that setting the limits is not the same as visually zooming in to a region of the plot. To do that, you need to use the xlim and ylim arguments to coord_cartesian(), described in cartesian coordinate systems. This performs purely visual zooming and does not affect the underlying data. You can override this with the oob (out of bounds) argument to the scale. The default is scales::censor() which replaces any value outside the limits with NA. Another option is scales::squish() which squishes all values into the range:
+
+```{r}
+df <- data.frame(x = 1:5)
+p <- ggplot(df, aes(x, 1)) + geom_tile(aes(fill = x), colour = "white")
+p
+p + scale_fill_gradient(limits = c(2, 4))
+p + scale_fill_gradient(limits = c(2, 4), oob = scales::squish)
+```
+
+## Exercises Limits
+
+**_Question 1_** The following code creates two plots of the mpg dataset. Modify the code so that the legend and axes match, without using facetting!
+```{r, eval=FALSE}
+fwd <- subset(mpg, drv == "f")
+rwd <- subset(mpg, drv == "r")
+ggplot(fwd, aes(displ, hwy, colour = class)) + geom_point()
+ggplot(rwd, aes(displ, hwy, colour = class)) + geom_point()
+```
+
+**_Question 2_** What does expand limits() do and how does it work? Read the source code.
+
+
+**_Question 3_** What happens if you add two xlim() calls to the same plot? Why?
+
+**_Question 4_** What does scale x continuous(limits = c(NA, NA)) do?
+
+
+## Scales toolbox
+As well as tweaking the options of the default scales, you can also override them completely with new scales. Scales can be divided roughly into four families:
+
+Continuous position scales used to map integer, numeric, and date/time data to x and y position.
+
+Colour scales, used to map continuous and discrete data to colours.
+
+Manual scales, used to map discrete variables to your choice of size, line type, shape or colour.
+
+The identity scale, paradoxically used to plot variables without scaling them. This is useful if your data is already a vector of colour names.
+
+The follow sections describe each family in more detail.
+
+### Continuous position scales
+Every plot has two position scales, x and y. The most common continuous position scales are scale_x_continuous() and scale_y_continuous(), which linearly map data to the x and y axis. The most interesting variations are produced using transformations. Every continuous scale takes a trans argument, allowing the use of a variety of transformations:
+
+Convert from fuel economy to fuel consumption
+```{r}
+ggplot(mpg, aes(displ, hwy)) + 
+  geom_point() + 
+  scale_y_continuous(trans = "reciprocal")
+```
+
+
+### Log transform x and y axes
+
+```{r}
+ggplot(diamonds, aes(price, carat)) + 
+  geom_bin2d() + 
+  scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans = "log10")
+```
+
+The transformation is carried out by a “transformer”, which describes the transformation, its inverse, and how to draw the labels. The following table lists the most common variants:
+
+Name	Function f(x)	Inverse f−1(y)
+asn	tanh−1(x)	tanh(y)
+exp	ex	log(y)
+identity	x	y
+log	log(x)	ey
+log10	log10(x)	10y
+log2	log2(x)	2y
+logit	log(x1−x)	11+e(y)
+pow10	10x	log10(y)
+probit	Φ(x)	Φ−1(y)
+reciprocal	x−1	y−1
+reverse	−x	−y
+sqrt	x1/2	y2
+
+There are shortcuts for the most common: scale_x_log10(), scale_x_sqrt() and scale_x_reverse() (and similarly for y.)
+
+Of course, you can also perform the transformation yourself. For example, instead of using scale_x_log10(), you could plot log10(x). The appearance of the geom will be the same, but the tick labels will be different. If you use a transformed scale, the axes will be labelled in the original data space; if you transform the data, the axes will be labelled in the transformed space.
+
+In either case, the transformation occurs before any statistical summaries. To transform, after statistical computation, use coord_trans(). See cartesian coordinate systems for more details.
+
+Date and date/time data are continuous variables with special labels. ggplot2 works with Date (for dates) and POSIXct (for date/times) classes: if your dates are in a different format you will need to convert them with as.Date() or as.POSIXct(). scale_x_date() and scale_x_datetime() work similarly to scale_x_continuous() but have special date_breaks and date_labels arguments that work in date-friendly units:
+
+date_breaks and date_minor_breaks() allows you to position breaks by date units (years, months, weeks, days, hours, minutes, and seconds). For example, date_breaks = "2 weeks" will place a major tick mark every two weeks.
+
+date_labels controls the display of the labels using the same formatting strings as in strptime() and format():
+
+String	Meaning
+%S	second (00-59)
+%M	minute (00-59)
+%l	hour, in 12-hour clock (1-12)
+%I	hour, in 12-hour clock (01-12)
+%p	am/pm
+%H	hour, in 24-hour clock (00-23)
+%a	day of week, abbreviated (Mon-Sun)
+%A	day of week, full (Monday-Sunday)
+%e	day of month (1-31)
+%d	day of month (01-31)
+%m	month, numeric (01-12)
+%b	month, abbreviated (Jan-Dec)
+%B	month, full (January-December)
+%y	year, without century (00-99)
+%Y	year, with century (0000-9999)
+For example, if you wanted to display dates like 14/10/1979, you would use the string "%d/%m/%Y".
+
+The code below illustrates some of these parameters.
+
+```{r}
+base <- ggplot(economics, aes(date, psavert)) + 
+  geom_line(na.rm = TRUE) +
+  labs(x = NULL, y = NULL)
+
+base # Default breaks and labels
+base + scale_x_date(date_labels = "%y", date_breaks = "5 years")
+
+
+base + scale_x_date(
+  limits = as.Date(c("2004-01-01", "2005-01-01")),
+  date_labels = "%b %y",
+  date_minor_breaks = "1 month"
+)
+base + scale_x_date(
+  limits = as.Date(c("2004-01-01", "2004-06-01")),
+  date_labels = "%m/%d",
+  date_minor_breaks = "2 weeks"
+)
+
+
+```
+
+## Colour
+After position, the most commonly used aesthetic is colour. There are quite a few different ways of mapping values to colours in ggplot2: four different gradient-based methods for continuous values, and two methods for mapping discrete values. But before we look at the details of the different methods, it’s useful to learn a little bit of colour theory. Colour theory is complex because the underlying biology of the eye and brain is complex, and this introduction will only touch on some of the more important issues. An excellent and more detailed exposition is available online at http://tinyurl.com/clrdtls.
+
+At the physical level, colour is produced by a mixture of wavelengths of light. To characterise a colour completely, we need to know the complete mixture of wavelengths. Fortunately for us the human eye only has three different colour receptors, and so we can summarise the perception of any colour with just three numbers. You may be familiar with the RGB encoding of colour space, which defines a colour by the intensities of red, green and blue light needed to produce it. One problem with this space is that it is not perceptually uniform: the two colours that are one unit apart may look similar or very different depending on where they are in the colour space. This makes it difficult to create a mapping from a continuous variable to a set of colours. There have been many attempts to come up with colours spaces that are more perceptually uniform. We’ll use a modern attempt called the HCL colour space, which has three components of hue, chroma and luminance:
+
+Hue is a number between 0 and 360 (an angle) which gives the “colour” of the colour: like blue, red, orange, etc.
+
+Chroma is the purity of a colour. A chroma of 0 is grey, and the maximum value of chroma varies with luminance.
+
+Luminance is the lightness of the colour. A luminance of 0 produces black, and a luminance of 1 produces white.
+
+Hues are not perceived as being ordered: e.g. green does not seem “larger” than red. The perception of chroma and luminance are ordered.
+
+The combination of these three components does not produce a simple geometric shape. Figure attempts to show the 3d shape of the space. Each slice is a constant luminance (brightness) with hue mapped to angle and chroma to radius. You can see the centre of each slice is grey and the colours get more intense as they get closer to the edge.
+
+\begin{figure}[htbp]
+  \centering
+    \includegraphics[width=\linewidth]{figure/hcl-space}
+  \caption{The shape of the HCL colour space.  Hue is mapped to angle, chroma to radius and each slice shows a different luminance.  The HCL space is a pretty odd shape, but you can see that colours near the centre of each slice are grey, and as you move towards the edges they become more intense.  Slices for luminance 0 and 100 are omitted because they would, respectively, be a single black point and a single white point.}
+  \label{fig:hcl}
+\end{figure}
+
+An additional complication is that many people (~10% of men) do not possess the normal complement of colour receptors and so can distinguish fewer colours than usual. In brief, it’s best to avoid red-green contrasts, and to check your plots with systems that simulate colour blindness. Visicheck is one online solution. Another alternative is the dichromat package (Lumley 2007) which provides tools for simulating colour blindness, and a set of colour schemes known to work well for colour-blind people. You can also help people with colour blindness in the same way that you can help people with black-and-white printers: by providing redundant mappings to other aesthetics like size, line type or shape.
+
+### Continuous
+Colour gradients are often used to show the height of a 2d surface. In the following example we’ll use the surface of a 2d density estimate of the faithful dataset (Azzalini and Bowman 1990), which records the waiting time between eruptions and during each eruption for the Old Faithful geyser in Yellowstone Park. I hide the legends and set expand to 0, to focus on the appearance of the data. . Remember: I’m illustrating these scales with filled tiles, but you can also use them with coloured lines and points.
+
+```{r}
+erupt <- ggplot(faithfuld, aes(waiting, eruptions, fill = density)) +
+  geom_raster() +
+  scale_x_continuous(NULL, expand = c(0, 0)) + 
+  scale_y_continuous(NULL, expand = c(0, 0)) + 
+  theme(legend.position = "none")
+```
+
+There are four continuous colour scales:
+
+scale_colour_gradient() and scale_fill_gradient(): a two-colour gradient, low-high (light blue-dark blue). This is the default scale for continuous colour, and is the same as scale_colour_continuous(). Arguments low and high control the colours at either end of the gradient.
+
+Generally, for continuous colour scales you want to keep hue constant, and vary chroma and luminance. The munsell colour system is useful for this as it provides an easy way of specifying colours based on their hue, chroma and luminance. Use munsell::hue_slice("5Y") to see the valid chroma and luminance values for a given hue.
+
+```{r}
+erupt
+
+erupt + scale_fill_gradient(low = "white", high = "black")
+
+erupt + scale_fill_gradient(
+  low = munsell::mnsl("5G 9/2"), 
+  high = munsell::mnsl("5G 6/8")
+)
+```
+
+
+
+scale_colour_gradient2() and scale_fill_gradient2(): a three-colour gradient, low-med-high (red-white-blue). As well as low and high colours, these scales also have a mid colour for the colour of the midpoint. The midpoint defaults to 0, but can be set to any value with the midpoint argument.
+
+It’s artificial to use this colour scale with this dataset, but we can force it by using the median of the density as the midpoint. Note that the blues are much more intense than the reds (which you only see as a very pale pink)
+
+```{r}
+mid <- median(faithfuld$density)
+erupt + scale_fill_gradient2(midpoint = mid) 
+```
+
+
+
+scale_colour_gradientn() and scale_fill_gradientn(): a custom n-colour gradient. This is useful if you have colours that are meaningful for your data (e.g., black body colours or standard terrain colours), or you’d like to use a palette produced by another package. The following code includes palettes generated from routines in the colorspace package. (Zeileis, Hornik, and Murrell 2008) describes the philosophy behind these palettes and provides a good introduction to some of the complexities of creating good colour scales.
+
+```{r}
+erupt + scale_fill_gradientn(colours = terrain.colors(7))
+erupt + scale_fill_gradientn(colours = colorspace::heat_hcl(7))
+erupt + scale_fill_gradientn(colours = colorspace::diverge_hcl(7))
+
+```
+
+
+By default, colours will be evenly spaced along the range of the data. To make them unevenly spaced, use the values argument, which should be a vector of values between 0 and 1.
+
+scale_color_distiller() and scale_fill_gradient() apply the ColorBrewer colour scales to continuous data. You use it the same way as scale_fill_brewer(), described below:
+
+```{r}
+erupt + scale_fill_distiller()
+erupt + scale_fill_distiller(palette = "RdPu")
+erupt + scale_fill_distiller(palette = "YlOrBr")
+
+```
+
+
+All continuous colour scales have an na.value parameter that controls what colour is used for missing values (including values outside the range of the scale limits). By default it is set to grey, which will stand out when you use a colourful scale. If you use a black and white scale, you might want to set it to something else to make it more obvious.
+
+```{r}
+df <- data.frame(x = 1, y = 1:5, z = c(1, 3, 2, NA, 5))
+p <- ggplot(df, aes(x, y)) + geom_tile(aes(fill = z), size = 5)
+p
+# Make missing colours invisible
+p + scale_fill_gradient(na.value = NA)
+# Customise on a black and white scale
+p + scale_fill_gradient(low = "black", high = "white", na.value = "red")
+
+
+```
+
+### Discrete
+There are four colour scales for discrete data. We illustrate them with a barchart that encodes both position and fill to the same variable:
+```{r}
+
+df <- data.frame(x = c("a", "b", "c", "d"), y = c(3, 4, 1, 2))
+bars <- ggplot(df, aes(x, y, fill = x)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "none")
+```
+
+The default colour scheme, scale_colour_hue(), picks evenly spaced hues around the HCL colour wheel. This works well for up to about eight colours, but after that it becomes hard to tell the different colours apart. You can control the default chroma and luminance, and the range of hues, with the h, c and l arguments:
+
+```{r}
+bars
+bars + scale_fill_hue(c = 40)
+bars + scale_fill_hue(h = c(180, 300))
+```
+
+
+
+One disadvantage of the default colour scheme is that because the colours all have the same luminance and chroma, when you print them in black and white, they all appear as an identical shade of grey.
+
+scale_colour_brewer() uses handpicked “ColorBrewer” colours, http://colorbrewer2.org/. These colours have been designed to work well in a wide variety of situations, although the focus is on maps and so the colours tend to work better when displayed in large areas. For categorical data, the palettes most of interest are ‘Set1’ and ‘Dark2’ for points and ‘Set2’, ‘Pastel1’, ‘Pastel2’ and ‘Accent’ for areas. Use RColorBrewer::display.brewer.all() to list all palettes.
+
+```{r}
+bars + scale_fill_brewer(palette = "Set1")
+bars + scale_fill_brewer(palette = "Set2")
+bars + scale_fill_brewer(palette = "Accent")
+```
+
+
+
+scale_colour_grey() maps discrete data to grays, from light to dark.
+
+```{r}
+bars + scale_fill_grey()
+bars + scale_fill_grey(start = 0.5, end = 1)
+bars + scale_fill_grey(start = 0, end = 0.5)
+```
+
+
+Note that one set of colours is not uniformly good for all purposes: bright colours work well for points, but are overwhelming on bars. Subtle colours work well for bars, but are hard to see on points:
+
+The Layered Grammar of Graphics
+In the previous sections, you learned much more than how to make scatterplots, bar charts, and boxplots. You learned a foundation that you can use to make any type of plot with ggplot2. To see this, let’s add position adjustments, stats, coordinate systems, and faceting to our code template:
+
+ggplot(data = <DATA>) +
+  <GEOM_FUNCTION>(
+     mapping = aes(<MAPPINGS>),
+     stat = <STAT>,
+     position = <POSITION>
+  ) +
+  <COORDINATE_FUNCTION> +
+  <FACET_FUNCTION>
+  
+Our new template takes seven parameters, the bracketed words that appear in the template. In practice, you rarely need to supply all seven parameters to make a graph because ggplot2 will provide useful defaults for everything except the data, the mappings, and the geom function.
+
+The seven parameters in the template compose the grammar of graphics, a formal system for building plots. The grammar of graphics is based on the insight that you can uniquely describe any plot as a combination of a dataset, a geom, a set of mappings, a stat, a position adjustment, a coordinate system, and a faceting scheme.
+
+To see how this works, consider how you could build a basic plot from scratch: you could start with a dataset and then transform it into the information that you want to display (with a stat):
+
+
+Next, you could choose a geometric object to represent each observation in the transformed data. You could then use the aesthetic properties of the geoms to represent variables in the data. You would map the values of each variable to the levels of an aesthetic:
+
+
+You’d then select a coordinate system to place the geoms into. You’d use the location of the objects (which is itself an aesthetic property) to display the values of the x and y variables. At that point, you would have a complete graph, but you could further adjust the positions of the geoms within the coordinate system (a position adjustment) or split the graph into subplots (faceting). You could also extend the plot by adding one or more additional layers, where each additional layer uses a dataset, a geom, a set of mappings, a stat, and a position adjustment:
+
+
+You could use this method to build any plot that you imagine. In other words, you can use the code template that you’ve learned in this chapter to build hundreds of thousands of unique plots.

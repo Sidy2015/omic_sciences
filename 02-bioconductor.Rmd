@@ -158,6 +158,31 @@ library(ph525x)
 library(png)
 
 ```
+The broad goals of the Bioconductor project are:
+
+To provide widespread access to a broad range of powerful statistical and graphical methods for the analysis of genomic data.
+To facilitate the inclusion of biological metadata in the analysis of genomic data, e.g. literature data from PubMed, annotation data from Entrez genes.
+To provide a common software platform that enables the rapid development and deployment of extensible, scalable, and interoperable software.
+To further scientific understanding by producing high-quality documentation and reproducible research.
+To train researchers on computational and statistical methods for the analysis of genomic data.
+
+
+Pros
+
+A powerful tool for Bioinformatics
+1. free and open software
+2. used for over two decades to analyze by genomic data
+3. often don't need to write code de novo
+4. huge user community (important for learning/help)
+5. publication quality graphics
+6. reproducible results
+7. modularized and standardized
+8. gene expression, Chip-seq, scRNA-seq,genetic screens,    interaction networks and much much more
+
+Cons
+1. steep learning curve
+2. no single 'right way' to do anything
+3. historically, R was lacking in terms of user            interface
 
 ### R packages, modularity, continuous integration
 

@@ -1,609 +1,15 @@
-# RNA-seq gene-level analysis
-
-```{r, echo=FALSE}
-library(knitr)
-```
-
-http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
-https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
-The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/10-RNA-seq_DESeq2.RMD). RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
-
-In this lab, we will focus on comparing the expression levels of genes across different samples, by counting the number of reads which overlap the exons of genes defined by a known annotation. As described in the lecture, this analysis sets aside the task of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. One advantage of looking at these matrices of counts is that we can use statistical distributions to model how the variance of counts will change when the counts are low vs high. We will explore the relationship of the variance of counts to the mean later in this lab.
-
-## Counting reads in genes
-
-In this lab we will examine 8 samples from the airway package, which are from the paper by [Himes et al](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057123/): "RNA-seq Transcriptome Profiling Identifies CRISPLD2 as a Glucocorticoid Responsive Gene that Modulates Cytokine Function in Airway Smooth Muscle Cells".
-
-This lab will focus on a summarized version of an RNA-seq experiment: a count matrix, which has genes along the rows and samples along the columns. The values in the matrix are the number of reads which could be uniquely aligned to the exons of a given gene for a given sample. As we have seen how to make a count matrix from BAM files, here we will use a pre-made count matrix, to avoid downloading the multi-gigabyte BAM files containing the aligned reads. A new pipeline for building count matrices, which skips the alignment step, is to use fast pseudoaligners such as Sailfish, Salmon and kallisto, followed by the [tximport](http://bioconductor.org/packages/tximport) package. See the package vignette for more details. Here, we will continue with the read counting pipeline.
-
-
-```{r messages=FALSE}
-library(airway)
-dir <- system.file("extdata", package="airway", mustWork=TRUE)
-csv.file <- file.path(dir, "sample_table.csv")
-sample.table <- read.csv(csv.file, row.names=1)
-
-```
-
-
-
-
-
-## Visualizing sample-sample distances
-
-We now load the full *SummarizedExperiment* object, counting reads over all the genes.
-
-```{r, message=FALSE}
-library(airway)
-data(airway)
-airway
-```
-
-```{r}
-colData(airway)
-```
-
-```{r}
-rowRanges(airway)
-```
-
-The counts matrix is stored in `assay` of a *SummarizedExperiment*.
-
-```{r}
-head(assay(airway))
-```
-
-This code chunk is not necessary, but helps to make nicer plots below with large axis labels (`mypar(1,2)` can be substituted with `par(mfrow=c(1,2))` below).
-
-```{r}
-# library(devtools)
-#devtools::install_github("ririzarr/rafalib")
-library(rafalib)
-mypar()
-```
-
-Note that, on the un-transformed scale, the high count genes have high variance. That is, in the following scatter plot, the points start out in a tight cone and then fan out toward the top right. This is a general property of counts generated from sampling processes, that the variance typically increases with the expected value. We will explore different scaling and transformations options below.
-
-```{r}
-plot(assay(airway)[,1:2], cex=.1)
-```
-
-### Creating a DESeqDataSet object
-
-We will use the `DESeq2` package to normalize the sample for sequencing depth. The *DESeqDataSet* object is just an extension of the *SummarizedExperiment* object, with a few changes. The matrix in `assay` is now accessed with `counts` and the elements of this matrix are required to be non-negative integers (0,1,2,...).
-
-We need to specify an experimental *design* here, for later use in differential analysis. The design starts with the tilde symbol `~`, which means, model the counts (log2 scale) using the following formula. Following the tilde, the variables are columns of the `colData`, and the `+` indicates that for differential expression analysis we want to compare levels of `dex` while controlling for the `cell` differences.
-
-```{r}
-library(DESeq2)
-dds <- DESeqDataSet(airway, design= ~ cell + dex)
-```
-
-We can also make a *DESeqDataSet* from a count matrix and column data.
-
-```{r}
-dds.fc <- DESeqDataSetFromMatrix(assay(airway),  
-                                 colData=sample.table, 
-                                 design=~ cell + dex)
-```
-
-### Normalization for sequencing depth
-
-The following estimates size factors to account for differences in sequencing depth, and is only necessary to make the `log.norm.counts` object below.
-
-```{r}
-dds <- estimateSizeFactors(dds)
-sizeFactors(dds)
-colSums(counts(dds))
-plot(sizeFactors(dds), colSums(counts(dds)))
-abline(lm(colSums(counts(dds)) ~ sizeFactors(dds) + 0))
-```
-
-Size factors are calculated by the median ratio of samples to a pseudo-sample (the geometric mean of all samples). In other words, for each sample, we take the exponent of the median of the log ratios in this histogram.
-
-```{r}
-loggeomeans <- rowMeans(log(counts(dds)))
-hist(log(counts(dds)[,1]) - loggeomeans, 
-     col="grey", main="", xlab="", breaks=40)
-```
-
-The size factor for the first sample:
-
-```{r}
-exp(median((log(counts(dds)[,1]) - loggeomeans)[is.finite(loggeomeans)]))
-sizeFactors(dds)[1]
-```
-
-Make a matrix of log normalized counts (plus a pseudocount):
-
-```{r}
-log.norm.counts <- log2(counts(dds, normalized=TRUE) + 1)
-```
-
-Another way to make this matrix, and keep the sample and gene information is to use the function `normTransform`. The same matrix as above is stored in `assay(log.norm)`.
-
-```{r}
-log.norm <- normTransform(dds)
-```
-
-Examine the log counts and the log normalized counts (plus a pseudocount).
-
-```{r}
-rs <- rowSums(counts(dds))
-mypar(1,2)
-boxplot(log2(counts(dds)[rs > 0,] + 1)) # not normalized
-boxplot(log.norm.counts[rs > 0,]) # normalized
-```
-
-Make a scatterplot of log normalized counts against each other. Note the fanning out of the points in the lower left corner, for points less than $2^5 = 32$.
-
-```{r}
-plot(log.norm.counts[,1:2], cex=.1)
-```
-
-### Stabilizing count variance
-
-Now we will use a more sophisticated transformation, which is similar to the variance stablizing normalization method taught in Week 3 of Course 4: Introduction to Bioconductor. It uses the variance model for count data to shrink together the log-transformed counts for genes with very low counts. For genes with medium and high counts, the `rlog` is very close to `log2`. For further details, see the section in the DESeq2 [paper](#foot). 
-
-```{r}
-rld <- rlog(dds)
-
-```
-
-Another transformation for stabilizing variance in the *DESeq2* package is `varianceStabilizingTransformation`. These two tranformations are similar, the *rlog* might perform a bit better when the size factors vary widely, and the *varianceStabilizingTransformation* is much faster when there are many samples.
-
-```{r}
-vsd <- varianceStabilizingTransformation(dds)
-
-```
-
-```{r}
-
-library("dplyr")
-library("ggplot2")
-
-dds <- estimateSizeFactors(dds)
-
-df <- bind_rows(
-  as_data_frame(log2(counts(dds, normalized=TRUE)[, 1:2]+1)) %>%
-         mutate(transformation = "log2(x + 1)"),
-  as_data_frame(assay(vsd)[, 1:2]) %>% mutate(transformation = "vst"),
-  as_data_frame(assay(rld)[, 1:2]) %>% mutate(transformation = "rlog"))
-
-colnames(df)[1:2] <- c("x", "y")  
-
-lvls <- c("log2(x + 1)", "vst", "rlog")
-df$transformation <- factor(df$transformation, levels=lvls)
-
-ggplot(df, aes(x = x, y = y)) + geom_hex(bins = 80) +
-  coord_fixed() + facet_grid( . ~ transformation)  + theme_bw()
-```
-We can examine the standard deviation of rows over the mean for the *log plus pseudocount* and the *rlog*. Note that the genes with high variance for the *log* come from the genes with lowest mean. If these genes were included in a distance calculation, the high variance at the low count range might overwhelm the signal at the higher count range.
-
-```{r}
-library(vsn)
-meanSdPlot(log.norm.counts, ranks=FALSE) 
-```
-
-For the rlog:
-
-```{r}
-meanSdPlot(assay(rld), ranks=FALSE)
-```
-
-For the VST:
-
-```{r}
-meanSdPlot(assay(vsd), ranks=FALSE)
-```
-
-The principal components (PCA) plot is a useful diagnostic for examining relationships between samples:
-
-```{r}
-plotPCA(log.norm, intgroup="dex")
-```
-
-Using the rlog:
-
-```{r}
-plotPCA(rld, intgroup="dex")
-```
-
-Using the VST:
-
-```{r}
-plotPCA(vsd, intgroup="dex")
-```
-
-We can make this plot even nicer using custom code from the `ggplot2` library:
-
-```{r}
-
-(data <- plotPCA(rld, intgroup=c("dex","cell"), returnData=TRUE))
-(percentVar =100*round(attr(data, "percentVar"),2))
-```
-
-```{r}
-makeLab <- function(x,pc) paste0("PC",pc,": ",x,"% variance")
-ggplot(data, aes(PC1,PC2,col=dex,shape=cell)) + geom_point() +
-  xlab(makeLab(percentVar[1],1)) + ylab(makeLab(percentVar[2],2))
-```
-
-In addition, we can plot a hierarchical clustering based on Euclidean distance matrix:
-
-```{r fig.width=10, fig.height=5}
-mypar(1,2)
-plot(hclust(dist(t(log.norm.counts))), labels=colData(dds)$dex)
-plot(hclust(dist(t(assay(rld)))), labels=colData(rld)$dex)
-```
-
-## Differential gene expression
-
-### Modeling raw counts with normalization
-
-We will now perform *differential gene expression* on the counts, to try to find genes in which the differences in expected counts across samples due to the condition of interest rises above the biological and technical variance we observe. 
-
-We will use an overdispersed Poisson distribution -- called the negative binomial -- to model the *raw counts* in the count matrix. The model will include the *size factors* into account to adjust for sequencing depth. The formula will look like:
-
-$$ K_{ij} \sim \text{NB}(s_{ij} q_{ij}, \alpha_i ) $$
-
-where $K_{ij}$ is a single raw count in our count table, $s_{ij}$ is a size factor or more generally a normalization factor, $q_{ij}$ is proportional to gene expression (what we want to model with our design variables), and $\alpha_i$ is a *dispersion parameter*.
-
-Why bother modeling *raw counts*, rather than dividing out the sequencing depth and working with the normalized counts? In other words, why put the $s_{ij}$ on the right side of the equation above, rather than dividing out on the left side and modeling $K_{ij} / s_{ij}$. The reason is that, with the raw count, we have knowledge about the link between the expected value and its variance. So we prefer the first equation below to the second equation, because with the first equation, we have some additional information about the variance of the quantity on the left hand side.
-
-$$ K_{ij} \sim \text{NB}(\mu_{ij} = s_{ij} q_{ij} ) $$
-
-$$ \frac{K_{ij}}{s_{ij}} \sim \mathcal{L}(\mu_{ij} = q_{ij}) $$
-
-When we sample cDNA fragments from a pool in a sequencing library, we can model the count of cDNA fragments which originated from a given gene with a binomial distribution, with a certain probability of picking a fragment for that gene which relates to factors such as the expression of that gene (the abundance of mRNA in the original population of cells), its length and technical factors in the production of the library. When we have many genes, and the rate for each gene is low, while the total number of fragments is high, we know that the Poisson is a good model for the binomial. And for the binomial and the Poisson, there is an explicit link between on observed count and its expected variance.
-
-Below is an example of what happens when we divide or multiply a raw count. Here we show three distributions which all have the expected value of 100, although they have different variances. The first is a raw count with mean 100, the second and third are raw counts with mean 1000 and 10, which were then scaled by 1/10 and 10, respectively. 
-
-```{r}
-mypar(3,1)
-n <- 10000
-brks <- 0:300
-hist(rpois(n,100),main="",xlab="",breaks=brks,col="black")
-hist(rpois(n,1000)/10,main="",xlab="",breaks=brks,col="black")
-hist(rpois(n,10)*10,main="",xlab="",breaks=brks,col="black")
-```
-
-So, when we scale a raw count, we break the implicit link between the mean and the variance. This is not necessarily a problem, if we have 100s of samples over which to observe within-group variance, however RNA-seq samples can often have only 3 samples per group, in which case, we can get a benefit of information from using raw counts, and incorporating normalization factors on the right side of the equation above.
-
-### Counts across biological replicates and over-dispersion
-
-For the negative binomial, the variance parameter is called *disperison*, and it links the mean value with the expected variance. The reason we see more dispersion than in a Poisson is mostly due to changes in the proportions of genes across biological replicates -- which we would expect due to natural differences in gene expression. 
-
-```{r}
-mypar(3,1)
-n <- 10000
-brks <- 0:400
-hist(rpois(n,lambda=100),
-     main="Poisson / NB, disp=0",xlab="",breaks=brks,col="black")
-hist(rnbinom(n,mu=100,size=1/.01),
-     main="NB, disp = 0.01",xlab="",breaks=brks,col="black")
-hist(rnbinom(n,mu=100,size=1/.1),
-     main="NB, disp = 0.1",xlab="",breaks=brks,col="black")
-```
-
-The square root of the dispersion is the coefficient of variation -- SD/mean -- after subtracting the variance we expect due to Poisson sampling.
-
-```{r}
-disp <- 0.5
-mu <- 100
-v <- mu + disp * mu^2
-sqrt(v)/mu
-sqrt(v - mu)/mu
-sqrt(disp)
-```
-
-A number of methods for assessing differential gene expression from RNA-seq counts use the negative binomial distribution to make probabilistic statements about the differences seen in an experiment. A few such methods are *edgeR*, *DESeq2*, and *DSS*. Other methods, such as *limma+voom* find other ways to explicitly model the mean of log counts and the observed variance of log counts. A very incomplete list of statistical methods for RNA-seq differential expression is provided in the [footnotes](#foot).
-
-*DESeq2* performs a similar step to *limma* as discussed in PH525x Course 3, in using the variance of all the genes to improve the variance estimate for each individual gene. In addition, *DESeq2* shrinks the unreliable fold changes from genes with low counts, which will be seen in the resulting MA-plot.
-
-### Experimental design and running DESeq2
-
-Remember, we had created the *DESeqDataSet* object earlier using the following line of code (or alternatively using *DESeqDataSetFromMatrix*)
-
-```{r}
-dds <- DESeqDataSet(airway, design= ~ cell + dex)
-```
-
-First, we setup the `design` of the experiment, so that differences will be considered across time and protocol variables. We can read and if necessary reset the design using the following code.
-
-```{r}
-design(dds)
-design(dds) <- ~ cell + dex
-```
-
-The last variable in the design is used by default for building results tables (although arguments to `results` can be used to customize the results table), and we make sure the "control" or "untreated" level is the first level, such that log fold changes will be treated over control, and not control over treated.
-
-
-```{r}
-levels(dds$dex)
-dds$dex <- relevel(dds$dex, "untrt")
-levels(dds$dex)
-```
-
-The following line runs the *DESeq2* model. After this step, we can build a results table, which by default will compare the levels in the last variable in the design, so the *dex* treatment in our case:
-
-```{r}
-dds <- DESeq(dds)
-res <- results(dds)
-```
-
-### Examining results tables
-
-```{r}
-head(res)
-table(res$padj < 0.1)
-```
-
-A summary of the results can be generated:
-
-```{r}
-summary(res)
-```
-
-For testing at a different threshold, we provide the `alpha` to *results*, so that the mean filtering is optimal for our new FDR threshold.
-
-```{r}
-res2 <- results(dds, alpha=0.05)
-table(res2$padj < 0.05)
-```
-
-### Visualizing results
-
-The MA-plot provides a global view of the differential genes, with the log2 fold change on the y-axis over the mean of normalized counts:
-
-```{r}
-plotMA(res, ylim=c(-4,4))
-```
-
-We can also test against a different null hypothesis. For example, to test for genes which have fold change more than doubling or less than halving:
-
-```{r}
-res.thr <- results(dds, lfcThreshold=1)
-plotMA(res.thr, ylim=c(-4,4))
-```
-
-A p-value histogram:
-
-```{r}
-hist(res$pvalue[res$baseMean > 1], 
-     col="grey", border="white", xlab="", ylab="", main="")
-```
-
-A sorted results table:
-
-```{r}
-resLFC <- lfcShrink(dds, coef="dex_trt_vs_untrt" , type="apeglm")
-
-resSort <- resLFC[order(resLFC$padj),]
-head(resSort)
-```
-
-Examine the counts for the top gene, sorting by p-value:
-
-```{r}
-plotCounts(dds, gene=which.min(resLFC$padj), intgroup="dex")
-```
-
-A more sophisticated plot of counts:
-
-```{r}
-
-data <- plotCounts(dds, gene=which.min(resLFC$padj), intgroup=c("dex","cell"), returnData=TRUE)
-ggplot(data, aes(x=dex, y=count, col=cell)) +
-  geom_point(position=position_jitter(width=.1,height=0)) +
-  scale_y_log10()
-```
-
-Connecting by lines shows the differences which are actually being tested by *results* given that our design includes `cell + dex`
-
-```{r}
-ggplot(data, aes(x=dex, y=count, col=cell, group=cell)) +
-  geom_point() + geom_line() + scale_y_log10() 
-```
-
-A heatmap of the top genes:
-
-```{r}
-library(pheatmap)
-topgenes <- head(rownames(resSort),20)
-mat <- assay(rld)[topgenes,]
-mat <- mat - rowMeans(mat)
-df <- as.data.frame(colData(dds)[,c("dex","cell")])
-pheatmap(mat, annotation_col=df)
-```
-
-### Getting alternate annotations
-
-We can then check the annotation of these highly significant genes:
-
-```{r}
-library(org.Hs.eg.db)
-keytypes(org.Hs.eg.db)
-anno <- select(org.Hs.eg.db, keys=topgenes,
-               columns=c("SYMBOL","GENENAME"), 
-               keytype="ENSEMBL")
-anno[match(topgenes, anno$ENSEMBL),]
-# for Bioconductor >= 3.1, easier to use mapIds() function
-```
-
-### Looking up different results tables
-
-The `contrast` argument allows users to specify what results table should be built. See the help and examples in `?results` for more details:
-
-```{r}
-results(dds, contrast=c("cell","N61311","N052611"))
-```
-88888888888888888888888888888888888888888888888888
-## Surrogate variable analysis for RNA-seq
-
-If we suppose that we didn't know about the different cell-lines in the experiment, but noticed some structure in the counts, we could use surrograte variable analysis (SVA) to detect this hidden structure (see PH525x Course 3 for details on the algorithm).
-
-```{r}
-library(sva)
-dat <- counts(dds, normalized=TRUE)
-idx <- rowMeans(dat) > 1
-dat <- dat[idx,]
-mod <- model.matrix(~ dex, colData(dds))
-mod0 <- model.matrix(~ 1, colData(dds))
-svseq <- svaseq(dat, mod, mod0, n.sv=2)
-```
-
-Do the surrogate variables capture the cell difference?
-
-```{r}
-plot(svseq$sv[,1], svseq$sv[,2], col=dds$cell, pch=16)
-```
-
-Using the surrogate variables in a *DESeq2* analysis:
-
-```{r}
-dds.sva <- dds
-dds.sva$SV1 <- svseq$sv[,1]
-dds.sva$SV2 <- svseq$sv[,2]
-design(dds.sva) <- ~ SV1 + SV2 + dex
-dds.sva <- DESeq(dds.sva)
-```
-
-## Session info
-
-```{r}
-sessionInfo()
-```
-
-## Footnotes <a name="foot"></a>
-
-### RNA-seq introductory papers
-
-Mortazavi A, Williams BA, McCue K, Schaeffer L, Wold B., "Mapping and quantifying mammalian transcriptomes by RNA-seq", Nat Methods. 2008.
-<http://www.nature.com/nmeth/journal/v5/n7/full/nmeth.1226.html>
-
-John C. Marioni, Christopher E. Mason, Shrikant M. Mane, Matthew Stephens, and Yoav Gilad, "RNA-seq: An assessment of technical reproducibility and comparison with gene expression arrays" Genome Res. 2008.
-<http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2527709/>
-
-Trapnell C, Williams BA, Pertea G, Mortazavi AM, Kwan G, van Baren MJ, Salzberg SL, Wold B, Pachter L.,  "Transcript assembly and quantification by RNA-seq reveals unannotated transcripts and isoform switching during cell differentiation", Nature Biotechnology, 2010.
-<http://www.nature.com/nbt/journal/v28/n5/full/nbt.1621.html>
-
-### ReCount
-
-Frazee AC, Langmead B, Leek JT. "ReCount: a multi-experiment resource of analysis-ready RNA-seq gene count datasets". BMC Bioinformatics 12:449
-<http://www.ncbi.nlm.nih.gov/pubmed/22087737>
-
-The following sections give just a few examples of the many RNA-seq differential expression software packages:
-
-### Negative binomial count methods
-
-The following methods are available on Bioconductor:
-
-- **DESeq2**
-
-Michael I Love, Simon Anders, Wolfgang Huber, "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2" Genome Biology 2014.
-<http://genomebiology.com/2014/15/12/550>
-
-- **edgeR**
-
-Mark D. Robinson, Davis J. McCarthy, and Gordon K. Smyth, "edgeR: a Bioconductor package for differential expression analysis of digital gene expression data" Bioinformatics 2010.
-<http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/>
-
-- **DSS**
-
-Hao Wu, Chi Wang, Zhijin Wu, "A new shrinkage estimator for dispersion improves differential expression detection in RNA-seq data" Biostatistics 2013.
-<http://biostatistics.oxfordjournals.org/content/14/2/232>
-
-### Variance-mean modeling followed by linear model
-
-- **limma-voom** in the *limma* Bioconductor package. Limma also contains gene-set testing methods (see ROAST for example in the Reference Manual)
-
-Charity W Law, Yunshun Chen, Wei Shi and Gordon K Smyth, "voom: precision weights unlock linear model analysis tools for RNA-seq read counts", Genome Biology. 2014.
-<http://genomebiology.com/2014/15/2/R29>
-
-### Resampling-based methods
-
-- **SAMseq** in the `samr` package on CRAN
-
-Jun Li and Robert Tibshirani, "Finding consistent patterns: A nonparametric approach for identifying differential expression in RNA-seq data", Stat Methods Med Res. 2013.
-<http://smm.sagepub.com/content/22/5/519.short>
-
-### Incorporating isoform-abundance
-
-- **Cuffdiff** (the latest version is `Cuffdiff2`) with `cummeRbund` the accompanying Bioconductor visualization package.
-
-Trapnell C, Hendrickson DG, Sauvageau M, Goff L, Rinn JL, Pachter L., "Differential analysis of gene regulation at transcript resolution with RNA-seq" Nat Biotechnol. 2013.
-<http://www.ncbi.nlm.nih.gov/pubmed/23222703>
-
-- **BitSeq** (Bioconductor)
-
-Peter Glaus, Antti Honkela, and Magnus Rattray, "Identifying differentially expressed transcripts from RNA-seq data with biological variation", Bioinformatics. 2012.
-<http://bioinformatics.oxfordjournals.org/content/28/13/1721>
-
-
-
-
----
-output: html_document
-editor_options: 
-  chunk_output_type: console
----
-s and microarray data analysis.” Bioinformatics 21: 3439–40.
-
-Durinck, S., P. Spellman, E. Birney, and W. Huber. 2009. “Mapping identifiers for the integration of genomic datasets with the R/Bioconductor package biomaRt.” Nature Protocols 4: 1184–91.
-
-Huber, W., V. J. Carey, R. Gentleman, S. Anders, M. Carlson, B. S. Carvalho, H. C. Bravo, et al. 2015. “Orchestrating High-Throughput Genomic Analysis with Bioconductor.” Nature Methods 12 (2): 115–21. http://www.nature.com/nmeth/journal/v12/n2/full/nmeth.3252.html.
-
-Law, C. W., Y. Chen, W. Shi, and G. K. Smyth. 2014. “Voom: Precision Weights Unlock Linear Model Analysis Tools for RNA-seq Read Counts.” Genome Biology 15: R29.
-
-Liao, Y., G. K. Smyth, and W. Shi. 2013. “The Subread Aligner: Fast, Accurate and Scalable Read Mapping by Seed-and-Vote.” Nucleic Acids Res 41 (10): e108.
-
-———. 2014. “featureCounts: an Efficient General-Purpose Program for Assigning Sequence Reads to Genomic Features.” Bioinformatics 30 (7): 923–30.
-
-Lim, E., D. Wu, B. Pal, T. Bouras, M. L. Asselin-Labat, F. Vaillant, H. Yagita, G. J. Lindeman, G. K. Smyth, and J. E. Visvader. 2010. “Transcriptome analyses of mouse and human mammary cell subpopulations reveal multiple conserved genes and pathways.” Breast Cancer Research 12 (2): R21.
-
-Liu, R., K. Chen, N. Jansz, M. E. Blewitt, and M. E. Ritchie. 2016. “Transcriptional Profiling of the Epigenetic Regulator Smchd1.” Genomics Data 7: 144–7.
-
-Liu, R., A. Z. Holik, S. Su, N. Jansz, K. Chen, H. S. Leong, M. E. Blewitt, M. L. Asselin-Labat, G. K. Smyth, and M. E. Ritchie. 2015. “Why weight? Combining voom with estimates of sample quality improves power in RNA-seq analyses.” Nucleic Acids Res 43: e97.
-
-McCarthy, D. J., and G. K. Smyth. 2009. “Testing significance relative to a fold-change threshold is a TREAT.” Bioinformatics 25: 765–71.
-
-Ritchie, M. E., B. Phipson, D. Wu, Y. Hu, C. W. Law, W. Shi, and # RNA-seq with edgeR
+# RNA-seq with edgeR and limma
 
 RNA-seq analysis is easy as 1-2-3 with limma, Glimma and edgeR
-Charity Law$^1$, Monther Alhamdoosh$^2$, Shian Su$^3$, Xueyi Dong$^3$, Luyi Tian$^1$, Gordon K. Smyth$^4$ and Matthew E. Ritchie$^5$
+Charity Law$^1, Monther Alhamdoosh$^2, Shian Su$^3, Xueyi Dong$^3, Luyi Tian$^1, Gordon K. Smyth$^4 and Matthew E. Ritchie$^5
 
-$^1$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
-$^2$CSL Limited, Bio21 Institute, 30 Flemington Road, Parkville, Victoria 3010, Australia
-$^3$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia
-$^4$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
-$^5$The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
+$^1The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
+$^2CSL Limited, Bio21 Institute, 30 Flemington Road, Parkville, Victoria 3010, Australia
+$^3The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia
+$^4The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
+$^5The Walter and Eliza Hall Institute of Medical Research, 1G Royal Parade, Parkville, VIC 3052, Melbourne, Australia; Department of Medical Biology, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia; School of Mathematics and Statistics, The University of Melbourne, Parkville, VIC 3010, Melbourne, Australia
 
 The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/11-RNAseq-limma.Rmd).
-Contents
-1 Abstract
-2 Introduction
-3 Set-up
-4 Data packaging
-4.1 Reading in count-data
-4.2 Organising sample information
-4.3 Organising gene annotations
-5 Data pre-processing
-5.1 Transformations from the raw-scale
-5.2 Removing genes that are lowly expressed
-5.3 Normalising gene expression distributions
-5.4 Unsupervised clustering of samples
-6 Differential expression analysis
-6.1 Creating a design matrix and contrasts
-6.2 Removing heteroscedascity from count data
-6.3 Fitting linear models for comparisons of interest
-6.4 Examining the number of DE genes
-6.5 Examining individual DE genes from top to bottom
-6.6 Useful graphical representations of differential expression results
-7 Gene set testing with camera
-8 Software and code used
-References
-
 
 ## Abstract
 The ability to easily and efficiently analyse RNA-sequencing data is a key strength of the Bioconductor project. Starting with counts summarised at the gene-level, a typical analysis involves pre-processing, exploratory data analysis, differential expression testing and pathway analysis with the results obtained informing future experiments and validation studies. In this workflow article, we analyse RNA-sequencing data from the mouse mammary gland, demonstrating use of the popular edgeR package to import, organise, filter and normalise the data, followed by the limma package with its voom method, linear modelling and empirical Bayes moderation to assess differential expression and perform gene set testing. This pipeline is further enhanced by the Glimma package which enables interactive exploration of the results so that individual samples and genes can be examined by the user. The complete analysis offered by these three packages highlights the ease with which researchers can turn the raw counts from an RNA-sequencing experiment into biological insights using Bioconductor.
@@ -618,7 +24,6 @@ The experiment analysed in this workflow is from Sheridan et al. (2015) (Sherida
 Count data for these samples can be downloaded from the Gene Expression Omnibus (GEO) http://www.ncbi.nlm.nih.gov/geo/ using GEO Series accession number GSE63310. Further information on experimental design and sample preparation is also available from GEO under this accession number.
 
 ## Set-up
-
 ```{r}
 suppressPackageStartupMessages({
 library(limma)
@@ -627,8 +32,7 @@ library(edgeR)
 library(Mus.musculus)
 })
 ```
-
-## Data 
+## Data packaging
 
 ### Reading in count-data
 To get started with this analysis, download the file GSE63310_RAW.tar available online from https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE63310&format=file, and extract the relevant files from this archive. The code below will do this, or you can do this step manually and then move on.
@@ -642,6 +46,7 @@ files <- c("GSM1545535_10_6_5_11.txt", "GSM1545536_9_6_5_11.txt", "GSM1545538_pu
 for(i in paste(files, ".gz", sep=""))
   R.utils::gunzip(i, overwrite=TRUE)
 ```
+
 Each of these text files contains the raw gene-level counts for a given sample. Note that our analysis only includes the basal, LP and ML samples from this experiment (see associated file names below).
 ```{r}
 files <- c("GSM1545535_10_6_5_11.txt", "GSM1545536_9_6_5_11.txt", 
@@ -666,11 +71,11 @@ If the counts from all samples were stored in a single file, the data can be rea
 For downstream analysis, sample-level information related to the experimental design needs to be associated with the columns of the counts matrix. This should include experimental variables, both biological and technical, that could have an effect on expression levels. Examples include cell type (basal, LP and ML in this experiment), genotype (wild-type, knock-out), phenotype (disease status, sex, age), sample treatment (drug, control) and batch information (date experiment was performed if samples were collected and analysed at distinct time points) to name just a few.
 
 Our DGEList-object contains a samples data frame that stores both cell type (or group) and batch (sequencing lane) information, each of which consists of three distinct levels. Note that within x$samples, library sizes are automatically calculated for each sample and normalisation factors are set to 1. For simplicity, we remove the GEO sample IDs (GSM*) from the column names of our DGEList-object x.
-
 ```{r}
 samplenames <- substring(colnames(x), 12, nchar(colnames(x)))
 samplenames
-
+## [1] "10_6_5_11" "9_6_5_11"  "purep53"   "JMS8-2"    "JMS8-3"    "JMS8-4"    "JMS8-5"   
+## [8] "JMS9-P7c"  "JMS9-P8c"
 colnames(x) <- samplenames
 group <- as.factor(c("LP", "ML", "Basal", "Basal", "ML", "LP", 
                      "Basal", "ML", "LP"))
@@ -688,7 +93,7 @@ The type of information that can be retrieved includes gene symbols, gene names,
 The Entrez gene IDs available in our dataset were annotated using the Mus.musculus package to retrieve associated gene symbols and chromosome information.
 ```{r}
 geneid <- rownames(x)
-genes <- AnnotationDbi::select(Mus.musculus, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
+genes <- select(Mus.musculus, keys=geneid, columns=c("SYMBOL", "TXCHROM"), 
                 keytype="ENTREZID")
 head(genes)
 ```
@@ -719,7 +124,7 @@ lcpm <- cpm(x, log=TRUE)
 
 A CPM value of 1 for a gene equates to having 20 counts in the sample with the lowest sequencing depth (JMS0-P8c, library size approx. 20 million) or 76 counts in the sample with the greatest sequencing depth (JMS8-3, library size approx. 76 million).
 
-The log-CPM values will be used for exploratory plots. When log=TRUE, the cpm function adds an offset to the CPM values before converting to the log2-scale. By default, the offset is 2/L where 2 is the “prior count” and L is the average library size in millions, so the log-CPM values are related to the CPM values by log2(CPM + 2/L). This calculation ensures that any two read counts with identical CPM values will also have identical log-CPM values. The prior count avoids taking the logarithm of zero, and also reduces spurious variability for genes with very low counts by shrinking all the inter-sample log-fold-changes towards zero, something that is helpful for exploratory plotting. For this dataset, the average library size is about 45.5 million, so L approx. 45.5 and the minimum log-CPM value for each sample becomes log2(2/45.5) = -4.51. In other words, a count of zero for this data maps to a log-CPM value of -4.51 after adding the prior count or offset:
+The log-CPM values will be used for exploratory plots. When log=TRUE, the cpm function adds an offset to the CPM values before converting to the log2-scale. By default, the offset is 2/L where 2 is the “prior count” and L is the average library size in millions, so the log-CPM values are related to the CPM values by log2(CPM + 2/L). This calculation ensures that any two read counts with identical CPM values will also have identical log-CPM values. The prior count avoids taking the logarithm of zero, and also reduces spurious variability for genes with very low counts by shrinking all the inter-sample log-fold-changes towards zero, something that is helpful for exploratory plotting. For this dataset, the average library size is about 45.5 million, so L approx. 45.5 and the minimum log-CPM value for each sample becomes log2(2/45.5) = -4.51. In other words, a counr of zero for this data maps to a log-CPM value of -4.51 after adding the prior count or offset:
 ```{r}
 L <- mean(x$samples$lib.size) * 1e-6
 M <- median(x$samples$lib.size) * 1e-6
@@ -777,7 +182,6 @@ lines(den$x, den$y, col=col[i], lwd=2)
 legend("topright", samplenames, text.col=col, bty="n")
 ```
 
-The density of log-CPM values for raw pre-filtered data (A) and post-filtered data (B) are shown for each sample. Dotted vertical lines mark the log-CPM threshold (equivalent to a CPM value of about 0.2) used in the filtering step.
 Figure 1: The density of log-CPM values for raw pre-filtered data (A) and post-filtered data (B) are shown for each sample
 Dotted vertical lines mark the log-CPM threshold (equivalent to a CPM value of about 0.2) used in the filtering step.
 
@@ -814,7 +218,6 @@ boxplot(lcpm, las=2, col=col, main="")
 title(main="B. Example: Normalised data",ylab="Log-cpm")
 ```
 
-Example data: Boxplots of log-CPM values showing expression distributions for unnormalised data (A) and normalised data (B) for each sample in the modified dataset where the counts in samples 1 and 2 have been scaled to 5% and 500% of their original values respectively.
 Figure 2: Example data: Boxplots of log-CPM values showing expression distributions for unnormalised data (A) and normalised data (B) for each sample in the modified dataset where the counts in samples 1 and 2 have been scaled to 5% and 500% of their original values respectively
 
 ### Unsupervised clustering of samples
@@ -844,17 +247,13 @@ title(main="A. Sample groups")
 plotMDS(lcpm, labels=lane, col=col.lane, dim=c(3,4))
 title(main="B. Sequencing lanes")
 ```
+Figure 3: MDS plots of log-CPM values over dimensions 1 and 2 with samples coloured and labeled by sample groups (A) and over dimensions 3 and 4 with samples coloured and labeled by sequencing lane (B) Distances on the plot correspond to the leading fold-change, which is the average (root-mean-square) log2-fold-change for the 500 genes most divergent between each pair of samples by default.
 
-MDS plots of log-CPM values over dimensions 1 and 2 with samples coloured and labeled by sample groups (A) and over dimensions 3 and 4 with samples coloured and labeled by sequencing lane (B). Distances on the plot correspond to the leading fold-change, which is the average (root-mean-square) log2-fold-change for the 500 genes most divergent between each pair of samples by default.
-Figure 3: MDS plots of log-CPM values over dimensions 1 and 2 with samples coloured and labeled by sample groups (A) and over dimensions 3 and 4 with samples coloured and labeled by sequencing lane (B)
-Distances on the plot correspond to the leading fold-change, which is the average (root-mean-square) log2-fold-change for the 500 genes most divergent between each pair of samples by default.
-
-Alternatively, the Glimma package offers the convenience of an interactive MDS plot where multiple dimensions can be explored. The glMDSPlot function generates an html page (that is opened in a browser if launch=TRUE) with an MDS plot in the left panel and a barplot showing the proportion of variation explained by each dimension in the right panel. Clicking on the bars of the bar plot changes the pair of dimensions plotted in the MDS plot, and hovering over the individual points reveals the sample label. The color scheme can be changed as well to highlight cell population or sequencing lane (batch). An interactive MDS plot of this dataset can be found at [Link to Interactive MDS plot]( http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MDS-Plot.html).
+Alternatively, the Glimma package offers the convenience of an interactive MDS plot where multiple dimensions can be explored. The glMDSPlot function generates an html page (that is opened in a browser if launch=TRUE) with an MDS plot in the left panel and a barplot showing the proportion of variation explained by each dimension in the right panel. Clicking on the bars of the bar plot changes the pair of dimensions plotted in the MDS plot, and hovering over the individual points reveals the sample label. The colour scheme can be changed as well to highlight cell population or sequencing lane (batch). An interactive MDS plot of this dataset can be found at http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MDS-Plot.html.
 ```{r}
 glMDSPlot(lcpm, labels=paste(group, lane, sep="_"), 
           groups=x$samples[,c(2,5)], launch=FALSE)
 ```
-
 
 ## Differential expression analysis
 
@@ -889,31 +288,26 @@ Moreover, the voom-plot provides a visual check on the level of filtering perfor
 
 Where sample-level variation is evident from earlier inspections of the MDS plot, the voomWithQualityWeights function can be used to simultaneously incorporate sample-level weights together with the abundance dependent weights estimated by voom (Liu et al. 2015). For an example of this approach, see Liu et al. (2016) (Liu et al. 2016).
 ```{r}
-par(mfrow=c(1,2))
+par(mfrow=c(2,1))
 v <- voom(x, design, plot=TRUE)
 v
 ```
+```{r}
+vfit <- lmFit(v, design)
+vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
+efit <- eBayes(vfit)
+plotSA(efit, main="Final model: Mean-variance trend")
+```
+
+Figure 4: Means (x-axis) and variances (y-axis) of each gene are plotted to show the dependence between the two before voom is applied to the data (top panel) and how the trend is removed after voom precision weights are applied to the data (bottom panel).The plot on the top is created within the `voom` function which extracts residual variances from fitting linear models to log-CPM transformed data. Variances are then rescaled to quarter-root variances (or square-root of standard deviations) and plotted against the average log2 count for each gene. The plot on the bottom is created using `plotSA` which plots log2 residual standard deviations against mean log-CPM values. In both plots, each black dot represents a gene. On the top plot, the red curve shows the estimated mean-variance trend used to compute the voom weights. On the bottom plot, the average log2 residual standard deviation estimated by the empirical Bayes algorithm is marked by a horizontal blue line. 
 
 Note that the other data frames stored within the DGEList-object that contain gene- and sample-level information, are retained in the EList-object v created by voom. The v$genes data frame is equivalent to x$genes, v$targets is equivalent to x$samples, and the expression values stored in v$E is analogous to x$counts, albeit on a transformed scale. In addition to this, the voom EList-object has a matrix of precision weights v$weights and stores the design matrix in v$design.
 
 ### Fitting linear models for comparisons of interest
 Linear modelling in limma is carried out using the lmFit and contrasts.fit functions originally written for application to microarrays. The functions can be used for both microarray and RNA-seq data and fit a separate model to the expression values for each gene. Next, empirical Bayes moderation is carried out by borrowing information across all the genes to obtain more precise estimates of gene-wise variability (Smyth 2004). The model’s residual variances are plotted against average expression values in the next figure. It can be seen from this plot that the variance is no longer dependent on the mean expression level.
 
-
-```{r, fig.height=8,fig.width=6}
-vfit <- lmFit(v, design)
-vfit <- contrasts.fit(vfit, contrasts=contr.matrix)
-efit <- eBayes(vfit)
-par(mfrow = c(2,1))
-v <- voom(x, design, plot=TRUE)
-plotSA(efit, main="Final model: Mean-variance trend")
-```
-Figure 4: Means (x-axis) and variances (y-axis) of each gene are plotted to show the dependence between the two before `voom` is applied to the data (top panel) and how the trend is removed after `voom` precision weights are applied to the data (bottom panel). The plot on the top is created within the `voom` function which extracts residual variances from fitting linear models to log-CPM transformed data. Variances are then rescaled to quarter-root variances (or square-root of standard deviations) and plotted against the average log2 count for each gene. The plot on the bottom is created using `plotSA` which plots log2 residual standard deviations against mean log-CPM values. In both plots, each black dot represents a gene. On the top plot, the red curve shows the estimated mean-variance trend used to compute the voom weights. On the bottom plot, the average log2 residual standard deviation estimated by the empirical Bayes algorithm is marked by a horizontal blue line. 
-
 ### Examining the number of DE genes
-
 For a quick look at differential expression levels, the number of significantly up- and down-regulated genes can be summarised in a table. Significance is defined using an adjusted p-value cutoff that is set at 5% by default. For the comparison between expression levels in basal and LP, 4,648 genes are found to be down-regulated in basal relative to LP and 4,863 genes are up-regulated in basal relative to LP – a total of 9,511 DE genes. A total of 9,598 DE genes are found between basal and ML (4,927 down- and 4,671 up-regulated genes), and a total of 5,652 DE genes are found between LP and ML (3,135 down- and 2,517 up-regulated). The larger numbers of DE genes observed for comparisons involving the basal population are consistent with our observations from the MDS plots.
-
 ```{r}
 summary(decideTests(efit))
 ```
@@ -935,9 +329,8 @@ head(tfit$genes$SYMBOL[de.common], n=20)
 vennDiagram(dt[,1:2], circle.col=c("turquoise", "salmon"))
 ```
 
-Venn diagram showing the number of genes DE in the comparison between basal versus LP only (left), basal versus ML only (right), and the number of genes that are DE in both comparisons (center). The number of genes that are not DE in either comparison are marked in the bottom-right.
-Figure 5: Venn diagram showing the number of genes DE in the comparison between basal versus LP only (left), basal versus ML only (right), and the number of genes that are DE in both comparisons (center)
-The number of genes that are not DE in either comparison are marked in the bottom-right.
+Figure 5: Venn diagram showing the number of genes DE in the comparison between basal versus LP only (left), basal versus ML only (right), and the number of genes that are DE in both comparisons (center) The number of genes that are not DE in either comparison are marked in the bottom-right.
+
 ```{r, eval = FALSE}
 write.fit(tfit, dt, file="results.txt")
 ```
@@ -966,7 +359,7 @@ Glimma extends this functionality by providing an interactive mean-difference pl
 glMDPlot(tfit, coef=1, status=dt, main=colnames(tfit)[1],
          side.main="ENTREZID", counts=lcpm, groups=group, launch=FALSE)
 ```
-[Link to Interactive MD](http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MD-Plot.html)
+The mean-difference plot generated by the command above is available online (see http://bioinf.wehi.edu.au/folders/limmaWorkflow/glimma-plots/MD-Plot.html).
 
 Interactive mean-difference plot generated using Glimma. Summary data (log-FCs versus log-CPM values) are shown in the left panel which is linked to the individual values per sample for a selected gene in the right panel. A table of results is also displayed below these figures, along with a search bar to allow users to look up a particular gene using the annotation information available, e.g. the Gene symbol identifier Clu.
 
@@ -977,7 +370,6 @@ Plots shown previously include either all of the genes that are expressed in any
 A heatmap is created for the top 100 DE genes (as ranked by adjusted p-value) from the basal versus LP contrast using the heatmap.2 function from the gplots package. The heatmap correctly clusters samples by cell type and reorders the genes into blocks with similar expression patterns. From the heatmap, we observe that the expression of ML and LP samples are very similar for the top 100 DE genes between basal and LP.
 ```{r}
 
-
 library(gplots)
 basal.vs.lp.topgenes <- basal.vs.lp$ENTREZID[1:100]
 i <- which(v$genes$ENTREZID %in% basal.vs.lp.topgenes)
@@ -987,14 +379,11 @@ heatmap.2(lcpm[i,], scale="row",
    col=mycol, trace="none", density.info="none", 
    dendrogram="column")
 ```
-
 Figure 6: Heatmap of log-CPM values for top 100 genes DE in basal versus LP
 Heatmap of log-CPM values for top 100 genes DE in basal versus LP. Expression across each gene (or row) have been scaled so that mean expression is zero and standard deviation is one. Samples with relatively high expression of a given gene are marked in red and samples with relatively low expression are marked in blue. Lighter shades and white represent genes with intermediate expression levels. Samples and genes have been reordered by the method of hierarchical clustering. A dendrogram is shown for the sample clustering.
 
-This experiment is the RNA-seq equivalent of the dataset generated by Lim et al. (2010) (Lim et al. 2010), who used Illumina microarrays to profile the same sorted cell populations, so it is reassuring to see the gene signatures from this earlier publication coming up at the top of the list for each contrast. We make a barcodeplot of the Lim et al. (2010) Mature Luminal gene sets (Up and Down) in the LP versus ML contrast. Note that these sets go in the opposite direction in our dataset due to our parameterization which compares LP against ML rather than the other way around (if the contrast were reversed, the directions would be consistent).
-
 ## Software and code used
-This RNA-seq workflow makes use of various packages available from version 3.8 of the Bioconductor project, running on R version 3.5.1. Besides the software highlighted in this article (limma, Glimma and edgeR) it requires a number of other packages, including gplots and RColorBrewer and the gene annotation package Mus.musculus. This document was compiled using knitr. Version numbers for all packages used are shown below. The RNAseq123 Bioconductor workflow package avaliable from https://bioconductor.org/packages/RNAseq123 contains both an English and Chinese (Mandarin) vignette of this artical along with code to perform the complete analysis. Installation of this package manages all of the above-mentioned dependencies and is a useful resource for delivering hands-on training on RNA-seq data analysis.
+This RNA-seq workflow makes use of various packages available from version 3.8 of the Bioconductor project, running on R version 3.5.1. Besides the software highlighted in this article (limma, Glimma and edgeR) it requires a number of other packages, including gplots and RColorBrewer and the gene annotation package Mus.musculus. This document was compiled using knitr. Version numbers for all packages used are shown below. Installation of this package manages all of the above-mentioned dependencies and is a useful resource for delivering hands-on training on RNA-seq data analysis.
 
 sessionInfo()
 
@@ -1003,7 +392,27 @@ Bioconductor Core Team. 2016a. Homo.sapiens: Annotation package for the Homo.sap
 
 ———. 2016b. Mus.musculus: Annotation package for the Mus.musculus object. https://bioconductor.org/packages/release/data/annotation/html/Mus.musculus.html.
 
-Durinck, S., Y. Moreau, A. Kasprzyk, S. Davis, B. De Moor, A. Brazma, and W. Huber. 2005. “BioMart and Bioconductor: a powerful link between biological databaseG. K. Smyth. 2015. “limma Powers Differential Expression Analyses for RNA-Sequencing and Microarray Studies.” Nucleic Acids Res 43 (7): e47.
+Durinck, S., Y. Moreau, A. Kasprzyk, S. Davis, B. De Moor, A. Brazma, and W. Huber. 2005. “BioMart and Bioconductor: a powerful link between biological databases and microarray data analysis.” Bioinformatics 21: 3439–40.
+
+Durinck, S., P. Spellman, E. Birney, and W. Huber. 2009. “Mapping identifiers for the integration of genomic datasets with the R/Bioconductor package biomaRt.” Nature Protocols 4: 1184–91.
+
+Huber, W., V. J. Carey, R. Gentleman, S. Anders, M. Carlson, B. S. Carvalho, H. C. Bravo, et al. 2015. “Orchestrating High-Throughput Genomic Analysis with Bioconductor.” Nature Methods 12 (2): 115–21. http://www.nature.com/nmeth/journal/v12/n2/full/nmeth.3252.html.
+
+Law, C. W., Y. Chen, W. Shi, and G. K. Smyth. 2014. “Voom: Precision Weights Unlock Linear Model Analysis Tools for RNA-seq Read Counts.” Genome Biology 15: R29.
+
+Liao, Y., G. K. Smyth, and W. Shi. 2013. “The Subread Aligner: Fast, Accurate and Scalable Read Mapping by Seed-and-Vote.” Nucleic Acids Res 41 (10): e108.
+
+———. 2014. “featureCounts: an Efficient General-Purpose Program for Assigning Sequence Reads to Genomic Features.” Bioinformatics 30 (7): 923–30.
+
+Lim, E., D. Wu, B. Pal, T. Bouras, M. L. Asselin-Labat, F. Vaillant, H. Yagita, G. J. Lindeman, G. K. Smyth, and J. E. Visvader. 2010. “Transcriptome analyses of mouse and human mammary cell subpopulations reveal multiple conserved genes and pathways.” Breast Cancer Research 12 (2): R21.
+
+Liu, R., K. Chen, N. Jansz, M. E. Blewitt, and M. E. Ritchie. 2016. “Transcriptional Profiling of the Epigenetic Regulator Smchd1.” Genomics Data 7: 144–7.
+
+Liu, R., A. Z. Holik, S. Su, N. Jansz, K. Chen, H. S. Leong, M. E. Blewitt, M. L. Asselin-Labat, G. K. Smyth, and M. E. Ritchie. 2015. “Why weight? Combining voom with estimates of sample quality improves power in RNA-seq analyses.” Nucleic Acids Res 43: e97.
+
+McCarthy, D. J., and G. K. Smyth. 2009. “Testing significance relative to a fold-change threshold is a TREAT.” Bioinformatics 25: 765–71.
+
+Ritchie, M. E., B. Phipson, D. Wu, Y. Hu, C. W. Law, W. Shi, and G. K. Smyth. 2015. “limma Powers Differential Expression Analyses for RNA-Sequencing and Microarray Studies.” Nucleic Acids Res 43 (7): e47.
 
 Robinson, M. D., D. J. McCarthy, and G. K. Smyth. 2010. “edgeR: A Bioconductor Package for Differential Expression Analysis of Digital Gene Expression Data.” Bioinformatics 26: 139–40.
 
@@ -1020,4 +429,3 @@ Subramanian, A., P. Tamayo, V. K. Mootha, S. Mukherjee, B. L. Ebert, M. A. Gille
 Wu, D., E. Lim, F. Vaillant, M. L. Asselin-Labat, J. E. Visvader, and G. K. Smyth. 2010. “ROAST: rotation gene set tests for complex microarray experiments.” Bioinformatics 26 (17): 2176–82.
 
 Wu, D., and G. K. Smyth. 2012. “Camera: a competitive gene set test accounting for inter-gene correlation.” Nucleic Acids Res 40 (17): e133.
-

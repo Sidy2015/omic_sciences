@@ -7,245 +7,45 @@ knitr::opts_chunk$set(echo=FALSE)
 opts_knit$set(progress=FALSE, verbose=FALSE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 ```
-We are going to walk through the general steps of a Next Generation Sequencing pipeline, even though the analytical steps are beyond the scope of this course, for reasons mainlly due to the memory capacities of our laptops. The Rmd for this file can be found
-[here](https://github.com/gurinina/omic_sciences/blob/main/08-NGS-pipeline.Rmd). We can though walk through a great deal of it using small chunks of sequences and R programs. For our examples we will mainly focus on RNA-seq as that is the most manageable computationally as opposed to methylation, Chip-chip and DNA variant analysis. Its also, probably for that reason, one of the more frequently used technologies in research, likely for this reasons.
 
-Ok, so our first files that we encounter are FASTQ...
+## Short intro to mapping RNA-Seq reads 
 
-## Introduction to FASTQ
+from [Wikipedia](https://en.wikipedia.org/wiki/RNA-Seq#Transcriptome_assembly)
 
-The first step in NGS sequencing is to read the FASTQ files and align them. We're not going to do that because the FASTQ files are too big, but we will walk through the steps. There are many many software programs for alignment. If you want to run a truncated version to see what FASTQ files look like, you can download a single sample in a UNIX shell here:
+Read mapping or alignment
+Once high-quality FASTQ data are obtained from pre-processing, the next step is the read mapping or alignment. There are two main options depending on the availability of a genome sequence (Figure 1):
 
-**Links for this experiment**
+Two methods are used to assign raw sequence reads to genomic features (i.e., assemble the transcriptome):
 
-Study information at the [Sequence Read Archive](http://www.ncbi.nlm.nih.gov/Traces/sra/?study=SRP033351)
+De novo: This approach does not require a reference genome to reconstruct the transcriptome, and is typically used if the genome is unknown, incomplete, or substantially altered compared to the reference.[59] Challenges when using short reads for de novo assembly include 1) determining which reads should be joined together into contiguous sequences (contigs), 2) robustness to sequencing errors and other artifacts, and 3) computational efficiency. The primary algorithm used for de novo assembly transitioned from overlap graphs, which identify all pair-wise overlaps between reads, to de Bruijn graphs, which break reads into sequences of length k and collapse all k-mers into a hash table.[60] Overlap graphs were used with Sanger sequencing, but do not scale well to the millions of reads generated with RNA-Seq. Examples of assemblers that use de Bruijn graphs are Trinity,[59] Oases[61] (derived from the genome assembler Velvet[62]), Bridger,[63] and rnaSPAdes.[64] Paired-end and long-read sequencing of the same sample can mitigate the deficits in short read sequencing by serving as a template or skeleton. Metrics to assess the quality of a de novo assembly include median contig length, number of contigs and N50.[65]
 
-[Himes et al paper](http://www.ncbi.nlm.nih.gov/pubmed/24926665)
+RNA-Seq alignment with intron-split short reads. Alignment of short reads to an mRNA sequence and the reference genome. Alignment software has to account for short reads that overlap exon-exon junctions (in red) and thereby skip intronic sections of the pre-mRNA and reference genome.
 
-Example sample table stored in our course repo on github: [airway_sample_table](https://github.com/genomicsclass/labs/blob/master/course5/airway_sample_table.csv)
+Genome guided: This approach relies on the same methods used for DNA alignment, with the additional complexity of aligning reads that cover non-continuous portions of the reference genome.[66] These non-continuous reads are the result of sequencing spliced transcripts (see figure). Typically, alignment algorithms have two steps: 1) align short portions of the read (i.e., seed the genome), and 2) use dynamic programming to find an optimal alignment, sometimes in combination with known annotations. Software tools that use genome-guided alignment include Bowtie,[67] TopHat (which builds on BowTie results to align splice junctions),[68][69] Subread,[70] STAR,[66] HISAT2,[71] and GMAP.[72] The output of genome guided alignment (mapping) tools can be further used by tools such as Cufflinks[69] or StringTie[73] to reconstruct contiguous transcript sequences (i.e., a FASTA file). The quality of a genome guided assembly can be measured with both 1) de novo assembly metrics (e.g., N50) and 2) comparisons to known transcript, splice junction, genome, and protein sequences using precision, recall, or their combination (e.g., F1 score).[65] In addition, in silico assessment could be performed using simulated reads.[74][75]
 
-Details on creating such a sample table from SRA and GEO: [details](http://www.bioconductor.org/packages/release/data/experiment/vignettes/airway/inst/doc/airway.html)
+A note on assembly quality: The current consensus is that 1) assembly quality can vary depending on which metric is used, 2) assembly tools that scored well in one species do not necessarily perform well in the other species, and 3) combining different approaches might be the most reliable.[76][77][78]
 
-The [European Nucleotide Archive (EMBL-EBI)](http://www.ebi.ac.uk/ena>)
 
-The [Sequence Read Archive (NCBI)](http://www.ncbi.nlm.nih.gov/sra/>)
+When studying an organism with a reference genome, it is possible to infer which transcripts are expressed by mapping the reads to the reference genome (genome mapping) or transcriptome (transcriptome mapping). Mapping reads to the genome requires no knowledge of the set of transcribed regions or the way in which exons are spliced together. This approach allows the discovery of new, unannotated transcripts.
+ 
+When working on an organism without a reference genome, reads need to be assembled first into longer contigs (de novo assembly). These contigs can then be considered as the expressed transcriptome to which reads are re-mapped for quantification.
 
-## Fastq file commands
+Alignment tools
 
-Downloading from the ENA:
+There are many bioinformatics tools available to perform the alignment of short reads. One of the most popular RNA-seq mappers is TopHat, which aligns reads in two steps:
 
-wget <ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR103/008/SRR1039508/SRR1039508_1.fastq.gz> wget <ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR103/008/SRR1039508/SRR1039508_2.fastq.gz>
+unspliced reads are mapped to locate exons (with Bowtie)
+unmapped reads are then split and aligned independently to identify exon junctions (9)
 
-Alias for ls:
+The RNA-seq read alignment program HISAT2 is another one, which stands for “hierarchical indexing for spliced alignment of transcripts 2”, and provides more accurate results with fast and sensitive alignment. HISAT2 uses a graph-based approach to index the reference genome, combined with the Bowtie2 algorithm for alignment.
 
-alias ll='ls -lGh'
+It is important to check the quality of the mapping process. The percentage of mapped reads is a global indicator of the overall sequencing accuracy and of the presence of contaminating DNA. Picard can be used for quality control in mapping.
 
-Unzipping:
+![Figure 1.](figure/alignment.png)
 
-gunzip \*.fastq.gz
+Either with a reference or de novo assembly, the complete reconstruction of transcriptomes using short reads is challenging. For example, short reads can sometimes align equally well to multiple locations (multi-mapped reads or multi-reads). Paired-end reads reduce the problem of multi-mapping, because a pair of reads must map within a certain distance of each other and in a certain order. Finally, long-read technologies, such as SMRT from Pacific Biosciences, provide reads that are long enough to sequence complete transcripts for most genes and are a promising alternative.
 
-Looking at the FASTQ files:
-
-less SRR1039508_1.fastq wc -l SRR1039508_1.fastq \### number of lines
-
-Quality control with [fastqc](http://www.bioinformatics.babraham.ac.uk/projects/fastqc/)
-
-Navigate to your FASTQ directory:
-
-fastqc "--" noextract SRR1039508_1.fastq SRR1039508_2.fastq "--" outdir=/Users/gurinina/Dropbox/Documents/Rprojects/2022_GENOMICS_COURSE/fastqc
-
-we're going to use a truncated fastq file to save memory, navigate to the directory
-after moving it from here:
-
-```{r}
-library(ShortRead)
-
-fastqDir <- system.file("extdata", "E-MTAB-1147", package = "ShortRead")
-fastqPath <- list.files(fastqDir, pattern = ".fastq.gz$", full.names = TRUE)[1]
-reads <- readFastq(fastqPath)
-
-```
-fastqc "--"noextract ERR127302_1_subset.fastq 
-
-```{r echo = FALSE,warning=FALSE, message = FALSE}
-
-library(fastqcr)
-library(Biostrings)
-qc.dir = paste(getwd(),"fastqc",sep = "/")
-qc <- qc_aggregate(qc.dir) ## if you have more than one file
-library(dplyr)
-  tmp = qc %>%
-    group_by(sample, module, status) %>%
-    filter(status %in% c("WARN", "FAIL")) %>%
-    arrange(sample)
-  # Summary of qc
-summary(qc)
-qc_stats(qc)
-qc_fails(qc)#: Displays samples or modules that failed.
-qc_warns(qc)#: Displays samples or modules that warned.
-qc_problems(qc)#: Union of qc_fails() and qc_warns(). Display which #samples or modules that failed or warned.
-  qc_fails(qc, "module")
-  qc_warns(qc, "module")
-  qc_problems(qc, "module")
-qc_problems(qc, "module", compact = FALSE)
-qc_fails(qc, "sample")
-
-### THIS ONE IS MOST IMPORTANT; BUT ALL OF THIS IS IN THE HTML FILE
-qc_report(qc.path=qc.dir,
-          result.file="reportFile", preview = TRUE)
-fastqc = list.files(qc.dir)
-fastqcfile = paste(qc.dir,fastqc,sep = "/")
-g = grep("gz",fastqcfile)
-qc <- qc_read(fastqcfile[g])
-names(qc)
-qc_plot(qc, "Per sequence GC content")
-qc_plot(qc, "Per base sequence quality")
-qc_plot(qc, "Per sequence quality scores")
-qc_plot(qc, "Sequence duplication levels")
-```
-
-reading FASTQ files in R
-
-```{r echo = FALSE,warning=FALSE,  message = FALSE}
-library(ShortRead)
-fastqFile = fastqcfile
-# read fastq file
-fq = readFastq(fastqFile[g])
-fq
-#class: ShortReadQ
-#length: 20000 reads; width: 72 cycles
-#class: ShortReadQ
-
-reads = sread(fq)[1:1000]
-reads[2]
-reverseComplement(reads[2])
-alphabetFrequency(reads[1:5] )
-w = vcountPattern("GCTGGGCG",reads)
-ww = which(w!=0)
-strsplit(reads[ww],"GCTGGGCG")
-# get quality scores per base as a matrix
-# first milion reads
-qPerBase = as(quality(fq), "matrix")
-qPerBase[1:3,]
-# get number of bases per read that have quality score below 20
-# we use this
-qcount = rowSums( qPerBase <= 20)
-# Number of reads where all Phred scores >= 20
-mean(qcount == 0)
-# 54% of the reads; for the actual samples, this was 98%
-```
-
-**~ 98 % of the reads have all 63 bp >= 20, is that enough?**
-
-88% of the reads for unfilterd FASTQ files, significant what is the cutoff? do we filter reads here or wait for the exon match to do it? what is a per tile quality score, how to read the QC reports? lets go back and look at an unfiltered fastq file many of these questions are application dependent The FASTQ file is 22e+06 reads long (prefiltered), you could write a loop and filter out the poor quality reads We can write out the filtered fastq file with the ShortRead::writeFastq() function. Just be aware that there are a lot more efficient ways of doing the filtering that don't involve R.
-
-```{r  echo = FALSE,eval = FALSE}
-
-# write out fastq file with only reads where all
-# quality scores per base are above 20
-# writeFastq(fq[qcount == 0],
-#            paste(fastqFile, "Qfiltered", sep="_"))
-           
-```
-
-88888888888888888888888888888888888888888888888888
-
-## Short intro to mapping RNA-Seq reads
-
-Note that the commands used in this lab require you have a lot of free disk space (the FASTQ files alone are 28 GB) and many cores available for running the alignment program. We do not expect students to replicate the commands in this video. We do not expect students install the alignment software on their machines. Much of the software for processing NGS data is designed for Linux systems. Note also that while we are mapping RNA reads, the same applies for all read mapping to a great extent. Certain software is tailored for specific applications, e.g. mapping rare transcript isolforms (which is not our goal here) or mapping where 99.99% of the DNA you are interested in in the sample is degraded. .
-
-The FASTQ file we are looking at in the beginning of this screencast was downloaded from:
-
-<http://trace.ncbi.nlm.nih.gov/Traces/sra/?run=SRR1177756>
-
-This is a human RNA-Seq sample from a [study](http://trace.ncbi.nlm.nih.gov/Traces/sra/?study=SRP032775) of naturally acquired immunity to malaria.
-
-We discuss the following software in the screencast:
-
--   fastq-dump from the 
-    [SRA toolkit](http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?cmd=s        how&f=software&m=software&s=software)
--   [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
--   [Tophat2](http://ccb.jhu.edu/software/tophat/index.shtml)
--   [STAR](https://github.com/alexdobin/STAR)
--   [Samtools](http://samtools.sourceforge.net/)
-
-To extract the FASTQ files from the SRA file, we used the following line. The `--split-files` argument is used to extract two files for the two paired-ends of the fragments which were sequenced.
-
-    fastq-dump "--"split-files SRR1177756.sra
-
-## STAR commands
-
-The STAR paper:
-
-<http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3530905/>
-
-The STAR manual:
-
-<https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf>
-
-Downloading genome FASTA and GTF files from ENSEMBL:
-
-<http://ensembl.org>
-
-<http://ensembl.org/info/data/ftp/index.html>
-
-Generating the genome:
-
-Note the `sjdbOverhang` is used for constructing the splice junction database. It should be set to (read length - 1), and according to the manual a general value of 100 will work as well.
-
-For this limited demonstration, I am only going to align to the genes on chromosome 1, so I subset the GTF file:
-
-grep -P '^1\t' Homo_sapiens.GRCh38.79.gtf > Homo_sapiens.GRCh38.79.chrom1.gtf
-
-We then moved files in subdirectories, and created one for the STAR genome index:
-
-mkdir gtf mkdir genome mv *.gtf gtf mv* .fa genome mkdir GRCh38.79.chrom1
-
-The STAR command to generate the genome index:
-
-STAR "--"runMode genomeGenerate\
-"--"genomeDir GRCh38.79.chrom1\
-"--"genomeFastaFiles genome/Homo_sapiens.GRCh38.dna.chromosome.1.fa\
-"--"sjdbGTFfile gtf/Homo_sapiens.GRCh38.79.chrom1.gtf\
-"--"sjdbOverhang 62
-
-Mapping the reads:
-
-STAR "--"runThreadN 12\
-"--"genomeDir GRCh38.79.chrom1\
-"--"readFilesIn fastq/SRR1039508_1.fastq fastq/SRR1039508_2.fastq
-
-STAR "--"runThreadN 12\
-"--"genomeDir Homo_sapiens.GRCh38.dna.chromosome.1\
-"--"readFilesIn fastq/SRR1039508_1.fastq/SRR1039508_2.fastq
-
-To filter out unmapped reads from BAM files (option -F) samtools view -bF SRR1039508_2.fastq.bam \> mappedSRR_2.bam SRR1039508_1.fastq.bam \> mappedSRR_1.bam
-
-## SUBREAD commands
-
-subread-build index 2022_GENOMICS_COURSE/Homo_sapiens.GRCh38.dna.chromosome.1.fa -o 2022_GENOMICS_COURSE/idxchr1/Homo_sapiens.GRCh38.dna.chromosome.1.fa.index
-
-subread-align -a 2022_GENOMICS_COURSE/gtf/Homo_sapiens.GRCh38.79.gtf -B 3 -T 5 -i 2022_GENOMICS_COURSE/idxchr1/Homo_sapiens.GRCh38.dna.chromosome.1.fa.index -t 0 -r 2022_GENOMICS_COURSE/fasta/SRR1039508_1.fastq 2022_GENOMICS_COURSE/fasta/SRR1039508_2.fastq -o 2022_GENOMICS_COURSE/idxchr1/result.bam
-
-align \<- align(index = "./reference_index", readfile1 = reads, output_file = "./Rsubread_alignment.BAM", phredOffset = 64)
-
-samtools view -b 4 -F result.bam \> pairmapped.bam samtools sort -n pairmapped.bam -o pairsorted.bam
-
-## TOPHAT commands
-
-The call for running Tophat2 was: \` export BOWTIE2_INDEXES=/path/to/your/Bowtie2Index
-
-tophat2 -o SRR1177756_tophat_out -p 10 genome SRR1177756_1.fastq SRR1177756_2.fastq
-
-To view the reads we used Samtools:
-
-samtools view accepted_hits.bam \| head -1000 \| less
-
-For demonstration purposes (you wouldn't necessarily repeat these lines in a typical workflow), we merged the mapped and unmapped reads into a single sorted file. For this we used the following calls:
-
-samtools sort -n accepted_hits.bam accepted_hits_name_sorted samtools sort -n unmapped.bam unmapped_name_sorted samtools merge -n all_reads.bam accepted_hits_name_sorted.bam unmapped_name_sorted.bam
-
-88888888888888888888888888888888888888888888888888
+The output of the alignment are bamfiles. We're going to look at them in more detail today.
 
 ## Importing NGS data into Bioconductor
 
@@ -253,10 +53,6 @@ There are two main packages for working with NGS data in R: the **Rsamtools** pa
 
 -   **Rsamtools** provides raw access to the information in NGS data files
 -   **GenomicAlignments** uses the Rsamtools functions to provide NGS data in R as high-level Bioconductor objects (based on **GRanges** for example). We will see more examples below.
-
-The Rsamtools package has the description:
-
-provides an interface to the 'samtools', 'bcftools', and 'tabix' utilities for manipulating SAM (Sequence Alignment / Map), FASTA, binary variant call (BCF) and compressed indexed tab-delimited (tabix) files.
 
 ## What are BAM files?
 
