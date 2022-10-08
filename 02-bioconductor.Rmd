@@ -74,10 +74,10 @@ Again, you want to set eval = TRUE for the next six chunks here on first run:
 
 pkgs= readLines("_R_package_list.txt")
 ```
+
 This is a list of all the pkgs you should need.
 This next line compares this to all the packages you already have,
 and subtracts them into the variable need.
-
 ```{r, eval = FALSE}
 int <- installed.packages()[, 1]
 need <- setdiff(pkgs, int)
@@ -85,14 +85,13 @@ need <- setdiff(pkgs, int)
 git = readLines("_R_package_github.txt")
 
 ```
+
 The required packages come in two flavors: those that are available through
 Bioconductor, and those that are available through a github website.
 I've written these out into two different textfiles: R_packages_github.txt and
 _R_package_list.txt. To get the ones available through Bioconductor, we substract 
 git from need, and these should be all the one we need from Bioconductor,
 and this will vary from person to person.
-
-
 ```{r, eval = FALSE}
 
 # installing the R packages required for class after
@@ -101,9 +100,9 @@ and this will vary from person to person.
 
 need = setdiff(need,git)
 ```
+
 Before you tell `BiocManager` to install these packages, check to make sure that there aren't any typos and that the formatting looks
 correct.
-
 ```{r,eval=FALSE}
 
 need
@@ -131,19 +130,18 @@ leftover! The `::` is a shortcut when you want to avoid loading a library, or wh
 you have a potential function conflict with another library that is loaded.
 
 If that all went successfully you are in great shape! If you want to be ambitious you can try publishing the website for the book yourself.
-
 ```{r bookdown, eval = FALSE}
+
 library(bookdown)
 bookdown::render_book("index.Rmd")
-
 ```
+
 If this process is successful, you can try publishing the book. First you need to create a [bookdown](https://bookdown.org/connect/) account. Then to publish to this account, simply run the following chunk:
-
-
 ```{r publish, eval = FALSE}
 
 publish_book(account = "ggiaever")
 ```
+
 R will walk you through setting up your account and you will have your very own copy of the course!
 
 88888888888888888888888888888888888888888888888
@@ -158,6 +156,7 @@ library(ph525x)
 library(png)
 
 ```
+
 The broad goals of the Bioconductor project are:
 
 To provide widespread access to a broad range of powerful statistical and graphical methods for the analysis of genomic data.
@@ -177,12 +176,12 @@ A powerful tool for Bioinformatics
 5. publication quality graphics
 6. reproducible results
 7. modularized and standardized
-8. gene expression, Chip-seq, scRNA-seq,genetic screens,    interaction networks and much much more
+8. gene expression, Chip-seq, scRNA-seq,genetic screens, interaction networks and much much more
 
 Cons
 1. steep learning curve
 2. no single 'right way' to do anything
-3. historically, R was lacking in terms of user            interface
+3. historically, R was lacking in terms of user interface
 
 ### R packages, modularity, continuous integration
 
@@ -338,6 +337,27 @@ methods(class="ExpressionSet")
 methods(class="lm")
 ```
 
+Sometimes finding the methods available for a class is so useful that I wrote a couple of functions that I use all the time to access data when I get confused about objects:
+```{r}
+mypackclass = function(package,class){
+  
+  int = intersect(sapply(strsplit(as.character(methods(class=class)), ","),
+                         `[`, 1), ls(paste("package",package,sep = ":")))
+  int
+}
+mypackmeth = function(package,class){
+  
+  func = sub("Function: (.*) \\(package .*\\)","\\1",grep("Function",showMethods(classes=class, 
+                                                                                 where=getNamespace(package), printTo=FALSE), value=TRUE))
+  func
+  
+}
+```
+
+These take as arguments the name of the package and the class, and output the 
+methods or functions available to access or act on those objects.
+
+
 A quick way to look up functions in a given package is to write out the package name, two ":" symbols and then trying tab-completion to get a list of functions, exported or not OR use ls followed by the name of the package:
 
 ```{r, eval=FALSE, tidy=FALSE}
@@ -364,3 +384,4 @@ showMethods("plotMA")
 getMethod("plotMA","data.frame")
 ```
 
+IF typing the package::function doesn't work, the other often more reliable way is to look up the function online by googling the package name, function and the website rdrr.io. This site contains the source function of packages. 

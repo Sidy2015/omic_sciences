@@ -1,3 +1,5 @@
+getting started 45'
+bioconductor
 bioconductor 2nd half: 16:12
 dplyr: 22:33
 

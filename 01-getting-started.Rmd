@@ -241,7 +241,7 @@ A good introduction to using Git with R can be found
 use it primarily just to "clone" information from a "repository", i.e. 
 a webpage containing course material, into your local machine. 
 
-To clone thr course repository so that you get your own copy in Rstudio, you create a new RStudio Project from this GitHub repo.
+To clone this course repository so that you get your own copy in Rstudio, you create a new RStudio Project from this GitHub repo.
 
 In RStudio, start a new Project:
 
@@ -254,6 +254,8 @@ a Git repository, linked to a remote GitHub repository
 and an RStudio Project.
 
 This should copy all of be the course material into this project and should be all you need for the course. Homework assignments will be posted on Canvas on a weekly basis.
+
+The published book version of the Rmd files for the course is available [here](https://bookdown.org/ggiaever/omic_sciences/).
 
 
 
