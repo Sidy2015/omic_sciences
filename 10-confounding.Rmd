@@ -23,6 +23,25 @@ The confounder here is games played. Jeter played more games during the year he 
 
 <a name="genomics"></a>
 
+## Confounding: Very Simple Example
+
+Sex confounded with treatment
+A confounded RNA-Seq experiment is one where you cannot distinguish the separate effects of two different sources of variation in the data.
+
+For example, we know that sex has large effects on gene expression, and if all of our control mice were female and all of the treatment mice were male, then our treatment effect would be confounded by sex. We could not differentiate the effect of treatment from the effect of sex.
+
+![Figure 1. Confounded Design](figure/confounded_design.png)
+
+To AVOID confounding:
+
+Ensure animals in each condition are all the same sex, age, litter, and batch, if possible.
+
+If not possible, then ensure to split the animals equally between conditions
+
+![Figure 2. Non-confounded Design](figure/non_confounded_design.png)
+
+
+
 ## Confounding: High-Throughput Example
 
 To describe the problem of confounding with a real example, we will use a dataset from [this paper](http://www.ncbi.nlm.nih.gov/pubmed/17206142) entitled "Common genetic variants account for differences in gene expression among ethnic groups", published in Nature Genetics 2007. In this study, Spielman et al. estimate the number of genes differentially expressed between individuals of European (CEU) and Asian (ASN) ancestry and suggest that these differences can be accounted for by measured genetic variants. Specifically, they claimed that roughly 50% of genes were differentially expressed when comparing blood from these two ethnic groups. We include the data in one of our data packages:
@@ -62,11 +81,11 @@ In response to this paper, Akey, Biswas, Leek and Storey (Leek and Storey are he
 
 Spielman et al categorized genes as differentially expressed if they had P-values <1e-5, corresponding to a Sidak corrected P-value <0.05 for multiple hypothesis tests. At this significance threshold, they report that approximately 26% of genes are differentially expressed between the CEU and ASN samples (ASN denotes the combined HapMap Beijing Chinese (CHB) and Japanese (JPT) HapMap individuals). As a Sidak correction is similar to a Bonferroni correction, the proportion of genes found to be significant is a conservative estimate of the true overall proportion of differentially expressed genes. A more widely used and less conservatively biased approach is to analyze the complete distribution of P-values, which provides a lower bound estimate of the proportion of truly differentially expressed genes (3,4). Applying this methodology to the distribution of P-values obtained by P-values obtained by t tests on genes expressed in lymphoblastoid cell lines as defined in Spielman et al.(1), we estimate that at least 78% of these genes are differentially expressed between the CEU and ASN samples. 
 
-Figure 1. Distribution of P-values for tests of differential expression. (a) P-values resulting from tests of P-values resulting from tests of P differential expression between the CEU and ASN samples. 
+Figure 3. Distribution of P-values for tests of differential expression. (a) P-values resulting from tests of P-values resulting from tests of P differential expression between the CEU and ASN samples. 
 
 Let's have a look at that:
 
-```{r Figure 1.(a), fig.cap="Comparison by ethnicity", fig.width=7,fig.height=4}
+```{r Figure 3.(a), fig.cap="Comparison by ethnicity", fig.width=7,fig.height=4}
 
 library(qvalue)
 ## remove control genes
@@ -96,13 +115,13 @@ round(length(wq)/nrow(res1)*100,1)
 
 It seemed implausible that as many as 78% of genes are differentially expressed between the CEU and ASN samples. For example, based on the complete distribution of P-values, the Akey et al. estimated that approximately 17% of genes are differentially expressed between individuals of European and African ancestry(2). To rule out the possibility that this difference was related to the larger sample size of Spielman et al.(1) and is thus not simply a power issue, they sampled eight CEU and eight ASN individuals (corresponding to the sample size of Storey et al.(2) 1,000 times, and for each sample estimated the proportion of differentially expressed genes as described above. The average proportion was 43% (standard deviation (s.d.) = 8%), demonstrating that differences in power between their study and Spielman et al.(1) did not fully account for differences in the estimated proportion of differentially expressed genes among the two human populations. 
 
-To explore these issues in more detail, the Akey et al. downloaded the raw CEL files from Gene Expression Omnibus (GSE5859) and extracted from the header line the date on which the file was created. Notably, the arrays used to measure expression for the CEU individuals were primarily processed from 2003 to 2004,whereas the arrays used to measure expression for the ASN individuals were all processed in 2005–2006 (see figure1). We tested for differential expression with respect to the year in which the microarrays were processed and found that at least 94% of genes are estimated to be differentially expressed. 
+To explore these issues in more detail, the Akey et al. downloaded the raw CEL files from Gene Expression Omnibus (GSE5859) and extracted from the header line the date on which the file was created. Notably, the arrays used to measure expression for the CEU individuals were primarily processed from 2003 to 2004,whereas the arrays used to measure expression for the ASN individuals were all processed in 2005–2006 (see figure3). We tested for differential expression with respect to the year in which the microarrays were processed and found that at least 94% of genes are estimated to be differentially expressed. 
 
-![Figure 2.](figure/batch.png)
+![Figure 4.](figure/batch.png)
 
 Let's look at these arrays:
-Figure 1.(b) P-values resulting from tests of differential P-values resulting from tests of differential P expression with respect to year in which the microarrays were processed. 
-```{r Figure 1.(b), fig.cap="Comparison by year", fig.width=7,fig.height=4}
+Figure 2.(b) P-values resulting from tests of differential P-values resulting from tests of differential P expression with respect to year in which the microarrays were processed. 
+```{r Figure 2.(b), fig.cap="Comparison by year", fig.width=7,fig.height=4}
 
 ## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
@@ -166,8 +185,8 @@ Typically, one would take these batch effects into account before performing any
 
 We have not yet discussed these methods, but we can model it none the less in the following way, though it's not clear if this is the correct way to model it.
 
-Figure 1.(c) P-values resulting from tests P-values differential expression between the CEU and ASN samples while controlling for the year in which the sample was processed.
-```{r Figure 1.(c), fig.cap="Comparison by batch", fig.width=7,fig.height=4}
+Figure 2.(c) P-values resulting from tests P-values differential expression between the CEU and ASN samples while controlling for the year in which the sample was processed.
+```{r Figure 2.(c), fig.cap="Comparison by batch", fig.width=7,fig.height=4}
 
 ## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
@@ -209,7 +228,7 @@ Only ~3% of genes are differentially expressed between ASN and CEU, which is not
 Obviously, these findings do not mean that all differentially expressed genes in Spielman et al.1 are due to batch effects; rather, the source of population differences in expression cannot be uniquely attributed to biological causes. To gain insight into the magnitude of the batch effects in Spielman et al.(1), we tested for differential expression within the CEU sample with respect to the year of processing. 
 
 (d) P-values resulting from tests of differential expression with respect to year P-values resulting from tests of differential expression with respect to year P in which the microarrays were processed only among the CEU samples.
-```{r Figure 1.(d), fig.cap="CEU ethnicity and year", fig.width=7,fig.height=4}
+```{r Figure 2.(d), fig.cap="CEU ethnicity and year", fig.width=7,fig.height=4}
 
 ## remove control genes
 out <- grep("AFFX",rownames(geneExpression))
@@ -508,7 +527,7 @@ cat("Total genes with q-value < 0.1: ",length(index),"\n",
 ```
 888888888888888888888888888888888888888888
 
-![Figure 3.](figure/confounding.png){width=940px,height = 3760px}
+![Figure 5.](figure/confounding.png){width=940px,height = 3760px}
 
 ## A more subtle example:bladderbatch
 

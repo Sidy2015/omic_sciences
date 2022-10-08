@@ -277,9 +277,9 @@ We check the files in the `DiffBind` folder, and in the `peaks`
 subdirectory:
 
 ```{r}
-#biocLite("DiffBind")
+
 dirwd = getwd()
-suppressPackageStartupMessages({library(DiffBind)})
+library(DiffBind)
 setwd(system.file("extra", package="DiffBind"))
 list.files()
 read.csv("tamoxifen.csv")
@@ -296,7 +296,7 @@ This function will automatically create a correlation plot showing the
 overlap of the peaks for all the samples.
 
 ```{r}
-library(DiffBind)
+
 setwd(system.file("extra", package="DiffBind"))
 ta <- dba(sampleSheet="tamoxifen.csv")
 ta

@@ -99,7 +99,7 @@ and this will vary from person to person.
 # installing the latest versions of R, Rstudio 
 # and Bioconductor
 
-need = setdiff(need,c(git,"GOenrichment"))
+need = setdiff(need,git)
 ```
 Before you tell `BiocManager` to install these packages, check to make sure that there aren't any typos and that the formatting looks
 correct.
@@ -119,7 +119,7 @@ git = paste0("genomicsclass/",git)
 devtools::install_github(git)
 
 ```
-```
+
 One final package that needs installation for the course is the following:
 
 ```{r, eval = FALSE}

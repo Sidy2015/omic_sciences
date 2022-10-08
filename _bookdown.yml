@@ -1,6 +1,6 @@
 book_filename: omic_sciences
 new_session: yes
-rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconducter.Rmd",
+rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconductor.Rmd",
 "03-dplyr-tutorial.Rmd","03-ggplot.Rmd","04-linear-algebra.Rmd","05-Inference.Rmd",
 "06-linear-modeling-genomics.Rmd","07-Multiple_testing_procedures.Rmd",
  "08-Exploratory-Data-Analysis.Rmd", "09-distance-and-dimension-reduction.Rmd",

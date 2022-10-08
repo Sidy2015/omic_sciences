@@ -11,7 +11,7 @@ suppressWarnings({
 suppressMessages({
 suppressPackageStartupMessages({
 
-#library(AnnotationDbi)
+library(AnnotationHub)
 library(BSgenome.Hsapiens.NCBI.GRCh38)
 library(BSgenome.Hsapiens.UCSC.hg19)
 library(GO.db)
@@ -24,7 +24,7 @@ library(IRanges)
 })
 ```
 
-In this document we will review Bioconductor's facilities for handling and annotating genomic sequence. The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/09-annotation.Rmd). We'll look at reference genomic sequence, transcripts and genes, and conclude with gene pathways. Keep in mind that our ultimate aim is to use annotation information to help produce reliable interpretations of genomic experiments. A basic objective of Bioconductor is to make it easy to incorporate information on genome structure and function into statistical analysis procedures.
+In this document we will review Bioconductor's facilities for handling and annotating genomic sequence. The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/12-annotation.Rmd). We'll look at reference genomic sequence, transcripts and genes, and conclude with gene pathways. Keep in mind that our ultimate aim is to use annotation information to help produce reliable interpretations of genomic experiments. A basic objective of Bioconductor is to make it easy to incorporate information on genome structure and function into statistical analysis procedures.
 
 <a name="threelev"></a>
 
@@ -57,7 +57,7 @@ The regular expression "\^org\\.") insists that the package names starts with or
 
 In addition to these packages, many org resources are available from AnnotationHub, described below
 
-```{r}
+```{r eval=FALSE, cache=TRUE}
 library(AnnotationHub)
 query(AnnotationHub(), "^org\\.")
 ```
@@ -88,7 +88,7 @@ Two main functions are `select()` and `mapIds()`. `mapIds()` is more focused. It
 mapIds(org.Hs.eg.db, keys = eid, column = "SYMBOL", keytype = "ENTREZID")
 
 # I like to spell these out:
-#mapIds(Orgdb, keys = selectedrecords, column = #retrievetheserecords,keytype=keytypeofseiectedrecord) 
+# mapIds(Orgdb, keys = selectedrecords, column = # retrievetheserecords,keytype = keytypeofselectedrecord) 
 ```
 
 **select** `select()` is more general, returning a data.frame of keys, plus one or more columns. If a key maps to multiple values, then multiple rows are returned.
@@ -98,7 +98,7 @@ which is the same as map, with just SYMBOL. if you add GO, then SYMBOL & GO anno
 ```{r}
 map <- select(org.Hs.eg.db, eid, c("SYMBOL", "GO"), "ENTREZID")
 
-#anno <- `select`(orgdb, #keys=selectheserecords,columns=c(retrievetheserecords), #keytype=keytypeofseiectedrecord) 
+# anno <- `select`(orgdb, #keys = selectheserecords,columns = c(retrievetheserecords), #keytype = keytypeofseiectedrecord) 
 ```
 
 ## GO.db
@@ -122,7 +122,7 @@ BiocManager::available("^TxDb") %>%
 
 and to download from AnnotationHub
 
-```{r}
+```{r eval=FALSE}
 query(AnnotationHub(), "^TxDb\\.")
 ```
 
@@ -171,14 +171,14 @@ and of course more scientifically relevant questions.
 
 The r Bioconductor package `AnnotationHub` package can be used to obtain `GRanges` or other suitably designed containers for institutionally curated annotation. `AnnotationHub` provides a resource of annotations that are available without requiring an annotation package.
 
-```{r annotationhub}
+```{r annotationhub, eval=FALSE}
 library(AnnotationHub)
 ah <- AnnotationHub()
 ```
 
 One example of such annotations are org-style data resources for less-model organisms. Discover available resources using the flexible `query` command.
 
-```{r query}
+```{r eval=FALSE}
 query(ah, "^org\\.")
 ```
 
@@ -186,14 +186,14 @@ Find out more about a particular resource using `[` to select just that resource
 
 Find out more about a particular resource using `[` to select just that resource, or use `mcols` on a subset of resources. identifier, e.g.
 
-```{r AH102598}
+```{r AH102598, eval=FALSE}
 
 ah["AH102598"]
 ```
 
 Retrieve and use a resource by using `[[` with the corresponding
 
-```{r retrieve}
+```{r retrieve,eval=FALSE}
 org <- ah[["AH102598"]]
 
 org
@@ -201,7 +201,7 @@ org
 
 Determine the central key, and the columns that can be mapped between
 
-```{r}
+```{r, eval=FALSE}
 chooseCentralOrgPkgSymbol(org)
 
 columns(org)
@@ -209,7 +209,7 @@ columns(org)
 
 Here are some Entrez identifiers, and their corresponding symbols for Anopheles gambiae, either allowing for 1:many maps (select()) or enforcing 1:1 maps. We use `AnnotationDbi::select()` to disambiguate between the `select()` generic defined in `AnnotationDbi` and the `select()` generic defined in `dplyr`: theses methods have incompatible signatures and 'contracts', and so must be invoked in a way that resolves our intention explicitly.
 
-```{r}
+```{r eval=FALSE}
 library(dplyr)    # for `%>%`
 eid <- head(keys(org))
 
@@ -226,13 +226,13 @@ Bioconductor represents gene models using 'transcript' databases. These are avai
 
 AnnotationHub provides an easy way to work with gene models published by Ensembl. Let's see what Ensembl's Release-94 has in terms of data for pufferfish, Takifugu rubripes.
 
-```{r}
+```{r eval=FALSE}
 query(ah, c("Takifugu", "release-94"))
 ```
 
 We see that there is a GTF file descrbing gene models, as well as various DNA sequences. Let's retrieve the GTF and top-level DNA sequence files. The GTF file is imported as a `GRanges` instance, the DNA sequence as a twobit file.
 
-```{r}
+```{r eval=FALSE}
 gtf <- ah[["AH64858"]]
 
 dna <- ah[["AH66116"]]
@@ -244,21 +244,21 @@ head(seqlevels(dna))
 
 Let's identify the 25 longest DNA sequences, and keep just the annotations on these scaffolds.
 
-```{r}
+```{r eval=FALSE}
 keep <- names(tail(sort(seqlengths(dna)), 25))
 gtf_subset <- gtf[seqnames(gtf) %in% keep]
 ```
 
 It is trivial to make a `TxDb` instance of this subset (or of the entire gtf)
 
-```{r}
+```{r eval=FALSE}
 library(GenomicFeatures)         # for makeTxDbFromGRanges
 txdb <- makeTxDbFromGRanges(gtf_subset)
 ```
 
 and to use that in conjunction with the DNA sequences, e.g., to find exon sequences of all annotated genes.
 
-```{r}
+```{r eval=FALSE}
 library(Rsamtools)               # for getSeq,FaFile-method
 exons <- exons(txdb)
 length(exons)
@@ -272,13 +272,13 @@ Some difficulties arise when working with this partly assembled genome that requ
 
 Finally, there are a number of experimental data objects available through `AnnotationHub`. For example, related to the HepG2 cell line.
 
-```{r doqueah}
+```{r doqueah, eval=FALSE}
 query(ah, "HepG2")
 ```
 
 The `query` method can take a vector of filtering strings. To limit response to annotation resources addressing the histone H4K5, simply add that tag:
 
-```{r doonek}
+```{r doonek, eval=FALSE}
 query(ah, c("HepG2", "H4K5"))
 ```
 

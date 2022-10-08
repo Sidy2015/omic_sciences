@@ -13,6 +13,7 @@ bookdown
 BSgenome.Hsapiens.NCBI.GRCh38
 BSgenome.Hsapiens.UCSC.hg19
 clusterProfiler
+dagdata
 DBI
 DESeq2
 devtools
@@ -33,6 +34,7 @@ GenomicAlignments
 GenomicFeatures
 GenomicRanges
 GEOquery
+ggforce
 ggnewscale
 ggplot2
 ggupset
@@ -48,6 +50,8 @@ GSEABase
 gwascat
 Homo.sapiens
 IRanges
+irlba
+kableExtra
 KEGGgraph
 KEGGREST
 knitr
@@ -57,13 +61,17 @@ Mus.musculus
 org.Hs.eg.db
 org.Sc.sgd.db
 pamr
+pasilla
 pasillaBamSubset
+patchwork
 ph525x
 pheatmap
 png
+pwr
 qvalue
 rafalib
 RColorBrewer
+readr
 rlang
 rmarkdown
 rols
@@ -77,6 +85,7 @@ SummarizedExperiment
 sva
 swirl
 tidyr
+tidyverse
 tissuesGeneExpression
 topGO
 TxDb.Athaliana.BioMart.plantsmart22
