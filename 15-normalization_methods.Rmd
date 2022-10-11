@@ -1,12 +1,4 @@
----
-title: "normalizing gene counts"
-output: html_document
-date: "2022-09-28"
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+# Normalization methods
 
 ## Gene count normalization theory
 The ultimate goal of most RNA-seq experiments is to accurately quantify the different transcripts present in a biological sample of interest. Yet, due to technical and biological causes, RNA-seq is prone to several biases that can affect sample / condition comparisons and therefore result interpretation.
