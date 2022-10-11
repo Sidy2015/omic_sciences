@@ -157,8 +157,10 @@ keep <- rowSums(counts(dds)) >= 10
 Alternatively, a popular filter is to ensure at least X samples with a count of 10 or more, where X can be chosen as the sample size of the smallest group of samples (here it would be 3):
 ```{r}
 X = 3
+dim(dds)
 keep <- rowSums(counts(dds) >= 10) >= X
 dds <- dds[keep,]
+dim(dds)
 ```
 This is a little more stringent, so I favor this one over the other one.
 
@@ -197,7 +199,7 @@ dds <- DESeq(dds)
 res <- results(dds)
 res
 ```
-
+It's always better to specify name in the results...
 
 Note that we could have specified the coefficient or contrast we want to build a results table for, using either of the following equivalent commands:
 ```{r}
@@ -229,7 +231,10 @@ Shrinkage estimation is discussed more in a later section.
 p-values and adjusted p-values
 We can order our results table by the smallest p value:
 
+```{r}
 resOrdered <- res[order(res$pvalue),]
+```
+
 We can summarize some basic tallies using the summary function.
 
 ```{r}
@@ -241,16 +246,6 @@ How many adjusted p-values were less than 0.1?
 
 ```{r}
 sum(res$padj < 0.1, na.rm=TRUE)
-```
-
-
-The results function contains a number of arguments to customize the results table which is generated. You can read about these arguments by looking up ?results. Note that the results function automatically performs independent filtering based on the mean of normalized counts for each gene, optimizing the number of genes which will have an adjusted p value below a given FDR cutoff, alpha. Independent filtering is further discussed below. By default the argument alpha is set to 0.1. If the adjusted p value cutoff will be a value other than 0.1, alpha should be set to that value:
-
-```{r}
-res05 <- results(dds, alpha=0.05)
-summary(res05)
-
-sum(res05$padj < 0.05, na.rm=TRUE)
 ```
 
 
@@ -331,6 +326,11 @@ For customized plotting, an argument returnData specifies that the function shou
 ```{r}
 d <- plotCounts(dds, gene=which.min(res$padj), intgroup="condition", 
                 returnData=TRUE)
+
+```
+This returns the raw counts for the data point in question.
+
+```{r}
 library("ggplot2")
 ggplot(d, aes(x=condition, y=count,col=condition)) + 
   geom_point(position=position_jitter(w=0.1,h=0)) + 
@@ -382,7 +382,14 @@ Again, we access the results using the results function.
 ```{r}
 
 resultsNames(ddsMF)
-resMF <- results(ddsMF)
+
+```
+
+What results do we want?
+```{r}
+
+resultsNames(ddsMF)
+resMF <- results(ddsMF, name = "condition_treated_vs_untreated")
 head(resMF)
 ```
 
@@ -394,6 +401,7 @@ In any case, the contrast argument of the function results takes a character vec
 resMFType <- results(ddsMF,
                      contrast=c("type", "single", "paired"))
 head(resMFType)
+table(abs(resMFType$log2FoldChange)>2&resMFType$padj < 0.05)
 ```
 
 
@@ -632,16 +640,43 @@ pheatmap(sampleDistMatrix,
 Related to the distance matrix is the PCA plot, which shows the samples in the 2D plane spanned by their first two principal components. This type of plot is useful for visualizing the overall effect of experimental covariates and batch effects.
 
 ```{r}
+plotPCA(vsd, intgroup=c("condition"))
+```
+
+```{r}
 plotPCA(vsd, intgroup=c("condition", "type"))
 ```
 
+```{r}
+plotPCA(vsd, intgroup=c( "type"))
+```
 
 
 It is also possible to customize the PCA plot using the ggplot function.
 
 ```{r}
 pcaData <- plotPCA(vsd, intgroup=c("condition", "type"), returnData=TRUE)
+
+
+```
+
+Let's look at the data returned by plotPCA:
+
+```{r}
+pcaData
+```
+
+```{r}
+str(pcaData)
+attributes(pcaData)
+```
+
+```{r}
 percentVar <- round(100 * attr(pcaData, "percentVar"))
+```
+
+
+```{r}
 ggplot(pcaData, aes(PC1, PC2, color=condition, shape=type)) +
   geom_point(size=3) +
   xlab(paste0("PC1: ",percentVar[1],"% variance")) +

@@ -5,7 +5,7 @@ library(knitr)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
 
 ```
-The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English and we are therefore going to introduce two simple functions: one is used to subset and the other to select columns. The Rmd file for this section is available [here](https://github.com/gurinina/omic_sciences/blob/main/03-dplyr-tutorial.Rmd).
+The learning curve for R syntax is slow. One of the more difficult aspects that requires some getting used to is subsetting data tables. The `dplyr` package brings these tasks closer to English. The Rmd file for this section is available [here](https://github.com/gurinina/omic_sciences/blob/main/03-dplyr-tutorial.Rmd).
 
 ## What is dplyr?
 
@@ -76,16 +76,18 @@ dplyr imports this operator from another package (magrittr).This operator allows
 chowVals <- filter(dat, Diet=="chow") %>% select(Bodyweight)
 ```
 
-Now in this case, we will pipe the dat data frame to the function that will filter one column, then select one column and then pipe the new data frame to the function `head()`, which will return the head of the new data frame. 
+Or even more simply:
+```{r}
+chowVals <- dat %>% filter(Diet=="chow") %>% select(Bodyweight)
+```
 
+Now in this case, we will pipe the dat data frame to the function that will filter one column, then select one column and then pipe the new data frame to the function `head()`, which will return the head of the new data frame. 
 ```{r}
 
 dat %>% filter(Diet=="chow") %>% select(Bodyweight) %>% head
 ```
 
 You will soon see how useful the pipe operator is when we start to combine many functions.  
-
-
 ```{r}
 chowVals <- dat %>% filter(Diet=="chow") %>% select(Bodyweight)
 ```
@@ -102,6 +104,7 @@ For pedagogical reasons, we will often want the final result to be a simple `num
 
 ```{r}
 chowVals <- filter(dat, Diet=="chow") %>% select(Bodyweight) %>% unlist
+chowVals
 class( chowVals )
 ```
 
@@ -131,7 +134,7 @@ column name | Description
 name | common name
 genus | taxonomic rank
 vore | carnivore, omnivore or herbivore?
-order | taxonomic rank
+order | taxonomic order
 conservation | the conservation status of the mammal
 sleep\_total | total amount of sleep, in hours
 sleep\_rem | rem sleep, in hours
@@ -207,12 +210,42 @@ Filter the rows for mammals that sleep a total of more than 16 hours *and* have 
 msleep %>% filter(sleep_total >= 16,bodywt >= 1)%>% select(name,sleep_total,bodywt) %>% head
 ```
 
+You can also filter with AND/OR...
+
+
+```{r}
+msleep %>% filter(sleep_total >= 16 | bodywt >= 1)%>% select(name,sleep_total,bodywt) %>% head
+```
+
 Filter the rows for mammals in the Perissodactyla and Primates taxonomic order:
 
 ```{r}
 msleep %>% filter(order %in% c("Perissodactyla", "Primates"))%>% select(name,genus,order) %>% head
 
 ```
+
+
+**Between, And, Not equal**
+
+Slightly more complicated
+
+Filter the animals that sleep between 2 and 19 hours, and they are NOT domesticated
+```{r}
+msleep_2_19_notdom <- msleep %>%
+  filter(between(sleep_total, 2, 19) & conservation != "domesticated") 
+  
+```
+
+
+Check if your filter is filtering NA for the variable conservation. If not, filter them.
+
+```{r}
+msleep_2_19_notdom_NA <- msleep %>%
+  filter(between(sleep_total, 2, 19) & conservation != "domesticated" | is.na(conservation)) 
+  
+```
+
+Can anyone think of another way of accomplishing the same thing as between?
 
 You can use the boolean operators (e.g. >, <, >=, <=, !=, %in%) to create the logical tests. 
 
@@ -233,6 +266,15 @@ msleep %>%
     arrange(order, sleep_total) %>% 
     head
 ```
+
+Same as above, except this time arrange by sleep_total first:
+```{r}
+msleep %>% 
+    select(name, order, sleep_total) %>%
+    arrange(sleep_total,order) %>% 
+    head
+```
+
 
 Same as above, except here we filter the rows for mammals that sleep for 16 or more hours, instead of showing the head of the final data frame:
 
@@ -282,7 +324,11 @@ msleep %>%
     summarise(avg_sleep = mean(sleep_total))
 ```
 
+Summarise is different because it doesn't alter your data.frame.
+
 There are many other summary statistics you could consider such `sd()`, `min()`, `max()`, `median()`, `sum()`, `n()` (returns the length of vector), `first()` (returns first value in vector), `last()` (returns last value in vector) and `n_distinct()` (number of distinct values in vector). 
+
+
 
 ```{r}
 msleep %>% 
@@ -292,6 +338,14 @@ msleep %>%
               total = n())
 ```
 
+For the summaries, you also need to be wary of the NAs, here you can use na.rm = TRUE. e.g. if instead of sleep_total you were looking at sleep_rem, which has NA values...
+```{r}
+msleep %>% 
+    summarise(avg_sleep = mean(sleep_rem), 
+              min_sleep = min(sleep_rem),
+              max_sleep = max(sleep_rem),
+              total = n())
+```
     
 ## Group operations using `group_by()`
 
@@ -300,13 +354,21 @@ The `group_by()` verb is an important function in dplyr. As we mentioned before 
 Let's do that: split the msleep data frame by the taxonomic order, then ask for the same summary statistics as above. We expect a set of summary statistics for each taxonomic order. 
 
 ```{r}
-msleep %>% 
+m = msleep %>% 
     group_by(order) %>%
     summarise(avg_sleep = mean(sleep_total), 
               min_sleep = min(sleep_total), 
               max_sleep = max(sleep_total),
               total = n())
 ```
+
+
+What are the dimensions of m? Why? What does the total column refer to?
+
+```{r}
+m
+```
+
 Note that if you wanted to keep all of the data intact, you would simply use mutate and add the `ungroup` function at the end:
 ```{r}
 msleep %>% 
@@ -316,3 +378,10 @@ msleep %>%
               max_sleep = max(sleep_total),
               total = n()) %>% ungroup
 ```
+
+Finally, there is glimpse for a quick summary:
+
+```{r}
+msleep %>% glimpse
+```
+

@@ -1,12 +1,117 @@
-# Highthroughput Data
+# Linear modeling genomics
 
-```{r, echo=FALSE}
-library(knitr)
-knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
+
+
+
+<a name="introduction"></a>
+
+
+## Inference: the process of reaching a conclusion from known facts. 
+
+```{r,results=FALSE,echo=FALSE}
+set.seed(1) #so that we get same results
+```
+
+The data introduced here is from a paper entitled The High-Fat Diet–Fed Mouse: A Model for Studying Mechanisms and Treatment of Impaired Glucose Tolerance and Type 2 Diabetes where they try and show that the mouse is a good model for studying diabetes and development of new treatments. the statistical concepts necessary to understand p-values and confidence intervals. These terms are ubiquitous in the life science literature. We'll use [this paper](https://doi.org/10.2337/diabetes.53.suppl_3.s215) as an example of . 
+
+Note that the abstract has this statement: 
+
+> "Body weight was higher in mice fed the high-fat diet already after the first week, due to higher dietary intake in combination with lower metabolic efficiency." 
+
+To support this claim they provide the following in the results section:
+
+> "Already during the first week after introduction of high-fat diet, body weight increased significantly more in the high-fat diet-fed mice ($+$ 1.6 $\pm$ 0.1 g) than in the normal diet-fed mice ($+$ 0.2 $\pm$ 0.1 g; P < 0.001)."
+
+What does P < 0.001 mean? What are the $\pm$ included?
+We will learn what this means and learn to compute these values in
+R. The first step is to understand random variables. To do
+this, we will use data from a mouse database (provided by Karen
+Svenson via Gary Churchill and Dan Gatti and partially funded by P50
+GM070683). We will import the data into R and explain random variables
+and null distributions using R programming. 
+
+If you already downloaded the `femaleMiceWeights` file into your working directory, you can read it into R with just one line:
+
+```{r echo=FALSE, results="hide"}
+library(downloader) ##use install.packages to install
+dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/"
+filename <- "femaleMiceWeights.csv"
+url <- paste0(dir, filename)
+if (!file.exists(filename)) download(url, destfile = filename)
+```
+
+```{r}
+dat <- read.csv("femaleMiceWeights.csv")
+```
+
+Remember that a quick way to read the data, without downloading it is by using the url:
+
+```{r,eval=FALSE}
+dir <- "https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/"
+filename <- "femaleMiceWeights.csv"
+url <- paste0(dir, filename)
+dat <- read.csv(url)
+```
+
+** Our first look at data **
+
+We are interested in determining if following a given diet makes mice
+heavier after several weeks. This data was produced by ordering 24
+mice from The Jackson Lab and randomly assigning either chow or high
+fat (hf) diet. After several weeks, the scientists weighed each mouse
+and obtained this data (`head` just shows us the first 6 rows):
+
+```{r}
+head(dat) 
+``` 
+
+In RStudio, you can view the entire dataset with:
+
+```{r,eval=FALSE}
+View(dat)
+```
+
+So are the hf mice heavier? Mouse 24 at 20.73 grams is one of the
+lightest mice, while Mouse 21 at 34.02 grams is one of the heaviest. Both are on
+the hf diet. Just from looking at the data, we see there is
+*variability*. Claims such as the one above usually refer to the
+averages. So let's look at the average of each group: 
+
+```{r,message=FALSE}
+library(dplyr)
+control <- filter(dat,Diet == "chow") %>% select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet == "hf") %>% select(Bodyweight) %>% unlist
+print( mean(treatment) )
+print( mean(control) )
+obsdiff <- mean(treatment) - mean(control)
+print(obsdiff)
+```
+
+So the hf diet mice are about 10% heavier. Are we done? Why do we need p-values and confidence intervals? The reason is that these averages are random variables. They can take many values. 
+
+If we repeat the experiment, we obtain 24 new mice from The Jackson Laboratory and, after randomly assigning them to each diet, we get a different mean. Every time we repeat this experiment, we get a different value. We call this type of quantity a *random variable*. 
+
+<a name="random_variable"></a>
+## T.tests
+** We can use a t.test to ask if there is a difference between the treatment and the control **
+```{r}
+t.test(treatment, control)
+```
+
+To see just the p-value, we can use the `$` extractor:
+
+```{r}
+result <- t.test(treatment,control)
+result$p.value
+```
+## Highthroughput Data
+
 ## The data 
 
-We want to move to inference when in comes to high-throughput data. High-throughput technologies have changed basic biology and the biomedical sciences from data poor disciplines to data intensive ones. A specific example comes from research fields interested in understanding gene expression. The Rmd file for this section is
+We want to move to inference when in comes to high-throughput data. Instead of doing t-tests for indivual datasets, we'll be doing t.tests for every gene in the genome. High-throughput technologies have changed basic biology and the biomedical sciences from data poor disciplines to data intensive ones. A specific example comes from research fields interested in understanding gene expression. The Rmd file for this section is
 available [here](https://github.com/gurinina/omic_sciences/blob/main/05-linear-modeling-genomics.Rmd). Gene expression is the process in which DNA, the blueprint for life, is copied into RNA, the templates for the synthesis of proteins, the building blocks for life. In the 1990s, the analysis of gene expression data amounted to spotting black dots on a piece of paper or extracting a few numbers from standard curves. With high-throughput technologies, such as microarrays, this suddenly changed to sifting through tens of thousands of numbers. More recently, RNA sequencing has further increased data complexity. Biologists went from using their eyes or simple summaries to categorize results, to having thousands (and now millions) of measurements per sample to analyze. In this chapter, we will focus on statistical inference in the context of high-throughput measurements. Specifically, we focus on the problem of detecting differences in groups using statistical tests and quantifying uncertainty in a meaningful way. We also introduce exploratory data analysis techniques that should be used in conjunction with inference when analyzing high-throughput data. 
 
 Since there is a vast number of available public datasets, we use several gene expression examples. Nonetheless, the statistical techniques you will learn have also proven useful in other fields that make use of high-throughput technologies. Technologies such as microarrays, next generation sequencing, fMRI, and mass spectrometry all produce data to answer questions for which what we learn here will be indispensable. 
@@ -56,6 +161,10 @@ One of the columns, filenames, permits us to connect the rows of this table to t
 match(sampleInfo$filename,colnames(geneExpression))
 ```
 
+```{r}
+table(sampleInfo$filename==colnames(geneExpression))
+
+```
 
 Finally, we have a table describing the features:
 
@@ -71,7 +180,7 @@ head(match(geneAnnotation$PROBEID,rownames(geneExpression)))
 ```
 The table also includes biological information about the features, namely chromosome location and the gene "name" used by biologists.
 
-888888888888888888888888888888888888888888888888888888
+8888888888888888888888888888888888888
 
 ## The Design Matrix
 
@@ -269,7 +378,9 @@ or by providing the levels explicitly in the `factor` call:
 group <- factor(group, levels = c("1","2"))
 model.matrix(~ group)
 ```
-888888888888888888888888888888888888888888888888888888
+
+maybe more clear using treated vs untreated...
+8888888888888888888888888888888888888
 
 ## Linear Regression in practice
 Linear regression is used to predict the value of an outcome variable Y based on one or more input predictor variables X. The aim is to establish a linear relationship (a mathematical formula) between the predictor variable(s) and the response variable, so that, we can use this formula to estimate the value of the response Y, when only the predictors (Xs) values are known.
@@ -282,148 +393,9 @@ $$ \mathbf{Y} = {\beta1} + {\beta2}\mathbf{X} + {\epsilon} $$
 
 where, β1 is the intercept and β2 is the slope. Collectively, they are called regression coefficients. ϵ is the error term, the part of Y the regression model is unable to explain.
 
-Example Problem
-For this analysis, we will use the cars dataset that comes with R by default. cars is a standard built-in dataset, that makes it convenient to demonstrate linear regression in a simple and easy to understand fashion. You can access this dataset simply by typing in cars in your R console. You will find that it consists of 50 observations(rows) and 2 variables (columns) – dist and speed. Lets print out the first six observations here..
 
-```{r}
-head(cars)  
-```
+8888888888888888888888888888888888888
 
-Before we begin building the regression model, it is a good practice to analyze and understand the variables. The graphical analysis and correlation study below will help with this.
-
-Graphical Analysis
-The aim of this exercise is to build a simple regression model that we can use to predict Distance (dist) by establishing a statistically significant linear relationship with Speed (speed). But before jumping in to the syntax, lets try to understand these variables graphically. Typically, for each of the independent variables (predictors), the following plots are drawn to visualize the following behavior:
-
-Scatter plot: Visualize the linear relationship between the predictor and response
-
-Box plot: To spot any outlier observations in the variable. Having outliers in your predictor can drastically affect the predictions as they can easily affect the direction/slope of the line of best fit.
-Density plot: To see the distribution of the predictor variable. Ideally, a close to normal distribution (a bell shaped curve), without being skewed to the left or right is preferred. Let us see how to make each one of them.
-
-Scatter Plot
-Scatter plots can help visualize any linear relationships between the dependent (response) variable and independent (predictor) variables. Ideally, if you are having multiple predictor variables, a scatter plot is drawn for each one of them against the response, along with the line of best as seen below.
-
-```{r}
-scatter.smooth(x = cars$speed, y = cars$dist, main = "Dist ~ Speed")  # scatterplot
-```
-
-The scatter plot along with the smoothing line above suggests a linearly increasing relationship between the ‘dist’ and ‘speed’ variables. This is a good thing, because, one of the underlying assumptions in linear regression is that the relationship between the response and predictor variables is linear and additive.
-
-BoxPlot – Check for outliers
-Generally, any datapoint that lies outside the 1.5 * interquartile-range (1.5 * IQR) is considered an outlier, where, IQR is calculated as the distance between the 25th percentile and 75th percentile values for that variable.
-
-```{r}
-par(mfrow = c(1, 2))  # divide graph area in 2 columns
-boxplot(cars$speed, main = "Speed", sub = paste("Outlier rows: ", boxplot.stats(cars$speed)$out))  # box plot for 'speed'
-boxplot(cars$dist, main = "Distance", sub = paste("Outlier rows: ", boxplot.stats(cars$dist)$out))  # box plot for 'distance'
-```
-Check if the response variable is close to normality
-Normal Q-Q plots take your sample data, sort it in ascending order, and then plot them versus quantiles calculated from a theoretical normal distribution. The number of quantiles is selected to match the size of your sample data. In R this can be done using the `qnorm` and `qline` functions. `qnorm` plots your data agaist the theoretical normal distribution, and `qline` plots the normal distribution against itself for comparison.  
-
-```{r}
-library(rafalib)
-mypar(1,2) # divide graph area in 2 columns
-par(pch = 19)  
-qqnorm(cars$speed, ylab = "speed quantiles",xlab = "normal quantiles",
-       main = "Speed Q-Q Plot", col = "dodgerblue")
-qqline(cars$speed)
-qqnorm(cars$dist, ylab = "distance quantiles",xlab = "normal quantiles",
-       main = "Distance Q-Q Plot",col = "dodgerblue")
-qqline(cars$dist)
-
-```
-
-Correlation
-Correlation is a statistical measure that suggests the level of linear dependence between two variables, that occur in pair – just like what we have here in speed and dist. Correlation can take values between -1 to +1. If we observe for every instance where speed increases, the distance also increases along with it, then there is a high positive correlation between them and therefore the correlation between them will be closer to 1. The opposite is true for an inverse relationship, in which case, the correlation between the variables will be close to -1.
-
-A value closer to 0 suggests a weak relationship between the variables. A low correlation (-0.2 < x < 0.2) probably suggests that much of variation of the response variable (Y) is unexplained by the predictor (X), in which case, we should probably look for better explanatory variables.
-
-```{r}
-cor(cars$speed, cars$dist)  # calculate correlation between speed and distance 
-```
-
-Build Linear Model
-Now that we have seen the linear relationship pictorially in the scatter plot and by computing the correlation, lets see the syntax for building the linear model. The function used for building linear models is lm(). The lm() function takes in two main arguments, namely: 1. Formula 2. Data. The data is typically a data.frame and the formula is a object of class formula. But the most common convention is to write out the formula directly in place of the argument as written below.
-
-```{r}
-linearMod <- lm(dist ~ speed, data = cars)  # build linear regression model on full data
-print(linearMod)
-```
-
-Now that we have built the linear model, we also have established the relationship between the predictor and response in the form of a mathematical formula for Distance (dist) as a function for speed. For the above output, you can notice the ‘Coefficients’ part having two components: Intercept: -17.579, speed: 3.932 These are also called the beta coefficients. In other words,
-
-$$ dist = Intercept + ({\beta} * speed) => dist = −17.579 + 3.932∗speed $$
-
-
-
-Linear Regression Diagnostics
-
-Now the linear model is built and we have a formula that we can use to predict the dist value if a corresponding speed is known. Is this enough to actually use this model? NO! Before using a regression model, you have to ensure that it is statistically significant. How do you ensure this? Lets begin by printing the summary statistics for linearMod.
-
-```{r}
-summary(linearMod)  # model summary
-```
-
-The p Value: Checking for statistical significance
-The summary statistics above tells us a number of things. One of them is the model p-Value (bottom last line) and the p-Value of individual predictor variables (extreme right column under ‘Coefficients’). The p-Values are very important because, We can consider a linear model to be statistically significant only when both these p-Values are less that the pre-determined statistical significance level, which is ideally 0.05. This is visually interpreted by the significance stars at the end of the row. The more the stars beside the variable’s p-Value, the more significant the variable.
-
-Null and alternate hypothesis
-
-When there is a p-value, there is a hull and alternative hypothesis associated with it. In Linear Regression, the Null Hypothesis is that the coefficients associated with the variables is equal to zero. The alternate hypothesis is that the coefficients are not equal to zero (i.e. there exists a relationship between the independent variable in question and the dependent variable).
-
-t-value
-We can interpret the t-value something like this. A larger t-value indicates that it is less likely that the coefficient is not equal to zero purely by chance. So, higher the t-value, the better.
-
-Pr(>|t|) or p-value is the probability that you get a t-value as high or higher than the observed value when the Null Hypothesis (the β coefficient is equal to zero or that there is no relationship) is true. So if the Pr(>|t|) is low, the coefficients are significant (significantly different from zero). If the Pr(>|t|) is high, the coefficients are not significant.
-
-
-What this means to us? when p Value is less than significance level (< 0.05), we can safely reject the null hypothesis that the co-efficient β ${\beta}$ of the predictor is zero. In our case, linearMod, both these p-Values are well below the 0.05 threshold, so we can conclude our model is indeed statistically significant.
-
-It is absolutely important for the model to be statistically significant before we can go ahead and use it to predict (or estimate) the dependent variable, otherwise, the confidence in predicted values from that model reduces and may be construed as an event of chance.
-
-How to calculate the t Statistic and p-Values?
-
-When the model co-efficients and standard error are known, the formula for calculating t Statistic and p-Value is as follows:
-
-$$t−Statistic = \frac{{\beta}−coefficient}{Std.Error} $$
-
-
-```{r}
-modelSummary <- summary(linearMod)  # capture model summary as an object
-modelCoeffs <- modelSummary$coefficients  # model coefficients
-beta.estimate <- modelCoeffs["speed", "Estimate"]  # get beta estimate for speed
-std.error <- modelCoeffs["speed", "Std. Error"]  # get std.error for speed
-t_value <- beta.estimate/std.error  # calc t statistic
-p_value <- 2*pt(-abs(t_value), df = nrow(cars)-ncol(cars))  # calc p Value
-f_statistic <- linearMod$fstatistic[1]  # fstatistic
-f <- summary(linearMod)$fstatistic  # parameters for model p-value calc
-model_p <- pf(f[1], f[2], f[3], lower.tail = FALSE)
-```
-
-R-Squared 
-The actual information in a data is the total variation it contains, remember?. What R-Squared tells us is the proportion of variation in the dependent (response) variable that has been explained by this model. In our example, 
-the $R^2$ we get is 0.6510794. Or roughly 65% of the variance found in the response variable (dist) can be explained by the predictor variable (speed). Pretty good, so speed is a good predictor of the distance required for a car to stop. A reminder of where $R^2$ comes from:
-
-
-$$ R^2 = 1−\frac{SSE}{SST}$$
-where SSE is the sum of squared errors given by:
-$$SSE= \sum_{i = 1}^{n}{(y_i - \hat{y_i})^2}$$
-and SST is the sum of squared total:
-$$SST = \sum_{i = 1}^{n}{(y_i - \bar{y_i})^2}$$
-
-Here, $\hat{y_i}$ is the fitted value for observation i and $\bar{y_i}$ is the mean of Y.
-
-Finally, we can plot the results:
-
-```{r}
-par(pch = 19)
-plot(cars$speed,cars$dist,ylab = "distance",xlab = "speed",
-       main = "Stopping Distance as a Function of Speed")
-points(cars$speed,linearMod$fitted.values,col = "dodgerblue")
-lines(cars$speed,linearMod$fitted.values,col = "dodgerblue")
-```
-
-
-888888888888888888888888888888888888888888888888888888
 ## The mouse diet example revisited
 
 We will demonstrate how to analyze the high fat diet data using linear models instead of directly applying a t-test. We will demonstrate how ultimately these two approaches are equivalent. 
@@ -547,7 +519,7 @@ summary(fit)$coefficients[2,3]
 ttest$statistic
 ```
 
-888888888888888888888888888888888888888888888888888888
+8888888888888888888888888888888888888
 
 ## Multiple comparisons 
 
@@ -563,7 +535,7 @@ In this section we will cover inference in the context of genome-scale experimen
 - there may be unmeasured or unreported sources of biological variation (such as time of day)
 - many features are inherently interrelated, so the tests are not independent
 
-888888888888888888888888888888888888888888888888888888
+8888888888888888888888888888888888888
 
 
 ## Inference in Practice
