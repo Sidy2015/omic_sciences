@@ -1,5 +1,12 @@
 getting started 45'
 bioconductor
 bioconductor 2nd half: 16:12
-dplyr: 22:33
+dplyr: to sleep = 9:00
+to group_by = 19:17
+dplyr total = 31:48
 
+linear algebrea = 34:15
+linear modeling up to mouse diet example 22:00
+
+RNA Seq Part  I = 51:22
+RNA Seq Part II = 

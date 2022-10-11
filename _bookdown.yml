@@ -1,11 +1,13 @@
 book_filename: omic_sciences
 new_session: yes
-rmd_files: ["index.Rmd", "01-getting-started.Rmd","02-bioconductor.Rmd",
-"03-dplyr-tutorial.Rmd","03-ggplot.Rmd","04-linear-algebra.Rmd","05-Inference.Rmd",
-"06-linear-modeling-genomics.Rmd","07-Multiple_testing_procedures.Rmd",
- "08-Exploratory-Data-Analysis.Rmd", "09-distance-and-dimension-reduction.Rmd",
-"10-confounding.Rmd","11-NGSpipeline.Rmd","12-annotation.Rmd","12-normalization_methods.Rmd",
-"13-RNAseq-DESeq_PartI.Rmd","13-RNAseq-DESeq2.Rmd","14-RNAseq-limma.Rmd","15-Chip-chip.Rmd",
-"16-GOenrichment.Rmd"]
+rmd_files: ["index.Rmd","01-intro.Rmd", "02-getting-started.Rmd","03-bioconductor.Rmd",
+"04-dplyr-tutorial.Rmd","05-ggplot.Rmd","06-linear-algebra.Rmd",
+"07-linear-modeling-genomics.Rmd","08-multiple_testing_procedures.Rmd",
+ "09-exploratory-data-analysis.Rmd", "10-distance-and-dimension-reduction.Rmd",
+"11-confounding.Rmd","12-fastq.Rmd","13-NGS-pipeline.Rmd","14-annotation.Rmd",
+"15-normalization_methods.Rmd",
+"16-RNAseq-DESeq_PartI.Rmd","17-RNAseq-DESeq_PartII.Rmd","18-RNAseq-limma.Rmd",
+"19-chip-chip.Rmd",
+"20-GO-enrichment.Rmd"]
 
 
