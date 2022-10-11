@@ -1,763 +1,767 @@
-# DESeq2 PartI
+# Differential expression analysis
 
+## Introduction
 
-Analyzing RNA-seq data with DESeq2
-Michael I. Love, Simon Anders, and Wolfgang Huber
-08/25/2022
+![](figures/06-workflow-overview.png)
 
-## Abstract
+Differential expression analysis is the process of determining which of the genes are significantly affected by my experimental design. In the example study that we use, Arabidopsis plants were infected or not by a pathogenic bacteria called Pseudomonas syringae DC3000. One comparison of interest could be to determine which of the Arabidopsis leaf genes are transcriptionally affected by the infection with this pathogenic bacteria.
 
-A basic task in the analysis of count data from RNA-seq is the detection of differentially expressed genes. The count data are presented as a table which reports, for each sample, the number of sequence fragments that have been assigned to each gene. Analogous data also arise for other assay types, including comparative ChIP-Seq, HiC, shRNA screening, and mass spectrometry. An important analysis question is the quantification and statistical inference of systematic changes between conditions, as compared to within-condition variability. The package DESeq2 provides methods to test for differential expression by use of negative binomial generalized linear models; the estimates of dispersion and logarithmic fold changes incorporate data-driven prior distributions. This vignette explains the use of the package and demonstrates typical workflows. An RNA-seq workflow on the Bioconductor website covers similar material to this vignette but at a slower pace, including the generation of count matrices from FASTQ files. DESeq2 package version: 1.37.6
+In this episode, we will see how to perform a simple one-condition experimental comparison with DESeq2. We will compare the transcriptome of Arabidopsis in response to infection by the leaf pathogenic bacteria Pseudomonas syringae DC3000 after 7 days (7 dpi).
 
-Standard workflow
-Note: if you use DESeq2 in published research, please cite:
+This will yield a table containing genes
+fold change and their corrected p-values. We will also see how to create a few typical representations classically used to display RNA-seq results such as volcano plots and heatmaps.
 
-Love, M.I., Huber, W., Anders, S. (2014) Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biology, 15:550. 10.1186/s13059-014-0550-8
+Important note
+For differential expression analysis, you should use the raw counts and not the scaled counts. As the DESeq2 model fit requires raw counts (integers), make sure that you use the raw_counts.csv file. {: .callout}
 
-Other Bioconductor packages with similar aims are edgeR, limma, DSS, EBSeq, and baySeq.
+## Differential expression analysis
+### Creating the DESeqDataSet object
+Since we do not want to work on all comparisons, we will filter out the samples and conditions that we do not need. Only the mock growth and the P. syringae infected condition will remain.
 
-## Quick start
-Here we show the most basic steps for a differential expression analysis. There are a variety of steps upstream of DESeq2 that result in the generation of counts or estimated counts for each sample, which we will discuss in the sections below. This code chunk assumes that you have a count matrix called cts and a table of sample information called coldata. The design indicates how to model the samples, here, that we want to measure the effect of the condition, controlling for batch differences. The two factor variables batch and condition should be columns of coldata.
-
-```{r eval=FALSE}
-dds <- DESeqDataSetFromMatrix(countData = cts,
-                              colData = coldata,
-                              design= ~ batch + condition)
-dds <- DESeq(dds)
-resultsNames(dds) # lists the coefficients
-res <- results(dds, name="condition_trt_vs_untrt")
-# or to shrink log fold changes association with condition:
-res <- lfcShrink(dds, coef="condition_trt_vs_untrt", type="apeglm")
+### Import libraries
+```{r}
+library("DESeq2")
+library("tidyverse")
 ```
 
 
-The following starting functions will be explained below:
-
-If you have performed transcript quantification (with Salmon, kallisto, RSEM, etc.) you could import the data with tximport, which produces a list, and then you can use DESeqDataSetFromTximport().
-If you imported quantification data with tximeta, which produces a SummarizedExperiment with additional metadata, you can then use DESeqDataSet().
-If you have htseq-count files, you can use DESeqDataSetFromHTSeq().
-## How to get help for DESeq2
-Any and all DESeq2 questions should be posted to the Bioconductor support site, which serves as a searchable knowledge base of questions and answers:
-
-https://support.bioconductor.org
-
-Posting a question and tagging with “DESeq2” will automatically send an alert to the package authors to respond on the support site. See the first question in the list of Frequently Asked Questions (FAQ) for information about how to construct an informative post.
-
-You should not email your question to the package authors, as we will just reply that the question should be posted to the Bioconductor support site.
-
-## Acknowledgments
-Constantin Ahlmann-Eltze has contributed core code for increasing the computational performance of DESeq2 and building an interface to his glmGamPoi package.
-
-We have benefited in the development of DESeq2 from the help and feedback of many individuals, including but not limited to:
-
-The Bionconductor Core Team, Alejandro Reyes, Andrzej Oles, Aleksandra Pekowska, Felix Klein, Nikolaos Ignatiadis (IHW), Anqi Zhu (apeglm), Joseph Ibrahim (apeglm), Vince Carey, Owen Solberg, Ruping Sun, Devon Ryan, Steve Lianoglou, Jessica Larson, Christina Chaivorapol, Pan Du, Richard Bourgon, Willem Talloen, Elin Videvall, Hanneke van Deutekom, Todd Burwell, Jesse Rowley, Igor Dolgalev, Stephen Turner, Ryan C Thompson, Tyr Wiesner-Hanks, Konrad Rudolph, David Robinson, Mingxiang Teng, Mathias Lesche, Sonali Arora, Jordan Ramilowski, Ian Dworkin, Bjorn Gruning, Ryan McMinds, Paul Gordon, Leonardo Collado Torres, Enrico Ferrero, Peter Langfelder, Gavin Kelly, Rob Patro, Charlotte Soneson, Koen Van den Berge, Fanny Perraudeau, Davide Risso, Stephan Engelbrecht, Nicolas Alcala, Jeremy Simon, Travis Ptacek, Rory Kirchner, R. Butler, Ben Keith, Dan Liang, Nil Aygün, Rory Nolan, Michael Schubert, Hugo Tavares, Eric Davis, Wancen Mu, Zhang Cheng, Frederik Ziebell.
-
-## Funding
-DESeq2 and its developers have been partially supported by funding from the European Union’s 7th Framework Programme via Project RADIANT, NIH NHGRI R01-HG009937, and by a CZI EOSS award.
-
-## Input data
-Why un-normalized counts?
-As input, the DESeq2 package expects count data as obtained, e.g., from RNA-seq or another high-throughput sequencing experiment, in the form of a matrix of integer values. The value in the i-th row and the j-th column of the matrix tells how many reads can be assigned to gene i in sample j. Analogously, for other types of assays, the rows of the matrix might correspond e.g. to binding regions (with ChIP-Seq) or peptide sequences (with quantitative mass spectrometry). We will list method for obtaining count matrices in sections below.
-
-The values in the matrix should be un-normalized counts or estimated counts of sequencing reads (for single-end RNA-seq) or fragments (for paired-end RNA-seq). The RNA-seq workflow describes multiple techniques for preparing such count matrices. It is important to provide count matrices as input for DESeq2’s statistical model (Love, Huber, and Anders 2014) to hold, as only the count values allow assessing the measurement precision correctly. The DESeq2 model internally corrects for library size, so transformed or normalized values such as counts scaled by library size should not be used as input.
-
-## The DESeqDataSet
-The object class used by the DESeq2 package to store the read counts and the intermediate estimated quantities during statistical analysis is the DESeqDataSet, which will usually be represented in the code here as an object dds.
-
-A technical detail is that the DESeqDataSet class extends the RangedSummarizedExperiment class of the SummarizedExperiment package. The “Ranged” part refers to the fact that the rows of the assay data (here, the counts) can be associated with genomic ranges (the exons of genes). This association facilitates downstream exploration of results, making use of other Bioconductor packages’ range-based functionality (e.g. find the closest ChIP-seq peaks to the differentially expressed genes).
-
-A DESeqDataSet object must have an associated design formula. The design formula expresses the variables which will be used in modeling. The formula should be a tilde (~) followed by the variables with plus signs between them (it will be coerced into an formula if it is not already). The design can be changed later, however then all differential analysis steps should be repeated, as the design formula is used to estimate the dispersions and to estimate the log2 fold changes of the model.
-
-Note: In order to benefit from the default settings of the package, you should put the variable of interest at the end of the formula and make sure the control level is the first level.
-
-## Count matrix input
-Alternatively, the function DESeqDataSetFromMatrix can be used if you already have a matrix of read counts prepared from another source. Another method for quickly producing count matrices from alignment files is the featureCounts function (Liao, Smyth, and Shi 2013) in the Rsubread package. To use DESeqDataSetFromMatrix, the user should provide the counts matrix, the information about the samples (the columns of the count matrix) as a DataFrame or data.frame, and the design formula.
-
-To demonstate the use of DESeqDataSetFromMatrix, we will read in count data from the pasilla package. We read in a count matrix, which we will name cts, and the sample information table, which we will name coldata. Further below we describe how to extract these objects from, e.g. featureCounts output.
-
-
+import the samples to conditions correspodence
 ```{r}
-library("pasilla")
-pasCts <- system.file("extdata",
-                      "pasilla_gene_counts.tsv",
-                      package="pasilla", mustWork=TRUE)
-pasAnno <- system.file("extdata",
-                       "pasilla_sample_annotation.csv",
-                       package="pasilla", mustWork=TRUE)
-cts <- as.matrix(read.csv(pasCts,sep="\t",row.names="gene_id"))
-coldata <- read.csv(pasAnno, row.names=1)
-coldata <- coldata[,c("condition","type")]
-coldata$condition <- factor(coldata$condition)
-coldata$type <- factor(coldata$type)
-```
-
-We examine the count matrix and column data to see if they are consistent in terms of sample order.
-
-```{r}
-head(cts,2)
-
-coldata
+xp_design <- read.csv("samples_to_conditions.csv", 
+                        header = T, 
+                        stringsAsFactors = F, 
+                        colClasses = rep("character",4))
 ```
 
 
-Note that these are not in the same order with respect to samples!
-
-It is absolutely critical that the columns of the count matrix and the rows of the column data (information about samples) are in the same order. DESeq2 will not make guesses as to which column of the count matrix belongs to which row of the column data, these must be provided to DESeq2 already in consistent order.
-
-As they are not in the correct order as given, we need to re-arrange one or the other so that they are consistent in terms of sample order (if we do not, later functions would produce an error). We additionally need to chop off the "fb" of the row names of coldata, so the naming is consistent.
-
+filter design file to keep only "mock" and the "infected P. syringae at 7 dpi" conditions.
 ```{r}
-rownames(coldata) <- sub("fb", "", rownames(coldata))
-all(rownames(coldata) %in% colnames(cts))
-```
-
-They are the same, but they are not in the right order:
-```{r}
-all(rownames(coldata) == colnames(cts))
-```
-
-Reorder the colnames of the matrix:
-```{r}
-
-cts <- cts[, rownames(coldata)]
-all(rownames(coldata) == colnames(cts))
+xp_design_mock_vs_infected = xp_design %>% 
+                      filter(growth == "MgCl2" & dpi == "7")
 ```
 
 
-If you have used the featureCounts function (Liao, Smyth, and Shi 2013) in the Rsubread package, the matrix of read counts can be directly provided from the "counts" element in the list output. The count matrix and column data can typically be read into R from flat files using base R functions such as read.csv or read.delim. For htseq-count files, see the dedicated input function below.
 
-With the count matrix, cts, and the sample information, coldata, we can construct a DESeqDataSet:
+We then import the gene counting values and call it raw_counts.
+The gene names have to be changed to the names of the rows of the table for compatibility with DESeq2. This is done using the column_to_rownames() function from the tibble package (contained in tidyverse suite of packages).
+
+Import the gene raw counts
 ```{r}
+raw_counts <- read.csv("raw_counts.csv", header = T, stringsAsFactors = F)                            %>% column_to_rownames("Geneid")
+```
 
-library(DESeq2)
-dds <- DESeqDataSetFromMatrix(countData = cts,
-                              colData = coldata,
-                              design = ~ condition)
+
+
+reorder counts columns according to the complete list of samples 
+```{r}
+raw_counts <- raw_counts[ , xp_design$sample]
+```
+
+
+
+We will now filter both the raw_counts and xp_design objects to keep a one-factor comparison and investigate the leaf transcriptome of Arabidopsis plants whose seeds were MgCl2 treated and whose plants were infected or not with Pseudomonas syringae DC3000 at 7 dpi.
+
+The corresponding code is available below.
+
+# Filter count file accordingly (to keep only samples present in the filtered xp_design file)
+```{r}
+raw_counts_filtered= raw_counts[, colnames(raw_counts) %in%xp_design_mock_vs_infected$sample]
+```
+
+
+## Creation of the DESeqDataSet
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = raw_counts_filtered, 
+                              colData = xp_design_mock_vs_infected, 
+                              design = ~ infected)
+```
+
+
+
+You can have a glimpse at the DESeqDataSet dds object that you have created. It gives some useful information already.
+
+```{r}
 dds
 ```
 
-If you have additional feature data, it can be added to the DESeqDataSet by adding to the metadata columns of a newly constructed object. (Here we add redundant data just for demonstration, as the gene names are already the rownames of the dds.)
+Important note on factor levels
+
+It is important to make sure that levels are properly ordered so we are indeed using the mock group as our reference level. A positive gene fold change means that the gene is upregulated in the P. syringae condition relatively to the mock condition.
+
+
+Please consult the dedicated section of the DESeq2 vignette on factor levels.
+
+One way to see how levels are interpreted within the DESeqDataSet object is to display the factor levels.
 
 ```{r}
-featureData <- data.frame(gene=rownames(cts))
-mcols(dds) <- DataFrame(mcols(dds), featureData)
-mcols(dds)
+dds$infected
 ```
 
-## Pre-filtering
-While it is not necessary to pre-filter low count genes before running the DESeq2 functions, there are two reasons which make pre-filtering useful: by removing rows in which there are very few reads, we reduce the memory size of the dds data object, and we increase the speed of the transformation and testing functions within DESeq2. It can also improve visualizations, as features with no information for differential expression are not plotted.
+This shows that the mock level comes first before the Pseudomonas_syringae_DC3000 level. If this is not correct, you can change it following the dedicated section of the DESeq2 vignette on factor levels.
 
-Here we perform a minimal pre-filtering to keep only rows that have at least 10 reads total. Note that more strict filtering to increase power is automatically applied via independent filtering on the mean of normalized counts within the results function.
+### Running the DE analysis
+Differential gene expression analysis will consist of simply two lines of code:
 
-```{r}
-keep <- rowSums(counts(dds)) >= 10
-# dds <- dds[keep,]
-```
-
-Alternatively, a popular filter is to ensure at least X samples with a count of 10 or more, where X can be chosen as the sample size of the smallest group of samples (here it would be 3):
-```{r}
-X = 3
-dim(dds)
-keep <- rowSums(counts(dds) >= 10) >= X
-dds <- dds[keep,]
-dim(dds)
-```
-This is a little more stringent, so I favor this one over the other one.
-
-### Note on factor levels
-By default, R will choose a reference level for factors based on alphabetical order. Then, if you never tell the DESeq2 functions which level you want to compare against (e.g. which level represents the control group), the comparisons will be based on the alphabetical order of the levels. There are two solutions: you can either explicitly tell results which comparison to make using the contrast argument (this will be shown later), or you can explicitly set the factors levels. In order to see the change of reference levels reflected in the results names, you need to either run DESeq or nbinomWaldTest/nbinomLRT after the re-leveling operation. Setting the factor levels can be done in two ways, either using factor:
-
-```{r}
-dds$condition <- factor(dds$condition, levels = c("untreated","treated"))
-# …or using relevel, just specifying the reference level:
-
-dds$condition <- relevel(dds$condition, ref = "untreated")
-```
-
-If you need to subset the columns of a DESeqDataSet, i.e., when removing certain samples from the analysis, it is possible that all the samples for one or more levels of a variable in the design formula would be removed. In this case, the droplevels function can be used to remove those levels which do not have samples in the current DESeqDataSet:
-
-```{r eval = FALSE}
-dds$condition <- droplevels(dds$condition)
-```
-
-## Collapsing technical replicates
-DESeq2 provides a function collapseReplicates which can assist in combining the counts from technical replicates into single columns of the count matrix. The term technical replicate implies multiple sequencing runs of the same library. You should not collapse biological replicates using this function. See the manual page for an example of the use of collapseReplicates.
-
-## About the pasilla dataset
-We continue with the pasilla data constructed from the count matrix method above. This data set is from an experiment on Drosophila melanogaster cell cultures and investigated the effect of RNAi knock-down of the splicing factor pasilla (Brooks et al. 2011). The detailed transcript of the production of the pasilla data is provided in the vignette of the data package pasilla.
-
-
-## Differential expression analysis
-The standard differential expression analysis steps are wrapped into a single function, DESeq. The estimation steps performed by this function are described below, in the manual page for ?DESeq and in the Methods section of the DESeq2 publication (Love, Huber, and Anders 2014).
-
-Results tables are generated using the function results, which extracts a results table with log2 fold changes, p values and adjusted p values. With no additional arguments to results, the log2 fold change and Wald test p value will be for the last variable in the design formula, and if this is a factor, the comparison will be the last level of this variable over the reference level (see previous note on factor levels). However, the order of the variables of the design do not matter so long as the user specifies the comparison to build a results table for, using the name or contrast arguments of results.
-
-Details about the comparison are printed to the console, directly above the results table. The text, condition treated vs untreated, tells you that the estimates are of the logarithmic fold change log2(treated/untreated).
-
+The first will call the DESeq function on a DESeqDataSet object that you've just created under the name dds. It will be returned under the same R object name dds.
+Then, results are extracted using the results function on the dds object and results will be extracted as a table under the name res (short for results).
 ```{r}
 dds <- DESeq(dds)
+```
+
+```{r}
 res <- results(dds)
+```
+
+
+# have a peek at the DESeqResults object 
+```{r}
 res
 ```
-It's always better to specify name in the results...
 
-Note that we could have specified the coefficient or contrast we want to build a results table for, using either of the following equivalent commands:
+
+The theory beyond DESeq2 differential gene expression analysis is beyond this course but nicely explained within the DESeq2 vignette.
+
+Beware of factor levels
+If you do not supply any values to the contrast argument of the DESeq function, it will use the first value of the design variable from the design file.
+
+In our case, we will perform a differential expression analysis between mock and Pseudomonas_syringae_DC3000.
+
+Q1: Which of these two is going to be used as the reference level?
+Q2: How would you interpret a positive log2 fold change for a given gene?
+
+```{r}
+all_genes_results <- results(dds, contrast = c("infected",# name of the factor
+    "Pseudomonas_syringae_DC3000",# name of the numerator level for fold change
+    "mock")) # name of the denominator level for fold change
+```
+
+
+If we now compare the res and all_genes_results DESeqResults objects, they should be exactly the same and return a TRUE value.
+
+```{r}
+all_equal(res, all_genes_results)
+```
+
+If not, that means that you should check your factor ordering.
+
+### Extracting the table of differential genes
+We can now have a look at the result table that contains all information on all genes (p-value, fold changes, etc).
+
+Let's take a peek at the first lines.
+
+```{r}
+head(all_genes_results)    
+```
+            
+
+Q3: What is the biological meaning of a fold change equal to 1 for gene X?
+Q4: What is the biological meaning of a fold change equal to -1?
+Q5: In R, compute the fold change ("treated vs untreated") of a gene that has:
+    1) A gene expression equal to 230 in the "untreated" condition.
+    2) A gene expression equal to 750 in the "treated" condition.
+
+
+Some explanations about the results output:
+
+The results table when printed will provide the information about the comparison, e.g. "log2 fold change (MAP): condition treated vs untreated", meaning that the estimates are of log2(treated / untreated), as would be returned by contrast=c("condition","treated","untreated").
+
+So in our case, since we specified contrast = c("infected", "Pseudomonas_syringae_DC3000", "mock"), the log2FoldChange will return the log2(Pseudomonas syringae DC3000 / mock).
+
+Additional information on the DESeqResult columns is available using the mcols function.
+
+mcols(all_genes_results)
+
+This will indicate a few useful metadata information about our results.
+
+### False discovery rates
+The selected threshold controls for type I error rate: rejecting the null hypothesis (H0 no difference) and therefore affirming that there is a gene expression difference between conditions while there aren't any. This
+value is often set at at
+
+= 0.01 (1%) or
+= 0.001 (0.1%) in RNA-seq analyses.
+
+When you perform thousands of statistical tests (one for each gene), you will by chance call genes differentially expressed while they are not (false positives). You can control for this by applying certain statistical procedures called multiple hypothesis test correction.
+
+We can count the number of genes that are differentially regulated at a certain
+level.
+
+library(dplyr)
+
+**threshold of p = 0.01**
+```{r}
+all_genes_results %>% 
+  as.data.frame() %>% 
+  filter(padj < 0.01) %>% 
+  dim()
+```
+
+
+**threshold of p = 0.001**
+```{r}
+all_genes_results %>% 
+  as.data.frame() %>% 
+  filter(padj < 0.001) %>% 
+  dim()
+```
+
+
+You should obtain 4979 differentially expressed genes at 0.01 and 3249 at 0.001 which are quite important numbers: indeed, it corresponds to respectively ~15% and ~10% of the whole number transcriptome (total number of mRNA is 33,768).
+
+Histogram p-values This [blog post](http://varianceexplained.org/statistics/interpreting-pvalue-histogram/) explains in detail what you can expect from each p-value distribution profile.
+
+**distribution of adjusted p-values**
+```{r}
+hist(all_genes_results$padj, col="lightblue", main = "Adjusted p-value distribution")
+```
+
+**p-values distribution (corrected for false discovery rate)**
+
+**distribution of non-adjusted p-values**
+```{r}
+hist(all_genes_results$pvalue, col="grey", main = "Non-adjusted p-value distribution")
+
+```
+
+**p-values distribution (no false discovery rate correction)**
+
+As you can see, the distribution of p-values was already quite similar suggesting that a good proportion of the tests have a significant p-value (inferior to
+= 0.01 for instance). This suggests that a good proportion of these will be true positives (genes truly differentially regulated).
+
+###Extracting the table of differential genes
+Ok, here's the moment you've been waiting for. How can I extract a nicely filtered final table of differential genes? Here it is!
+
+```{r}
+diff_genes = all_genes_results %>% 
+  as.data.frame() %>% 
+  rownames_to_column("genes") %>% 
+  filter(padj < 0.01) %>% 
+  arrange(desc(log2FoldChange), 
+          desc(padj))
+head(diff_genes)
+```
+
+### Choosing thresholds
+Getting a list of differentially expressed genes means that you need to choose an absolute threshold for the log2 fold change (column log2FoldChange) and the adjusted p-value (column _padj_). Therefore you can make different list of differential genes based on your selected thresholds. It is common to choose a log2 fold change threshold of |1| or |2| and an adjusted p-value of 0.01 for instance. {: .callout}
+
+You could write this file on your disk with write.csv() for instance to save a comma-separated text file containing your results.
+
+### Volcano plot
+For each gene, this plot shows the gene fold change on the x-axis against the p-value plotted on the y-axis.
+
+Here, we make use of a library called EnhancedVolcano which is available through Bioconductor and described extensively on its own GitHub page.
+
+First, we are going to "shrink" the
+fold changes to remove the noise associated with fold changes coming from genes with low count levels. Shrinkage of effect size (LFC estimates) is useful for visualization and ranking of genes. This helps to get more meaningful log2 fold changes for all genes independently of their expression level.
+
+Which
+
+the name or number of the coefficient (LFC) to shrink
+
+```{r}
+library("apeglm")
+
+resLFC <- lfcShrink(dds = dds, 
+                  res = all_genes_results,
+                  type = "normal",
+                  coef = "infected_Pseudomonas_syringae_DC3000_vs_mock") 
+                          # name or number of the coefficient (LFC) to shrink
+```
+
+
+
+To see what coefficients can be extracted, type:
+
 ```{r}
 resultsNames(dds)
-res <- results(dds, name="condition_treated_vs_untreated")
-res <- results(dds, contrast=c("condition","treated","untreated"))
-
-
 ```
 
-One exception to the equivalence of these two commands, is that, using contrast will additionally set to 0 the estimated LFC in a comparison of two groups, where all of the counts in the two groups are equal to 0 (while other groups have positive counts). As this may be a desired feature to have the LFC in these cases set to 0, one can use contrast to build these results tables. More information about extracting specific coefficients from a fitted DESeqDataSet object can be found in the help page ?results. The use of the contrast argument is also further discussed below.
+We can build the Volcano plot rapidly without much customization.
+
+load the library if not done yet
+```{r}
+library("EnhancedVolcano")
+```
 
 
-## Log fold change shrinkage for visualization and ranking
-Shrinkage of effect size (LFC estimates) is useful for visualization and ranking of genes. To shrink the LFC, we pass the dds object to the function lfcShrink. Below we specify to use the apeglm method for effect size shrinkage (Zhu, Ibrahim, and Love 2018), which improves on the previous estimator.
-
-We provide the dds object and the name or number of the coefficient we want to shrink, where the number refers to the order of the coefficient as it appears in resultsNames(dds).
+# The main function is named after the package
 
 ```{r}
-resultsNames(dds)
+EnhancedVolcano(toptable = resLFC,# use shrunken log2 fold change as noise associated with low count genes is removed 
+                x = "log2FoldChange",# column in resLFC with log2 fold changes
+                y = "padj", # column in resLFC that contains the p-value
+                lab = rownames(resLFC)
+                )
+```
+default volcano plot
 
-resLFC <- lfcShrink(dds, coef="condition_treated_vs_untreated", type="apeglm")
-resLFC
+Alternatively, the plot can be heavily customized to become a publication-grade figure.
+```{r}
+EnhancedVolcano(toptable = resLFC,
+                x = "log2FoldChange",
+                y = "padj",
+                lab = rownames(resLFC),
+                xlim = c(-10, +10),
+                ylim = c(0,100),
+                pCutoff = 1e-06,
+                transcriptPointSize = 2.0,
+                FCcutoff = 2, 
+                title = "Pseudomonas syringae DC3000 versus mock \n (fold change cutoff = 2, p-value cutoff = 1e-06)",
+                legend=c(
+                  'Not significant',
+                  'Log2 fold-change (but do not pass p-value cutoff)',
+                  'Pass p-value cutoff',
+                  'Pass both p-value & Log2 fold change')
+                )
+
+
 ```
 
 
-Shrinkage estimation is discussed more in a later section.
+ customized volcano plot
+ 
+Once more for fun:
+```{r}
+EnhancedVolcano(resLFC,
+  lab = rownames(resLFC),
+  x = 'log2FoldChange',
+  y = 'pvalue',
+  xlim = c(-2.5,7),
+  xlab = bquote(~Log[2]~ 'fold change'),
+  pCutoff = 10e-14,
+  FCcutoff = 2.0,
+  pointSize = 3.0,
+  labSize = 3.0,
+  colAlpha = 0.75,
+  legendLabels = c('NS', expression(Log[2] ~ FC), expression(italic(p - value)), 
+      expression(italic(p - value ~ and ~ log[2] ~ FC))),
+  legendPosition = 'right',
+  legendLabSize = 12,
+  legendIconSize = 2.0,
+  drawConnectors = TRUE,
+  widthConnectors = 0.2,
+  colConnectors = 'grey30')
+```
 
-p-values and adjusted p-values
-We can order our results table by the smallest p value:
+
+### Heatmap
+Heatmap is a representation where values are represented on a color scale. It is usually one of the classic figures part of a transcriptomic study. One can also cluster samples and genes to identify groups of genes that show a coordinated behaviour. Let's build a nice looking heatmap to display our differential genes one step at a time.
+
+We are going to make use of a library called pheatmap. Here is a minimal example (mtcars is a dataset that comes included with R).
 
 ```{r}
-resOrdered <- res[order(res$pvalue),]
+library(pheatmap)
+df <- scale(mtcars)
+pheatmap(df)
 ```
+basic heatmap
 
-We can summarize some basic tallies using the summary function.
+Troubleshooting
+If you have issues where your heatmap plot is not being shown, run dev.off() and try to plot again. It should solve your issue. {: .callout}
+
+### Function to scale the raw counts
+Let's work on the global raw_counts object that contains the unscaled raw counts for our genes. We will first normalize it using a custom function that mimics DESeq2 normalization procedure in one line.
+
+The function is called mor_normalization and stands for "median of ratios normalization" method. It is explained in details in the previous episode section 'Bonus: DESeq2 count normalization'.
+
+The whole function is available here in the [extra functions page]({{page.root}}{%link _extras/extra_functions.md %}) and below.
+
+# import custom function
+# copy-paste and execute this code in your console to get the mor_normalization() function
 
 ```{r}
-summary(res)
+mor_normalization = function(data){
+  library(dplyr)
+  library(tibble)
+
+  # take the log
+  log_data = log(data) 
+  
+  # find the psuedo-references per sample by taking the geometric mean
+  log_data = log_data %>% 
+               rownames_to_column('gene') %>% 
+               mutate (gene_averages = rowMeans(log_data)) %>% 
+               filter(gene_averages != "-Inf")
+  
+  # the last columns is the pseudo-reference column 
+  pseudo_column = ncol(log_data)
+  
+  # where to stop before the pseudo column 
+  before_pseduo = pseudo_column - 1
+  
+  # find the ratio of the log data to the pseudo-reference
+  ratios = sweep(log_data[,2:before_pseduo], 1, log_data[,pseudo_column], "-")
+  
+  # find the median of the ratios
+  sample_medians = apply(ratios, 2, median)
+  
+  # convert the median to a scaling factor
+  scaling_factors = exp(sample_medians)
+  
+  # use scaling factors to scale the original data
+  manually_normalized = sweep(data, 2, scaling_factors, "/")
+  return(manually_normalized)
+}
+
+
 ```
 
 
-How many adjusted p-values were less than 0.1?
+Let's scale/normalise the raw unscaled counts and display the first lines.
 
 ```{r}
-sum(res$padj < 0.1, na.rm=TRUE)
+
+scaled_counts <- mor_normalization(raw_counts_filtered)
+head(scaled_counts)
+
 ```
 
 
-## Exploring and exporting results
-### MA-plot
+This scaling procedure does not fundamentally change our gene count values. You can verify this by executing this code:
+
+```{r}
+
+long_scaled_counts = 
+  scaled_counts %>% 
+  rownames_to_column("gene") %>% 
+  pivot_longer(-gene, names_to = "sample", values_to = "counts") %>% 
+  mutate(scaled = "yes")
+
+long_raw_counts = 
+  raw_counts %>% 
+  rownames_to_column("gene") %>% 
+  pivot_longer(-gene, names_to = "sample", values_to = "counts") %>% 
+  mutate(scaled = "no")
+
+long_raw_and_scaled_counts = bind_rows(long_raw_counts, long_scaled_counts)
+
+ggplot(long_raw_and_scaled_counts, 
+       aes(x = scaled, y = counts + 1, fill = scaled)) +
+  geom_violin() +
+  scale_y_log10() +
+  labs(x = "Gene counts scaled/normalised?", y = "Gene counts (raw or scaled)")
+
+
+```
+
+raw vs scaled counts
+
+### First version
+```{r}
+# normalize the counts using our custom function 
+counts_normalised_only_diff_genes = 
+  mor_normalization(raw_counts) %>% 
+  rownames_to_column("genes") %>%               
+  pivot_longer(- genes,                         
+               names_to = "sample", 
+               values_to = "counts") %>% 
+  filter(genes %in% diff_genes$genes) %>%             
+  pivot_wider(names_from = "sample",            
+              values_from = "counts")  %>%      
+  column_to_rownames("genes") 
+# the gene column is converted back to row names to create a matrix usable with pheatmap
+
+dim(counts_normalised_only_diff_genes)
+# check that you have the expected number of rows and columns
+```
+
+
+
+We indeed find that we have 4979 genes (rows, p < 0.01) and 48 samples (columns) which corresponds to the number of differential genes identified previously between Mock and DC3000 infected conditions at 7 dpi and with a MgCl2 seed coating. You can also use head() to show the first lines of this table.
+
+Let's plot our first version of the heatmap.
+
+```{r}
+library(pheatmap)
+pheatmap(counts_normalised_only_diff_genes, 
+         cluster_rows = FALSE, 
+         cluster_cols = FALSE, 
+         scale = "none",
+         show_rownames = FALSE, 
+         show_colnames = TRUE)
+```
+
+
+
+We have removed the genes names with show_rownames = FALSE since they are not readable anymore for such a high number of genes.
+
+first heatmap version
+
+Well....not very useful right?
+
+Q6: Do you have an idea of how to improve this heatmap?
+
+Hint: run the code below to show the distribution of values in the counts_normalised_only_diff_genes table:
+```{r}
+
+counts_normalised_only_diff_genes %>% 
+    rownames_to_column("genes") %>% 
+    pivot_longer(- genes, names_to = "sample", values_to = "counts")     %>% with(., hist(counts, col = "dodgerblue"))
+```
+
+
+Now with log2 counts to spread out the histogram...
+```{r}
+counts_normalised_only_diff_genes %>% 
+    rownames_to_column("genes") %>% 
+    pivot_longer(- genes,names_to = "sample", values_to = "counts")      %>% with(., hist(log2(counts), col = "dodgerblue"))
+```
+
+
+If you re-run the code for the first heatmap with a log2 transformation, you will get a simple way to display different gene count levels. We add `+ 1` to account for genes with count values equal to 0. 
+```{r}
+pheatmap(log2(counts_normalised_only_diff_genes + 1), 
+     cluster_rows = FALSE, 
+     cluster_cols = FALSE, 
+     scale = "none",
+     show_rownames = FALSE, 
+     show_colnames = TRUE)
+
+```
+
+
+
+Although the scaling has been slightly improved it is still not really an optimal heatmap.
+
+### Second version with scaling
+When creating a heatmap, it is vital to control how scaling is performed. A possible solution is to specify scale = "row" to the pheatmap() function to perform row scaling since gene expression levels will become comparable. Instead, I'd recommend to do it "manually" to understand and control the scaling procedure.
+
+We can perform a Z-score calculation for each gene so that
+ 
+where
+is an individual gene count inside a given sample,
+the row mean of for that gene across all samples and
+its standard deviation.
+Check background and R code instructions here.
+
+For each gene, the row-wise mean should be close to 0 while the row-wise standard deviation should be close to 1. We are going to use the R scale() function to do this and check that our scaling procedure worked out.
+
+Here is a simple example to understand how scale() works.
+
+set.seed(1)
+```{r}
+x <- runif(7)
+```
+
+
+# Manually scaling
+```{r}
+(x - mean(x)) / sd(x)
+```
+
+
+# With scale function
+```{r}
+scale(x)[,1]
+```
+
+
+manually
+```{r}
+(x - mean(x)) / sd(x)
+```
+
+
+using the function scale
+```{r}
+scale(x)[,1]
+```
+
+The two outputs are identical. Let's do it for our dataset.
+```{r}
+counts_scaled = 
+  counts_normalised_only_diff_genes %>% 
+  t(.) %>% # transpose to have the genes in columns 
+  scale() %>%# scale(x, center = TRUE, scale = TRUE) 
+  t(.)# back in original shape
+
+```
+
+# sanity check
+# the majority of the values should be around zero
+```{r}
+apply(counts_scaled, MARGIN = 1, mean) %>%                          # calculate the mean per row
+  hist(., main = "", xlab = "Z-score values", col = "dodgerblue2")  
+```
+
+
+You can verify that it went well.
+
+histogram of Z-score values
+
+Does this scaling improves our heatmap?
+```{r}
+pheatmap(counts_scaled, 
+         cluster_rows = FALSE, 
+         cluster_cols = FALSE, 
+         show_rownames = FALSE, 
+         scale = "none",            # already done "manually"
+         show_colnames = TRUE)
+```
+
+
+
+After applying the scaling procedure, the gene expression levels become more comparable. Still, this heatmap isn't really useful so far.
+
+second heatmap (scaled)
+
+Notice
+Have you noticed the two different color scales? {: .callout}
+
+### Third version with genes and samples grouped by profiles
+One interesting feature of the heatmap visualisation is the ability to group genes and samples by their expression profile. Similarly to the hierarchical clustering procedure that we have seen in episode 05.
+
+Let's compare how it looks with both gene and sample clustering.
+
+```{r}
+pheatmap(counts_scaled, 
+         cluster_rows = TRUE,                      
+         cluster_cols = TRUE, 
+         show_rownames = FALSE, 
+         show_colnames = TRUE,
+         main = "Clustering on")
+```
+
+Third heatmap version (clustered)
+
+This is getting easier to read. Genes with similar profiles that distinguish different samples can be easily visualised.
+
+Q7: Do you know how this gene and sample clustering was done? How can you find this out?
+
+A7: Check in the help page related to the pheatmap function (type ?pheatmap) inside R. By default, the clustering distance is euclidean for both rows (genes) and columns (samples). The clustering_method is complete.
+
+You can change this default behavion easily and try other clustering methods (see ?hclust for supported methods).
+
+## Discussion
+Q8: The gene clusters do not seem to be pretty clear cut though. Do you have an idea why?
+Hint: we still have 48 samples under investigation but we are working on 4979 genes (differential genes between what?) {: .discussion}
+
+### Fourth version of our heatmap with the 8 samples being investigated
+But there's even a better and clearer heatmap that can be generated. Since we have "noise" coming from samples that were not under investigation in our comparison (DC3000 vs Mock at 7dpi from seeds treated with MgCl2), we can remove the other samples.
+
+```{r}
+counts_scaled_filtered = 
+  counts_scaled %>% 
+  as.data.frame() %>%
+  dplyr::select(xp_design_mock_vs_infected$sample) # keep the 8 samples
+
+
+head(counts_scaled_filtered)
+```
+
+We have 8 columns corresponding to the 8 samples of the xp_design_mock_vs_infected
+
+
+```{r}
+
+anno_col_info = xp_design_mock_vs_infected %>% column_to_rownames("sample")
+
+anno_info_colors = list(
+  seed = c(MgCl2 = "#d8b365"),
+  infected = c(mock = "lightgrey", 
+               Pseudomonas_syringae_DC3000 = "black"),
+  dpi = c("7" = "dodgerblue4")
+)
+pheatmap(counts_scaled_filtered, 
+         cluster_rows = TRUE,                       
+         cluster_cols = TRUE, 
+         show_rownames = FALSE, 
+         show_colnames = TRUE,
+         annotation_col = anno_col_info,
+         annotation_colors = anno_info_colors,
+         main = "Clustering with ward method")
+```
+final heatmap
+
+Challenge (if time allows)
+Q9: Can you can generate a heatmap from differential genes with a fold change higher than 4 (positive) ?
+
+Solution
+A9: For this, we can keep the differentially expressed genes that have a strong fold change (e.g. > 4)
+
+```{r}
+genes_differential_fold = 
+res %>%
+as.data.frame() %>%
+rownames_to_column("gene") %>%  
+filter(log2FoldChange > 4) %>% 
+select(gene) 
+
+
+counts_scaled_filtered_high_fold_change = 
+counts_scaled_filtered[row.names(counts_scaled_filtered) %in% genes_differential_fold$gene, ]
+```
+
+
+
+# cluster genes and samples
+```{r}
+pheatmap(counts_scaled_filtered_high_fold_change, 
+       cluster_rows = TRUE, 
+       cluster_cols = TRUE,
+       show_rownames = FALSE, 
+       show_colnames = TRUE, 
+      annotation_col = anno_col_info,
+       clustering_method = "ward.D",
+       annotation_colors = anno_info_colors,
+       main = "Clustering of genes and samples (high fold only)")
+```
+
+
+
+If you managed to do this exercise, here is what you should see. Surprinsingly, one of the "infected" sample is clustered together with the "mock" samples. If you look closer though, it is rather poorly clustered with the rest of the control samples and more of an intermediate sample between control and infected samples. Perhaps a sample for which the infection process did not work very efficiently?
+heatmap genes and samples clustered on genes with a high fold change
+
+Bonus: MA plots
+We don't cover MA plots in this lesson but if you are interested, you can have a look at it here.
+
+The MA plot originally comes from microarray studies that compared two conditions. From the DESeq2 vignette:
+
 In DESeq2, the function plotMA shows the log2 fold changes attributable to a given variable over the mean of normalized counts for all the samples in the DESeqDataSet. Points will be colored red if the adjusted p value is less than 0.1. Points which fall out of the window are plotted as open triangles pointing either up or down.
 
 ```{r}
-plotMA(res, ylim=c(-2,2))
+plotMA(dds2, alpha = 0.01)
 ```
 
-
-
-It is more useful visualize the MA-plot for the shrunken log2 fold changes, which remove the noise associated with log2 fold changes from low count genes without requiring arbitrary filtering thresholds.
-
-```{r}
-plotMA(resLFC, ylim=c(-2,2))
-```
-
-
-
-After calling plotMA, one can use the function identify to interactively detect the row number of individual genes by clicking on the plot. One can then recover the gene identifiers by saving the resulting indices:
-
-```{r}
-plotMA(res, ylim=c(-2,2))
-idx <- identify(res$baseMean, res$log2FoldChange)
-rownames(res)[idx]
-```
-
-## Alternative shrinkage estimators
-The moderated log fold changes proposed by Love, Huber, and Anders (2014) use a normal prior distribution, centered on zero and with a scale that is fit to the data. The shrunken log fold changes are useful for ranking and visualization, without the need for arbitrary filters on low count genes. The normal prior can sometimes produce too strong of shrinkage for certain datasets. In DESeq2 version 1.18, we include two additional adaptive shrinkage estimators, available via the type argument of lfcShrink. For more details, see ?lfcShrink
-
-The options for type are:
-
-apeglm is the adaptive t prior shrinkage estimator from the apeglm package (Zhu, Ibrahim, and Love 2018). As of version 1.28.0, it is the default estimator.
-
-ashr is the adaptive shrinkage estimator from the ashr package (Stephens 2016). Here DESeq2 uses the ashr option to fit a mixture of Normal distributions to form the prior, with method="shrinkage".
-normal is the the original DESeq2 shrinkage estimator, an adaptive Normal distribution as prior.
-
-If the shrinkage estimator apeglm is used in published research, please cite:
-
-Zhu, A., Ibrahim, J.G., Love, M.I. (2018) Heavy-tailed prior distributions for sequence count data: removing the noise and preserving large differences. Bioinformatics. 10.1093/bioinformatics/bty895
-
-If the shrinkage estimator ashr is used in published research, please cite:
-
-Stephens, M. (2016) False discovery rates: a new deal. Biostatistics, 18:2. 10.1093/biostatistics/kxw041
-
-In the LFC shrinkage code above, we specified coef="dex_trt_vs_untrt". We can also just specify the coefficient by the order that it appears in resultsNames(dds), in this case coef=5. 
-
-```{r}
-
-resultsNames(dds)
-```
-
-For more details explaining how the shrinkage estimators differ, and what kinds of designs, contrasts and output is provided by each, see the extended section on shrinkage estimators.
-```{r}
-
-resLFC <- lfcShrink(dds, coef="condition_treated_vs_untreated" , type="apeglm")
-resNorm <- lfcShrink(dds, coef=2, type="normal")
-# requires an extra package
-# resAsh <- lfcShrink(dds, coef=5, type="ashr")
-par(mfrow=c(1,3), mar=c(4,4,2,1))
-xlim <- c(1,1e5); ylim <- c(-3,3)
-plotMA(resLFC, xlim=xlim, ylim=ylim, main="apeglm")
-plotMA(resNorm, xlim=xlim, ylim=ylim, main="normal")
-plotMA(res, xlim=xlim, ylim=ylim, main="no shrinkage")
-```
-
-## Plot counts
-It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is plotCounts, which normalizes counts by the estimated size factors (or normalization factors if these were used) and adds a pseudocount of 1/2 to allow for log scale plotting. The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can select the gene to plot by rowname or by numeric index.
-
-```{r}
-plotCounts(dds, gene=which.min(res$padj), intgroup="condition")
-```
-
-For customized plotting, an argument returnData specifies that the function should only return a data.frame for plotting with ggplot.
-
-```{r}
-d <- plotCounts(dds, gene=which.min(res$padj), intgroup="condition", 
-                returnData=TRUE)
-
-```
-This returns the raw counts for the data point in question.
-
-```{r}
-library("ggplot2")
-ggplot(d, aes(x=condition, y=count,col=condition)) + 
-  geom_point(position=position_jitter(w=0.1,h=0)) + 
-  scale_y_log10(breaks=c(500,1000,1500)) 
-```
-
-## Multi-factor designs
-Experiments with more than one factor influencing the counts can be analyzed using design formula that include the additional variables. In fact, DESeq2 can analyze any possible experimental design that can be expressed with fixed effects terms (multiple factors, designs with interactions, designs with continuous variables, splines, and so on are all possible).
-
-By adding variables to the design, one can control for additional variation in the counts. For example, if the condition samples are balanced across experimental batches, by including the batch factor to the design, one can increase the sensitivity for finding differences due to condition. There are multiple ways to analyze experiments when the additional variables are of interest and not just controlling factors (see section on interactions).
-
-Experiments with many samples: in experiments with many samples (e.g. 50, 100, etc.) it is highly likely that there will be technical variation affecting the observed counts. Failing to model this additional technical variation will lead to spurious results. Many methods exist that can be used to model technical variation, which can be easily included in the DESeq2 design to control for technical variation which estimating effects of interest. See the RNA-seq workflow for examples of using RUV or SVA in combination with DESeq2. For more details on why it is important to control for technical variation in large sample experiments, see the following thread.
-
-The data in the pasilla package have a condition of interest (the column condition), as well as information on the type of sequencing which was performed (the column type), as we can see below:
-
-```{r}
-colData(dds)
-```
-
-We create a copy of the DESeqDataSet, so that we can rerun the analysis using a multi-factor design.
-
-```{r}
-ddsMF <- dds
-```
-
-We change the levels of type so it only contains letters (numbers, underscore and period are also allowed in design factor levels). Be careful when changing level names to use the same order as the current levels.
-
-```{r}
-
-levels(ddsMF$type)
-
-levels(ddsMF$type) <- sub("-.*", "", levels(ddsMF$type))
-levels(ddsMF$type)
-
-```
-
-We can account for the different types of sequencing, and get a clearer picture of the differences attributable to the treatment. As condition is the variable of interest, we put it at the end of the formula. Thus the results function will by default pull the condition results unless contrast or name arguments are specified.
-
-Then we can re-run DESeq:
-
-```{r}
-
-design(ddsMF) <- formula(~ type + condition)
-ddsMF <- DESeq(ddsMF)
-
-```
-
-Again, we access the results using the results function.
-```{r}
-
-resultsNames(ddsMF)
-
-```
-
-What results do we want?
-```{r}
-
-resultsNames(ddsMF)
-resMF <- results(ddsMF, name = "condition_treated_vs_untreated")
-head(resMF)
-```
-
-It is also possible to retrieve the log2 fold changes, p values and adjusted p values of variables other than the last one in the design. While in this case, type is not biologically interesting as it indicates differences across sequencing protocol, for other hypothetical designs, such as ~genotype + condition + genotype:condition, we may actually be interested in the difference in baseline expression across genotype, which is not the last variable in the design.
-
-In any case, the contrast argument of the function results takes a character vector of length three: the name of the variable, the name of the factor level for the numerator of the log2 ratio, and the name of the factor level for the denominator. The contrast argument can also take other forms, as described in the help page for results and below
-
-```{r}
-resMFType <- results(ddsMF,
-                     contrast=c("type", "single", "paired"))
-head(resMFType)
-table(abs(resMFType$log2FoldChange)>2&resMFType$padj < 0.05)
-```
-
-
-If the variable is continuous or an interaction term (see section on interactions) then the results can be extracted using the name argument to results, where the name is one of elements returned by resultsNames(dds).
-
-## Why is it Important to Transform Data Before Analysis?
-The log, rlog, and variance stabilizing transformations
-Many common statistical methods for exploratory analysis of multidimensional data, for example clustering and principal components analysis (PCA), work best for data that generally has the same range of variance at different ranges of the mean values. When the expected amount of variance is approximately the same across different mean values, the data is said to be homoskedastic. For RNA-seq counts, however, the expected variance grows with the mean. For example, if one performs PCA directly on a matrix of counts or normalized counts (e.g. correcting for differences in sequencing depth), the resulting plot typically depends mostly on the genes with highest counts because they show the largest absolute differences between samples. A simple and often used strategy to avoid this is to take the logarithm of the normalized count values plus a pseudocount of 1 (to account for 0-count observations, as the log of 0 is undefined and the log of 1 is always 0 irrespective of base); however, depending on the choice of pseudocount, the genes with the very lowest counts will contribute a great deal of noise to the resulting plot, because taking the logarithm of small counts actually inflates their variance. We can quickly show this property of counts with simulated data (here, Poisson-distributed counts with a range of lambda from 0.1 to 100). We plot the standard deviation of each row (genes) against the mean:
-
-```{r}
-options(repr.plot.height=3, repr.plot.width=5)
-lambda <- 10^seq(from = -1, to = 2, length = 1000)
-cts <- matrix(rpois(1000*100, lambda), ncol = 100)
-library(vsn)
-meanSdPlot(cts, ranks = FALSE)
-```
-
-
-And for logarithm-transformed counts:
-
-```{r}
-options(repr.plot.height=3, repr.plot.width=5)
-log.cts.one <- log2(cts + 1)
-meanSdPlot(log.cts.one, ranks = FALSE)
-```
-
-Note the markedly lower scale of the axes in the log-transformed data!
-The logarithm with a small pseudocount (i.e. the standard log2(x+1) transformation) amplifies differences when the values are close to 0. The low count genes with low signal-to-noise ratio will then overly contribute to sample-sample distances and PCA plots.
-
-As a solution, DESeq2 offers two transformations for count data that stabilize the variance across the mean: the regularized-logarithm transformation or rlog (Love, Huber, Anders, Genome Biology 2014), and the variance stabilizing transformation (VST) for negative binomial data with a dispersion-mean trend (Anders and Huber, Genome Biology 2010), implemented in the vst function.
-
-For genes with high counts, the rlog and VST will give similar result to the ordinary log2 transformation of normalized counts. For genes with lower counts, however, the values are shrunken towards the genes' averages across all samples. The rlog-transformed or VST data then becomes approximately homoskedastic, and can be used directly for computing distances between samples, making PCA plots, or as input to downstream methods which perform best with homoskedastic data.
-
-Which transformation to choose? The rlog tends to work well on small datasets (n < 30), sometimes outperforming the VST when there is a large range of sequencing depth across samples (an order of magnitude difference). The VST is much faster to compute and is less sensitive to high count outliers than the rlog. We therefore recommend the VST for large datasets (hundreds of samples). You can perform both transformations and compare the meanSdPlot or PCA plots generated, as described below.
-
-Note that the two transformations offered by DESeq2 are provided for applications other than differential testing. For differential testing we recommend the DESeq function applied to raw counts, this approach also takes into account the dependence of the variance of counts on the mean value during the dispersion estimation step.
-
-The function rlog returns an object based on the SummarizedExperiment class that contains the rlog-transformed values in its assay slot. The assay slot is merely the piece of the dds object that contains the actual counts (as opposed to other information like metadata). R is programmed to know that when you call rlog on a dds object, and should transform the contents of the assay slot and not the entire object.
-
-First, we will depict the untransformed data, against which we can visually compare the results of the two aforementioned transformations. Note the extreme outliers and leverage points in the upper right of the plot, each colored dark blue to show that only one gene falls within each point - these observations would cause a great deal of bias in the result if uncorrected:
-
-```{r}
-suppressPackageStartupMessages(library(vsn))
-options(repr.plot.height=3, repr.plot.width=5)
-head(assay(dds), 3)
-par(mfrow=c(1,2))
-meanSdPlot(assay(dds), ranks=FALSE)
-```
-
-
-Now we will implement the rlog function:
-```{r}
-
-options(repr.plot.height=3, repr.plot.width=5)
-rld <- rlog(dds, blind = FALSE)
-head(assay(rld), 3)
-meanSdPlot(assay(rld), ranks=FALSE)
-```
-
-The function vst returns a similar object. Please note that the VST transformation is meant for exploratory data analysis and visualization only and is not to be used in actual differential expression analysis.
-
-```{r}
-vsd <- vst(dds, blind = FALSE)
-head(assay(vsd), 3)
-meanSdPlot(assay(vsd), ranks=FALSE)
-```
-
-In the above function calls, we specified blind = FALSE, which means that differences between untreated and treated (the variables in the design) will not contribute to the expected variance-mean trend of the experiment. The experimental design is not used directly in the transformation, only in estimating the global amount of variability in the counts. For a fully unsupervised transformation, one can set blind = TRUE (which is the default).
-
-To show the effect of the transformation, in the figure below we plot the first sample against the second, first simply using the log2 function (after adding 1, to avoid taking the log of zero, which as previously mentioned is undefined and would cause an error), and then using the rlog- and VST-transformed values. For the log2 approach, we need to first estimate size factors to account for sequencing depth, and then specify normalized=TRUE. Sequencing depth correction is done automatically for the rlog and the vst.
-
-```{r}
-dds <- estimateSizeFactors(dds)
-ddsESF <- estimateSizeFactors(dds)
-df1 <- data.frame(log2(counts(ddsESF, normalized=TRUE)[, 1:2] + 1))
-df1$transformation <- "log2(x + 1)"
-df2 <- data.frame(assay(rld)[, 1:2])
-df2$transformation <- "rld"
-df3 <- data.frame(assay(vsd)[, 1:2])
-df3$transformation <- "vsd"
-df <- rbind(df1, df2, df3)
-colnames(df)[1:2] <- c("x", "y")
-head(df)
-table(df$transformation)
-```
-
-
-```{r}
-options(repr.plot.width=6, repr.plot.height=2.5)
-library(ggplot2)
-ggplot(df, aes(x = x, y = y)) + geom_hex(bins = 80) +
-  coord_fixed() + facet_grid( . ~ transformation)
-```
-
-
-Scatterplot of transformed counts from two samples. Shown are scatterplots using the log2 transform of normalized counts (left), using the rlog (middle), and using the VST (right). While the rlog is on roughly the same scale as the log2 counts, the VST has a upward shift for the smaller values. It is the differences between samples (deviation from y=x in these scatterplots) which will contribute to the distance calculations and the PCA plot.
-
-We can see how genes with low counts (bottom left-hand corner) seem to be excessively variable on the ordinary logarithmic scale, while the rlog transform and VST compress differences for the low count genes for which the data provide little information about differential expression. As any differences in these low-count values are likely artefacts introduced by error or random chance, their exclusion helps to prevent false positives.
-
-### Boxplots of transformed distributions
-Boxplots of the count distributions in each sample are a good way to understand the effects these transformations have at the level of individual subjects.
-
-In R's boxplots, points classified as outliers are shown on the plots as circles. Here, neither the log2 nor the rld transformations include any outliers, while the vsd transformations do have outliers at the upper end of the distributions. These points are classified as outliers because the vsd method compresses lower end points more substantially, as can be seen on the scatter plot above - the actual magnitude of these points does not significantly exceed the magnitude seen with the other transformations.
-
-```{r}
-par(mfrow=c(1,3))
-boxplot(log2(assay(ddsESF)+1), las=2, main="log2(x+1)")
-boxplot(assay(rld), las=2, main="rld")
-boxplot(assay(vsd), las=2, main="vsd")
-```
-
-## Blind dispersion estimation
-The two functions, vst and rlog have an argument blind, for whether the transformation should be blind to the sample information specified by the design formula. When blind equals TRUE (the default), the functions will re-estimate the dispersions using only an intercept. This setting should be used in order to compare samples in a manner wholly unbiased by the information about experimental groups, for example to perform sample QA (quality assurance) as demonstrated below.
-
-However, blind dispersion estimation is not the appropriate choice if one expects that many or the majority of genes (rows) will have large differences in counts which are explainable by the experimental design, and one wishes to transform the data for downstream analysis. In this case, using blind dispersion estimation will lead to large estimates of dispersion, as it attributes differences due to experimental design as unwanted noise, and will result in overly shrinking the transformed values towards each other. By setting blind to FALSE, the dispersions already estimated will be used to perform transformations, or if not present, they will be estimated using the current design formula. Note that only the fitted dispersion estimates from mean-dispersion trend line are used in the transformation (the global dependence of dispersion on mean for the entire experiment). So setting blind to FALSE is still for the most part not using the information about which samples were in which experimental group in applying the transformation.
-
-## Extracting transformed values
-These transformation functions return an object of class DESeqTransform which is a subclass of RangedSummarizedExperiment. For ~20 samples, running on a newly created DESeqDataSet, rlog may take 30 seconds, while vst takes less than 1 second. The running times are shorter when using blind=FALSE and if the function DESeq has already been run, because then it is not necessary to re-estimate the dispersion values. The assay function is used to extract the matrix of normalized values.
-
-```{r}
-vsd <- vst(dds, blind=FALSE)
-rld <- rlog(dds, blind=FALSE)
-
-head(assay(vsd), 3)
-```
-
-
-## Variance stabilizing transformation
-Above, we used a parametric fit for the dispersion. In this case, the closed-form expression for the variance stabilizing transformation is used by the vst function. If a local fit is used (option fitType="locfit" to estimateDispersions) a numerical integration is used instead. The transformed data should be approximated variance stabilized and also includes correction for size factors or normalization factors. The transformed data is on the log2 scale for large counts.
-
-## Regularized log transformation
-The function rlog, stands for regularized log, transforming the original count data to the log2 scale by fitting a model with a term for each sample and a prior distribution on the coefficients which is estimated from the data. This is the same kind of shrinkage (sometimes referred to as regularization, or moderation) of log fold changes used by the DESeq and nbinomWaldTest. The resulting data contains elements defined as:
-
-$$log2(qij)=βi0+βij$$
-
-where $qij$ is a parameter proportional to the expected true concentration of fragments for gene i and sample j (see formula below), $βi0$ is an intercept which does not undergo shrinkage, and $βij$ is the sample-specific effect which is shrunk toward zero based on the dispersion-mean trend over the entire dataset. The trend typically captures high dispersions for low counts, and therefore these genes exhibit higher shrinkage from the rlog.
-
-Note that, as $qij$ represents the part of the mean value $μij$ after the size factor $sj$ has been divided out, it is clear that the rlog transformation inherently accounts for differences in sequencing depth. Without priors, this design matrix would lead to a non-unique solution, however the addition of a prior on non-intercept betas allows for a unique solution to be found.
-
-## Effects of transformations on the variance
-The figure below plots the standard deviation of the transformed data, across samples, against the mean, using the shifted logarithm transformation, the regularized log transformation and the variance stabilizing transformation. The shifted logarithm has elevated standard deviation in the lower count range, and the regularized log to a lesser extent, while for the variance stabilized data the standard deviation is roughly constant along the whole dynamic range.
-
-Note that the vertical axis in such plots is the square root of the variance over all samples, so including the variance due to the experimental conditions. While a flat curve of the square root of variance over the mean may seem like the goal of such transformations, this may be unreasonable in the case of datasets with many true differences due to the experimental conditions.
-
-```{r}
-# this gives log2(n + 1)
-ntd <- normTransform(dds)
-library("vsn")
-meanSdPlot(assay(ntd))
-```
-
-
-
-```{r}
-meanSdPlot(assay(vsd))
-```
-
-
-
-```{r}
-meanSdPlot(assay(rld))
-```
-
-
-
-## Data quality assessment by sample clustering and visualization
-Data quality assessment and quality control (i.e. the removal of insufficiently good data) are essential steps of any data analysis. These steps should typically be performed very early in the analysis of a new data set, preceding or in parallel to the differential expression testing.
-
-We define the term quality as fitness for purpose. Our purpose is the detection of differentially expressed genes, and we are looking in particular for samples whose experimental treatment suffered from an anormality that renders the data points obtained from these particular samples detrimental to our purpose.
-
-## Heatmap of the count matrix
-To explore a count matrix, it is often instructive to look at it as a heatmap. Below we show how to produce such a heatmap for various transformations of the data.
-
-```{r}
-library("pheatmap")
-select <- order(rowMeans(counts(dds,normalized=TRUE)),
-                decreasing=TRUE)[1:20]
-df <- as.data.frame(colData(dds)[,c("condition","type")])
-pheatmap(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
-         cluster_cols=FALSE, annotation_col=df)
-```
-
-
-
-```{r}
-pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
-         cluster_cols=FALSE, annotation_col=df)
-```
-
-
-
-```{r}
-pheatmap(assay(rld)[select,], cluster_rows=FALSE, show_rownames=FALSE,
-         cluster_cols=FALSE, annotation_col=df)
-```
-
-## Sample distances
-### The importance of distances
-High-dimensional data are complex and impossible to visualize in raw form. They represent thousands of dimensions, but we can only visualize 2-3.
-
-All clustering and classification of samples and/or genes involves combining or identifying objects that are close or similar. Distances or similarities are mathematical representations of what we mean by close or similar. The choice of distance is important and varies for different subject areas and types of data.
-
-See: http://master.bioconductor.org/help/course-materials/2002/Summer02Course/Distance/distance.pdf
-
-### Distances for exploratory RNA-seq data analysis
-A useful first step in an RNA-seq analysis is often to assess overall similarity between samples: Which samples are similar to each other, which are different? Does this fit to the expectation from the experiment's design?
-
-We use the R function dist to calculate the "Euclidean distance" between samples; the Euclidean distance is simply the higher-dimensional analogue of the human-measurable distance between points in 2 or 3 dimensions. To ensure we have a roughly equal contribution from all genes, we calculate it from the rlog-transformed data. We need to transpose the matrix of values using t, because the dist function expects the different samples to be rows of its argument, and different dimensions (here, genes) to be columns.
-
-## Heatmap of the sample-to-sample distances
-Another use of the transformed data is sample clustering. Here, we apply the dist function to the transpose of the transformed count matrix to get sample-to-sample distances.
-
-```{r}
-sampleDists <- dist(t(assay(vsd)))
-
-sampleDists
-```
-
-A heatmap of this distance matrix gives us an overview over similarities and dissimilarities between samples. We have to provide a hierarchical clustering hc to the heatmap function based on the sample distances, or else the heatmap function would calculate a clustering based on the distances between the rows/columns of the distance matrix.
-
-```{r}
-library("RColorBrewer")
-sampleDistMatrix <- as.matrix(sampleDists)
-rownames(sampleDistMatrix) <- paste(vsd$condition, vsd$type, sep="-")
-colnames(sampleDistMatrix) <- NULL
-colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
-pheatmap(sampleDistMatrix,
-         clustering_distance_rows=sampleDists,
-         clustering_distance_cols=sampleDists,
-         col=colors)
-```
-
-
-
-## Principal component plot of the samples
-Related to the distance matrix is the PCA plot, which shows the samples in the 2D plane spanned by their first two principal components. This type of plot is useful for visualizing the overall effect of experimental covariates and batch effects.
-
-```{r}
-plotPCA(vsd, intgroup=c("condition"))
-```
-
-```{r}
-plotPCA(vsd, intgroup=c("condition", "type"))
-```
-
-```{r}
-plotPCA(vsd, intgroup=c( "type"))
-```
-
-
-It is also possible to customize the PCA plot using the ggplot function.
-
-```{r}
-pcaData <- plotPCA(vsd, intgroup=c("condition", "type"), returnData=TRUE)
-
-
-```
-
-Let's look at the data returned by plotPCA:
-
-```{r}
-pcaData
-```
-
-```{r}
-str(pcaData)
-attributes(pcaData)
-```
-
-```{r}
-percentVar <- round(100 * attr(pcaData, "percentVar"))
-```
-
-
-```{r}
-ggplot(pcaData, aes(PC1, PC2, color=condition, shape=type)) +
-  geom_point(size=3) +
-  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
-  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
-  coord_fixed()
-```
-
-## Likelihood ratio test
-DESeq2 offers two kinds of hypothesis tests: the Wald test, where we use the estimated standard error of a log2 fold change to test if it is equal to zero, and the likelihood ratio test (LRT). The LRT examines two models for the counts, a full model with a certain number of terms and a reduced model, in which some of the terms of the full model are removed. The test determines if the increased likelihood of the data using the extra terms in the full model is more than expected if those extra terms are truly zero.
-
-The LRT is therefore useful for testing multiple terms at once, for example testing 3 or more levels of a factor at once, or all interactions between two variables. The LRT for count data is conceptually similar to an analysis of variance (ANOVA) calculation in linear regression, except that in the case of the Negative Binomial GLM, we use an analysis of deviance (ANODEV), where the deviance captures the difference in likelihood between a full and a reduced model.
-
-The likelihood ratio test can be performed by specifying test="LRT" when using the DESeq function, and providing a reduced design formula, e.g. one in which a number of terms from design(dds) are removed. The degrees of freedom for the test is obtained from the difference between the number of parameters in the two models. If the full design contained other variables, such as a batch variable, e.g. ~batch + condition then the likelihood ratio test would look like:
-
-```{r eval=FALSE}
-dds <- DESeq(dds, test="LRT", reduced=~batch)
-res <- results(dds)
-```
-
-
-## Session info
-```{r}
-sessionInfo()
-```
-
-
-## References
-Ahlmann-Eltze, Constantin, and Wolfgang Huber. 2020. “glmGamPoi: Fitting Gamma-Poisson Generalized Linear Models on Single Cell Count Data.” Bioinformatics, December. https://doi.org/10.1093/bioinformatics/btaa1009.
-
-Anders, Simon, and Wolfgang Huber. 2010. “Differential Expression Analysis for Sequence Count Data.” Genome Biology 11: R106. http://genomebiology.com/2010/11/10/R106.
-
-Anders, Simon, Paul Theodor Pyl, and Wolfgang Huber. 2014. “HTSeq – A Python framework to work with high-throughput sequencing data.” Bioinformatics. http://dx.doi.org/10.1093/bioinformatics/btu638.
-
-Bourgon, Richard, Robert Gentleman, and Wolfgang Huber. 2010. “Independent Filtering Increases Detection Power for High-Throughput Experiments.” PNAS 107 (21): 9546–51. http://www.pnas.org/content/107/21/9546.long.
-
-Bray, Nicolas, Harold Pimentel, Pall Melsted, and Lior Pachter. 2016. “Near-Optimal Probabilistic Rna-Seq Quantification.” Nature Biotechnology 34: 525–27. http://dx.doi.org/10.1038/nbt.3519.
-
-Brooks, A. N., L. Yang, M. O. Duff, K. D. Hansen, J. W. Park, S. Dudoit, S. E. Brenner, and B. R. Graveley. 2011. “Conservation of an RNA regulatory map between Drosophila and mammals.” Genome Research, 193–202. https://doi.org/10.1101/gr.108662.110.
-
-Cook, R. Dennis. 1977. “Detection of Influential Observation in Linear Regression.” Technometrics, February.
-
-Cox, D. R., and N. Reid. 1987. “Parameter orthogonality and approximate conditional inference.” Journal of the Royal Statistical Society, Series B 49 (1): 1–39. http://www.jstor.org/stable/2345476.
-
-Gerard, David, and Matthew Stephens. 2017. “Empirical Bayes Shrinkage and False Discovery Rate Estimation, Allowing For Unwanted Variation.” arXiv. https://arxiv.org/abs/1709.10066.
-
-Huber, Wolfgang, Anja von Heydebreck, Holger Sültmann, Annemarie Poustka, and Martin Vingron. 2003. “Parameter Estimation for the Calibration and Variance Stabilization of Microarray Data.” Statistical Applications in Genetics and Molecular Biology 2 (1): Article 3.
-
-Ignatiadis, Nikolaos, Bernd Klaus, Judith Zaugg, and Wolfgang Huber. 2016. “Data-Driven Hypothesis Weighting Increases Detection Power in Genome-Scale Multiple Testing.” Nature Methods. http://dx.doi.org/10.1038/nmeth.3885.
-
-Leek, Jeffrey T. 2014. “svaseq: removing batch effects and other unwanted noise from sequencing data.” Nucleic Acids Research 42 (21). http://dx.doi.org/10.1093/nar/gku864.
-
-Li, Bo, and Colin N. Dewey. 2011. “RSEM: accurate transcript quantification from RNA-Seq data with or without a reference genome.” BMC Bioinformatics 12: 323+. https://doi.org/10.1186/1471-2105-12-3231.
-
-Liao, Y., G. K. Smyth, and W. Shi. 2013. “featureCounts: an efficient general purpose program for assigning sequence reads to genomic features.” Bioinformatics, November.
-
-Love, Michael I., John B. Hogenesch, and Rafael A. Irizarry. 2016. “Modeling of Rna-Seq Fragment Sequence Bias Reduces Systematic Errors in Transcript Abundance Estimation.” Nature Biotechnology 34 (12): 1287–91. http://dx.doi.org/10.1038/nbt.3682.
-
-Love, Michael I., Wolfgang Huber, and Simon Anders. 2014. “Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2.” Genome Biology 15 (12): 550. http://dx.doi.org/10.1186/s13059-014-0550-8.
-
-Love, Michael I., Charlotte Soneson, Peter F. Hickey, Lisa K. Johnson, N. Tessa Pierce, Lori Shepherd, Martin Morgan, and Rob Patro. 2020. “Tximeta: Reference sequence checksums for provenance identification in RNA-seq.” PLOS Computational Biology. https://doi.org/10.1371/journal.pcbi.1007664.
-
-Patro, Rob, Geet Duggal, Michael I. Love, Rafael A. Irizarry, and Carl Kingsford. 2017. “Salmon Provides Fast and Bias-Aware Quantification of Transcript Expression.” Nature Methods. http://dx.doi.org/10.1038/nmeth.4197.
-
-Patro, Rob, Stephen M. Mount, and Carl Kingsford. 2014. “Sailfish enables alignment-free isoform quantification from RNA-seq reads using lightweight algorithms.” Nature Biotechnology 32: 462–64. http://dx.doi.org/10.1038/nbt.2862.
-
-Risso, Davide, John Ngai, Terence P Speed, and Sandrine Dudoit. 2014. “Normalization of RNA-seq data using factor analysis of control genes or samples.” Nature Biotechnology 32 (9). http://dx.doi.org/10.1038/nbt.2931.
-
-Robert, Christelle, and Mick Watson. 2015. “Errors in RNA-Seq quantification affect genes of relevance to human disease.” Genome Biology. https://doi.org/10.1186/s13059-015-0734-x.
-
-Soneson, Charlotte, Michael I. Love, and Mark Robinson. 2015. “Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences.” F1000Research 4 (1521). http://dx.doi.org/10.12688/f1000research.7563.1.
-
-Stephens, Matthew. 2016. “False Discovery Rates: A New Deal.” Biostatistics 18 (2). https://doi.org/10.1093/biostatistics/kxw041.
-
-Storey, J. 2003. “The positive false discovery rate: A Bayesian interpretation and the q-value.” The Annals of Statistics 31 (6): 2013–35.
-
-Tibshirani, Robert. 1988. “Estimating Transformations for Regression via Additivity and Variance Stabilization.” Journal of the American Statistical Association 83: 394–405.
-
-Trapnell, Cole, David G Hendrickson, Martin Sauvageau, Loyal Goff, John L Rinn, and Lior Pachter. 2013. “Differential analysis of gene regulation at transcript resolution with RNA-seq.” Nature Biotechnology. https://doi.org/10.1038/nbt.2450.
-
-Van den Berge, Koen, Fanny Perraudeau, Charlotte Soneson, Michael I Love, Davide Risso, Jean-Philippe Vert, Mark D Robinson, Sandrine Dudoit, and Lieven Clement. 2018. “Observation weights unlock bulk RNA-seq tools for zero inflation and single-cell applications.” Genome Biology 19 (24). https://doi.org/10.1186/s13059-018-1406-4.
-
-Wu, Hao, Chi Wang, and Zhijin Wu. 2012. “A new shrinkage estimator for dispersion improves differential expression detection in RNA-seq data.” Biostatistics, September. https://doi.org/10.1093/biostatistics/kxs033.
-
-Zhu, Anqi, Joseph G. Ibrahim, and Michael I. Love. 2018. “Heavy-Tailed Prior Distributions for Sequence Count Data: Removing the Noise and Preserving Large Differences.” Bioinformatics. https://doi.org/10.1093/bioinformatics/bty895.
+MA plot
+
+Shrinkage of effect size (LFC estimates) is useful for visualization and ranking of genes. It is more useful visualize the MA-plot for the shrunken log2 fold changes, which remove the noise associated with log2 fold changes from low count genes without requiring arbitrary filtering thresholds. This helps to get more meaningful log2 fold changes for all genes independently of their expression level.
+
+resLFC <- lfcShrink(dds = dds2, 
+                  res = res,
+                  type = "normal",
+                  coef = 2) # corresponds to "infected_Pseudomonas_syringae_DC3000_vs_mock" comparison
+
+
+plotMA(resLFC, alpha = 0.01)
+
+
+You can see that genes with low counts are now shrinked.
+
+MA plot
+
+References
+Kamil Slowikoski blog post about heatmap
+Z-score calculations: link 1 and link 2.
+Type I and type II error rates in gene expression studies
+p-value histograms explained
+@gurinina
+Propose changes
+Commit summary
+Create 06-differential-analysis.md
+Optional extended description
+Add an optional extended description…
+ 
+Footer
+© 2022 GitHub, Inc.
+Footer navigation
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About

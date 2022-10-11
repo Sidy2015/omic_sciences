@@ -1,11 +1,5 @@
 # Annotation resources
 
-```{r, echo=FALSE}
-library(knitr)
-knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 40), tidy = TRUE)
-
-```
-
 ```{r setup,echo=FALSE}
 suppressWarnings({
 suppressMessages({
@@ -171,14 +165,15 @@ and of course more scientifically relevant questions.
 
 The r Bioconductor package `AnnotationHub` package can be used to obtain `GRanges` or other suitably designed containers for institutionally curated annotation. `AnnotationHub` provides a resource of annotations that are available without requiring an annotation package.
 
-```{r annotationhub, eval=FALSE}
+Note: you will need to run this without localHub = TRUE the first time, and it will take sometime to run...
+```{r annotationhub}
 library(AnnotationHub)
-ah <- AnnotationHub()
+ah <- AnnotationHub(localHub = TRUE)
 ```
 
 One example of such annotations are org-style data resources for less-model organisms. Discover available resources using the flexible `query` command.
 
-```{r eval=FALSE}
+```{r}
 query(ah, "^org\\.")
 ```
 
@@ -186,14 +181,14 @@ Find out more about a particular resource using `[` to select just that resource
 
 Find out more about a particular resource using `[` to select just that resource, or use `mcols` on a subset of resources. identifier, e.g.
 
-```{r AH102598, eval=FALSE}
+```{r AH102598}
 
 ah["AH102598"]
 ```
 
 Retrieve and use a resource by using `[[` with the corresponding
 
-```{r retrieve,eval=FALSE}
+```{r retrieve}
 org <- ah[["AH102598"]]
 
 org
@@ -201,7 +196,7 @@ org
 
 Determine the central key, and the columns that can be mapped between
 
-```{r, eval=FALSE}
+```{r}
 chooseCentralOrgPkgSymbol(org)
 
 columns(org)
@@ -209,7 +204,7 @@ columns(org)
 
 Here are some Entrez identifiers, and their corresponding symbols for Anopheles gambiae, either allowing for 1:many maps (select()) or enforcing 1:1 maps. We use `AnnotationDbi::select()` to disambiguate between the `select()` generic defined in `AnnotationDbi` and the `select()` generic defined in `dplyr`: theses methods have incompatible signatures and 'contracts', and so must be invoked in a way that resolves our intention explicitly.
 
-```{r eval=FALSE}
+```{r}
 library(dplyr)    # for `%>%`
 eid <- head(keys(org))
 
@@ -226,13 +221,13 @@ Bioconductor represents gene models using 'transcript' databases. These are avai
 
 AnnotationHub provides an easy way to work with gene models published by Ensembl. Let's see what Ensembl's Release-94 has in terms of data for pufferfish, Takifugu rubripes.
 
-```{r eval=FALSE}
+```{r}
 query(ah, c("Takifugu", "release-94"))
 ```
 
 We see that there is a GTF file descrbing gene models, as well as various DNA sequences. Let's retrieve the GTF and top-level DNA sequence files. The GTF file is imported as a `GRanges` instance, the DNA sequence as a twobit file.
 
-```{r eval=FALSE}
+```{r}
 gtf <- ah[["AH64858"]]
 
 dna <- ah[["AH66116"]]
@@ -244,21 +239,21 @@ head(seqlevels(dna))
 
 Let's identify the 25 longest DNA sequences, and keep just the annotations on these scaffolds.
 
-```{r eval=FALSE}
+```{r}
 keep <- names(tail(sort(seqlengths(dna)), 25))
 gtf_subset <- gtf[seqnames(gtf) %in% keep]
 ```
 
 It is trivial to make a `TxDb` instance of this subset (or of the entire gtf)
 
-```{r eval=FALSE}
+```{r}
 library(GenomicFeatures)         # for makeTxDbFromGRanges
 txdb <- makeTxDbFromGRanges(gtf_subset)
 ```
 
 and to use that in conjunction with the DNA sequences, e.g., to find exon sequences of all annotated genes.
 
-```{r eval=FALSE}
+```{r}
 library(Rsamtools)               # for getSeq,FaFile-method
 exons <- exons(txdb)
 length(exons)
@@ -272,13 +267,13 @@ Some difficulties arise when working with this partly assembled genome that requ
 
 Finally, there are a number of experimental data objects available through `AnnotationHub`. For example, related to the HepG2 cell line.
 
-```{r doqueah, eval=FALSE}
+```{r doqueah}
 query(ah, "HepG2")
 ```
 
 The `query` method can take a vector of filtering strings. To limit response to annotation resources addressing the histone H4K5, simply add that tag:
 
-```{r doonek, eval=FALSE}
+```{r doonek}
 query(ah, c("HepG2", "H4K5"))
 ```
 

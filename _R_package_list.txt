@@ -22,6 +22,7 @@ DOSE
 downloader
 dplyr
 edgeR
+EnhancedVolcano
 enrichplot
 EnsDb.Hsapiens.v75
 ensembldb
