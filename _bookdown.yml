@@ -6,7 +6,7 @@ rmd_files: ["index.Rmd","01-intro.Rmd", "02-getting-started.Rmd","03-bioconducto
  "09-exploratory-data-analysis.Rmd", "10-distance-and-dimension-reduction.Rmd",
 "11-confounding.Rmd","12-fastq.Rmd","13-NGS-pipeline.Rmd","14-annotation.Rmd",
 "15-normalization_methods.Rmd",
-"16-RNAseq-DESeq_PartI.Rmd","17-RNAseq-DESeq_PartII.Rmd","18-RNAseq-DESeq_PartIII.Rmd" ,"19-RNAseq-limma.Rmd",
+"16-RNAseq-DESeq2_PartI.Rmd","17-RNAseq-DESeq2_PartII.Rmd","18-RNAseq-DESeq2_PartIII.Rmd" ,"19-RNAseq-limma.Rmd",
 "20-chip-chip.Rmd",
 "21-GO-enrichment.Rmd"]
 

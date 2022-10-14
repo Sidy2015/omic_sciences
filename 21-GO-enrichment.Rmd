@@ -5,6 +5,7 @@ knitr::opts_chunk$set(warning = FALSE,
         message = FALSE, echo = TRUE)
 knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), 
                       tidy = TRUE)
+sapGO <- readRDS("data/sapGO.rds")
 suppressPackageStartupMessages({
 library(clusterProfiler)
 library(fgsea)
@@ -535,7 +536,7 @@ How do we make sense of them all?
 You could look at just the most extreme
 scores with the lowest adjusted pvalues:
 
-```{r ego, cache = TRUE}
+```{r ego, cache = 1}
 ### GO enrichment analysis
 plot(ranks)
 abline(v = 3500)
@@ -556,17 +557,17 @@ goplot(ego)
 dotplot(ego, showCategory=10) + ggtitle("positive enrichment")
 
 
-if (file.exists("sapGO.rds")) {
-  sapGO <- readRDS("sapGO.rds")
+if (file.exists("data/sapGO.rds")) {
+  sapGO <- readRDS("data/sapGO.rds")
 } else {
   sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
-  saveRDS(sapGO, "sapGO.rds")
+  saveRDS(sapGO, "data/sapGO.rds")
 }
 hx = pairwise_termsim(ego, semData = sapGO)
 emapplot(hx, showCategory = 15)
 ```
 We can also look at athe negative enrichment, or the repressed end:
-```{r nego, cache=TRUE}
+```{r nego}
 nego <- clusterProfiler::enrichGO(
         gene  = names(ranks)[13711:15211],
         OrgDb = "org.Hs.eg.db",
@@ -581,6 +582,7 @@ nego <- clusterProfiler::enrichGO(
 
 goplot(nego)
 dotplot(nego, showCategory=10) + ggtitle("negative enrichment analysis")
+
 
 hx = pairwise_termsim(nego, semData = sapGO)
 emapplot(hx, showCategory = 15)
@@ -622,7 +624,7 @@ based on the input fitness threshold cutoff set by `sig`, typically = 1.
 
 Just like for fgsea, we need a rank file, that is how we use ygene here:
 
-```{r gse, cache=TRUE}
+```{r gse, cache=2}
 library(GOenrichment)
 dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
 head(dfsig)
@@ -649,11 +651,11 @@ pAdjustMethod = "BH",
 by = "fgsea"
 )
 
-if (file.exists("scGO.rds")) {
-  scGO <- readRDS("scGO.rds")
+if (file.exists("data/scGO.rds")) {
+  scGO <- readRDS("data/scGO.rds")
 } else {
   scGO <- godata('org.Sc.sgd.db', keytype = "GENENAME", ont="BP", computeIC=FALSE)
-  saveRDS(scGO, "scGO.rds")
+  saveRDS(scGO, "data/scGO.rds")
 }
 
 goplot(gse)
@@ -736,17 +738,12 @@ The function `simplify` internally calls GOSemSim (Yu et al. 2010) to calculate 
 
 
 ```{r simp}
-if (file.exists("sapGO.rds")) {
-  sapGO <- readRDS("sapGO.rds")
-} else {
-  sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
-  saveRDS(sapGO, "sapGO.rds")
-}
-if (file.exists("simp.rds")) {
-  simp <- readRDS("simp.rds")
+
+if (file.exists("data/simp.rds")) {
+  simp <- readRDS("data/simp.rds")
 } else {
  simp = clusterProfiler::simplify(hse,semData  = sapGO)
-  saveRDS(simp, "simp.rds")
+  saveRDS(simp, "data/simp.rds")
 }
 
 simp$Description[1:10]
@@ -845,11 +842,11 @@ gseGO enrichment for both the yeast and the human. First let's tackle the yeast:
 
 ```{r yoverlapGO}
 
-if (file.exists("y.rds")) {
-  y <- readRDS("y.rds")
+if (file.exists("data/y.rds")) {
+  y <- readRDS("data/y.rds")
 } else {
   y = calcOverGOcoeff(res=gse,showCategory = nrow(data.frame(gse)),cutoff=1,select_fun = overlapcoeff,orgDb = "org.Sc.sgd.db",keytype="GENENAME")
-  saveRDS(y, "y.rds")
+  saveRDS(y, "data/y.rds")
 }
 
 x = pairwise_termsim(y, semData = scGO,showCategory = nrow(y))
@@ -858,19 +855,14 @@ treeplot(x, hclust_method = "ward.D2",showCategory =nrow(x), nCluster=6)
 ```
 
 ```{r hoverlapGO}
-if (file.exists("h.rds")) {
-  h <- readRDS("h.rds")
+if (file.exists("data/h.rds")) {
+  h <- readRDS("data/h.rds")
 } else {
   h = calcOverGOcoeff(res=hse,showCategory = nrow(data.frame(hse)),cutoff=0.5,select_fun = overlapcoeff,orgDb = "org.Hs.eg.db",keytype="SYMBOL")
-  saveRDS(h, "h.rds")
+  saveRDS(h, "data/h.rds")
 }
 
-if (file.exists("sapGO.rds")) {
-  sapGO <- readRDS("sapGO.rds")
-} else {
-  sapGO <- godata('org.Hs.eg.db', keytype = "SYMBOL", ont="BP", computeIC=TRUE)
-  saveRDS(sapGO, "sapGO.rds")
-}
+
 
 
 x = pairwise_termsim(h, semData = sapGO,showCategory = nrow(h))
@@ -988,7 +980,7 @@ are combined into a much broader annotation. We can look
 at how well that does by downloading the slim annotations from
 Biomart.
 
-```{r biomaRt, cache=TRUE}
+```{r biomaRt, cache=3}
 
 library(biomaRt)
 
@@ -1140,13 +1132,16 @@ the `select` function, we can pull down the GO annotaations
 by querying the yeast database `org.Sc.sgd.db`.
 
 ```{r yanno}
-if (file.exists("yanno.rds")) {
-  yanno <- readRDS("yanno.rds")
+if (file.exists("data/yanno.rds")) {
+  yanno <- readRDS("data/yanno.rds")
 } else {
   
 yanno = AnnotationDbi::select(org.Sc.sgd.db,
   keys=dfsig$gene,columns=c("ORF","GENENAME","GOALL",
-  "ONTOLOGYALL"),keytype="GENENAME")}
+  "ONTOLOGYALL"),keytype="GENENAME")
+
+   saveRDS(yanno, "data/yanno.rds")
+}
 names(yanno)
 
 
@@ -1793,7 +1788,7 @@ properties. So this analysis really helped clarify the positive
 end of the GSEA analysis. We could do the same for the negative end
 by just negating the values.
 
-```{r, cache = TRUE}
+```{r}
 library(GOenrichment)
 
 mat[,2]= -mat[,2]
@@ -1878,12 +1873,12 @@ Use the hresp enrichInfo and plug it into this revised function:
 ```{r newhresp}
 
 
-if (file.exists("newhresp.rds")) {
-  newhresp <- readRDS("newhresp.rds")
+if (file.exists("data/newhresp.rds")) {
+  newhresp <- readRDS("data/newhresp.rds")
 } else {
   
 newhresp = calcOverGOcoeff(select_fun=overlapcoeff,cutoff=0.7,res = hresp$enrichInfo,padj="FDR",term="term",goont=hGOBP.gmt)
-  saveRDS(newhresp, "newhresp.rds")
+  saveRDS(newhresp, "data/newhresp.rds")
 }
 
 
