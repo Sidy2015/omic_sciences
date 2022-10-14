@@ -415,7 +415,7 @@ The to run fgsea:
 fgseaRes = fgsea::fgseaSimple(pathways = hGOBP.gmt,stats=ranks,nperm=1000,maxSize = 200,minSize = 15)
 ```
 
-Some enrichment plots:
+Some enrichment plots to have first glance:
 ```{r plot}
 topPathwaysUp <- fgseaRes[ES > 0][head(order(pval), n=5), pathway]
 topPathwaysDown <- fgseaRes[ES < 0][head(order(pval), n=5), pathway]
@@ -1940,5 +1940,6 @@ package and it plays nicely with GOSemSim and enrichplot.
 Visualization wherever possible is essential in communicating
 your results. GO enrichment is the fun part in my eyes, as it is here where 
 you really can extract the meaning from large-scale data analysis...
+
 
 

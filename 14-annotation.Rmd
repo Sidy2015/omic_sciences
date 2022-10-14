@@ -368,15 +368,16 @@ Overview The KEGG REST API is built on some simple operations: info, list, find,
 
 KEGGREST, requires an active internet connection. A very useful query resolution facility is based on Entrez identifiers. The Entrez ID for BRCA2 is 675. We'll perform a general query.
 
-```{r dokr}
+```{r dokr, cache=1}
 library(KEGGREST)
 brca2K = keggGet("hsa:675")
+
 names(brca2K[[1]])
 ```
 
 The list of genes making up a pathway model can be obtained with another keggGet:
 
-```{r dolkp}
+```{r dolkp, cache=2}
 brpat = keggGet("path:hsa05212")
 names(brpat[[1]])
 brpat[[1]]$GENE[seq(1,132,2)] # entrez gene ids
@@ -384,7 +385,7 @@ brpat[[1]]$GENE[seq(1,132,2)] # entrez gene ids
 
 There is much to explore, and the KEGGREST package vignette provides examples. As a last illustration, we can acquire a static image of the (human) pancreatic cancer pathway in which BRCA2 is implicated.
 
-```{r getp,fig=TRUE}
+```{r getp,fig=TRUE, cache=3}
 library(png)
 library(grid)
 brpng = keggGet("hsa05212", "image")
