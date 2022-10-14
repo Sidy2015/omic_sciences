@@ -29,13 +29,13 @@ fq
 #length: 1885330 reads; width: 51 cycles
 
 
-reads = sread(fq)[1:20000]
+reads = sread(fq)
 reads[2]
 reverseComplement(reads[2])
 alphabetFrequency(reads[1:5] ,baseOnly = TRUE)
-w = vcountPattern("GCTGGGCG",reads)
+w = vcountPattern("GCTGGGC",reads)
 ww = which(w!=0)
-strsplit(reads[ww],"GCTGGGCG")
+strsplit(reads[ww],"GCTGGGC")
 ```
 
 
@@ -159,23 +159,23 @@ Within our report, a summary of all of the modules is given on the
 left-hand side of the report. Don't take the yellow "WARNING"s and red
 "FAIL"s too seriously; they should be interpreted as flags for modules
 to check out.
-
-![Figure 1. Summary](figure/fastqc_summary.png)
+![Figure 1A. Summary](figure/fastqc_summary.png)
+![Figure 1B. Summary](figure/my_fasq_summary.png)
 
 The first module gives the basic statistics for the sample. Generally it
 is a good idea to keep track of the total number of reads sequenced for
 each sample and to make sure the read length and %GC content is as
 expected.
-
-![Figure 2. Basic stats](figure/fastqc_basic_stats.png)
+![Figure 2A. Basic stats](figure/fastqc_basic_stats.png)
+![Figure 2B. Our basic stats](figure/basic_stats.png)
 
 One of the most important analysis modules is the "Per base sequence
 quality" plot. This plot provides the distribution of quality scores at
 each position in the read across all reads. This plot can alert us to
 whether there were any problems occuring during sequencing and whether
 we might need to contact the sequencing facility.
-
-![Figure 3. FastQC sequence quality](figure/FastQC_seq_qual.png)
+![Figure 3A. FastQC sequence per base sequence quality quality](figure/fastqc_seq_qual.png)
+![Figure 3B. Our FastQC per base sequence quality quality](figure/my_perbase_seq_quality.png)
 
 The y-axis gives the quality scores, while the x-axis represents the
 position in the read. The color coding of the plot denotes what are
@@ -256,7 +256,9 @@ signal decay or phasing. No other worrisome signs are present, so the
 sequencing data from the facility is of good quality.
 
 FastQC_seq_qual 
-![Figure 10. Sequence quality](figure/FastQC_seq_qual.png)
+![Figure 10A. Sequence quality](figure/FastQC_seq_qual.png)
+![Figure 10B. Our Sequence quality](figure/my_perbase_seq_quality.png)
+
 
 The other modules in the FastQC report can also help interpret the
 quality of the data.
@@ -266,7 +268,8 @@ score on the x-axis and the number of sequences with that average on the
 y-axis. We hope the majority of our reads have a high average quality
 score with no large bumps at the lower quality values.
 
-![Figure 11. Per sequence quality scores](figure/fastqc_per_sequence_quality_scores.png)
+![Figure 11A. Per sequence quality scores](figure/fastqc_per_sequence_quality_scores.png)
+![Figure 11B. Our Per sequence quality scores](figure/my_per_seq_quality.png)
 
 This data has a small bump at a mean quality of 12. Since it doesn't
 represent a large proportion of the data, it isn't extremely worrisome,
@@ -278,8 +281,8 @@ a FAIL for RNA-seq data. This is because the first 10-12 bases result
 from the 'random' hexamer priming that occurs during RNA-seq library
 preparation. This priming is not as random as we might hope giving an
 enrichment in particular bases for these intial nucleotides.
-
-![Figure 12. Per base sequence content](figure/fastqc_per_base_sequence_content.png)
+![Figure 12A. Our Per base sequence content](figure/fastqc_per_base_sequence_content.png)
+![Figure 12B. Our Per base sequence content](figure/my_base_seq_content.png)
 
 The "Per sequence GC content" plot gives the GC distribution over all
 sequences. Generally is a good idea to note whether the GC content of
@@ -291,8 +294,8 @@ another organism (broad peak).
 This plot would indicate some type of over-represented sequence with the
 sharp peaks, indicating either contamination or a highly over-expressed
 gene.
-
-![Figure 12. Per sequence GC content](figure/fastqc_GC.png)
+![Figure 13A. Per sequence GC content](figure/fastqc_GC.png)
+![Figure 13B. Our Per sequence GC content](figure/myGC.png)
 
 The next module explores numbers of duplicated sequences in the library.
 This plot can help identify a low complexity library, which could result
@@ -304,7 +307,8 @@ future libraries. In this analysis we seem to have a large number of
 duplicated sequences, but this is expected due to the subset of data we
 are working with containing the over-expression of MOV10.
 
-![Figure 13. Sequence duplication levels](figure/fastqc_duplication.png)
+![Figure 14A. Sequence duplication levels](figure/fastqc_duplication.png)
+![Figure 14B. Sequence duplication levels](figure/my_seq_dup.png)
 
 The "Overrepresented sequences" table is another important module as it
 displays the sequences (at least 20 bp) that occur in more than 0.1% of
@@ -318,8 +322,8 @@ Since our data is just a subset of the original data and it contains the
 over-expressed MOV10 gene, if we BLAST the sequences we will find they
 belong to MOV10. For this experiment, these over-represented sequences
 are not concerning.
-
-![Figure 14. Overrepresented sequences](figure/FastQC_contam.png)
+![Figure 14A. Overrepresented sequences](figure/fastqc_contam.png)
+![Figure 14B. Our Overrepresented sequences](figure/overrepresented.png)
 
 As our report only represents a subset of reads (chromosome 1) for
 Mov10_oe_1.subset.fq, which can skew the QC results. We encourage you to

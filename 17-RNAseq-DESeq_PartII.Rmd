@@ -1,4 +1,4 @@
-# DESeq2 PartI
+# DESeq2 PartII
 
 
 Analyzing RNA-seq data with DESeq2
@@ -77,7 +77,7 @@ To demonstate the use of DESeqDataSetFromMatrix, we will read in count data from
 
 
 ```{r}
-library("pasilla")
+library(pasilla)
 pasCts <- system.file("extdata",
                       "pasilla_gene_counts.tsv",
                       package="pasilla", mustWork=TRUE)
@@ -131,8 +131,7 @@ With the count matrix, cts, and the sample information, coldata, we can construc
 
 library(DESeq2)
 dds <- DESeqDataSetFromMatrix(countData = cts,
-                              colData = coldata,
-                              design = ~ condition)
+       colData = coldata,design = ~ condition)
 dds
 ```
 
@@ -163,6 +162,226 @@ dds <- dds[keep,]
 dim(dds)
 ```
 This is a little more stringent, so I favor this one over the other one.
+
+### Quality assessment and exploratory analysis using DESeq2
+
+![](figure/deseq_workflow_full_2018.png) 
+**Transform normalized counts using the rlog transformation**
+To improve the distances/clustering for the PCA and heirarchical clustering visualization methods, we need to moderate the variance across the mean by applying the rlog transformation to the normalized counts.
+
+The rlog transformation of the normalized counts is only necessary for these visualization methods during this quality assessment. We will not be using these tranformed counts downstream.
+
+### Transform counts for data visualization
+```{r}
+rld <- rlog(dds, blind=TRUE)
+vsd <- vst(dds, blind = TRUE)
+```
+
+The blind=TRUE argument results in a transformation unbiased to sample condition information. When performing quality assessment, it is important to include this option. The DESeq2 vignette has more details.
+
+The rlog function returns a DESeqTransform object, another type of DESeq-specific object. The reason you don’t just get a matrix of transformed values is because all of the parameters (i.e. size factors) that went into computing the rlog transform are stored in that object. We use this object to plot the PCA and heirarchical clustering figures for quality assessment.
+
+NOTE: The rlog() funtion can be a bit slow when you have e.g. > 20 samples. In these situations the vst() function is much faster and performs a similar transformation appropriate for use with plotPCA(). It’s typically just a few seconds with vst() due to optimizations and the nature of the transformation. log2 transformation of normalized counts (+1 to avoid taking the log of zero) can also be used.
+
+### Boxplots of transformed distributions
+Boxplots of the count distributions in each sample are a good way to check quality and to understand the effects these transformations have at the level of individual subjects.
+
+In R's boxplots, points classified as outliers are shown on the plots as circles. Here, neither the log2 nor the rld transformations include any outliers, while the vsd transformations do have outliers at the upper end of the distributions. These points are classified as outliers because the vsd method compresses lower end points more substantially, as can be seen on the scatter plot above - the actual magnitude of these points does not significantly exceed the magnitude seen with the other transformations.
+
+```{r}
+library(vsn)
+par(mfrow=c(1,3))
+ddsESF <- estimateSizeFactors(dds)
+rld <- rlog(dds, blind = FALSE)
+vsd <- vst(dds, blind = FALSE)
+boxplot(log2(assay(ddsESF)+1), las=2, main="log2(x+1)")
+boxplot(assay(rld), las=2, main="rld")
+boxplot(assay(vsd), las=2, main="vsd")
+
+```
+
+
+
+## Blind dispersion estimation
+The two functions, vst and rlog have an argument blind, for whether the transformation should be blind to the sample information specified by the design formula. When blind equals TRUE (the default), the functions will re-estimate the dispersions using only an intercept. This setting should be used in order to compare samples in a manner wholly unbiased by the information about experimental groups, for example to perform sample QA (quality assurance) as demonstrated below.
+
+However, blind dispersion estimation is not the appropriate choice if one expects that many or the majority of genes (rows) will have large differences in counts which are explainable by the experimental design, and one wishes to transform the data for downstream analysis. In this case, using blind dispersion estimation will lead to large estimates of dispersion, as it attributes differences due to experimental design as unwanted noise, and will result in overly shrinking the transformed values towards each other. By setting blind to FALSE, the dispersions already estimated will be used to perform transformations, or if not present, they will be estimated using the current design formula. Note that only the fitted dispersion estimates from mean-dispersion trend line are used in the transformation (the global dependence of dispersion on mean for the entire experiment). So setting blind to FALSE is still for the most part not using the information about which samples were in which experimental group in applying the transformation.
+
+## Extracting transformed values
+These transformation functions return an object of class DESeqTransform which is a subclass of RangedSummarizedExperiment. For ~20 samples, running on a newly created DESeqDataSet, rlog may take 30 seconds, while vst takes less than 1 second. The running times are shorter when using blind=FALSE and if the function DESeq has already been run, because then it is not necessary to re-estimate the dispersion values. The assay function is used to extract the matrix of normalized values.
+
+
+## Variance stabilizing transformation
+Above, we used a parametric fit for the dispersion. In this case, the closed-form expression for the variance stabilizing transformation is used by the vst function. If a local fit is used (option fitType="locfit" to estimateDispersions) a numerical integration is used instead. The transformed data should be approximated variance stabilized and also includes correction for size factors or normalization factors. The transformed data is on the log2 scale for large counts.
+
+## Data quality assessment by sample clustering and visualization
+Data quality assessment and quality control (i.e. the removal of insufficiently good data) are essential steps of any data analysis. These steps should typically be performed very early in the analysis of a new data set, preceding or in parallel to the differential expression testing.
+
+We define the term quality as fitness for purpose. Our purpose is the detection of differentially expressed genes, and we are looking in particular for samples whose experimental treatment suffered from an anormality that renders the data points obtained from these particular samples detrimental to our purpose.
+
+## Heatmap of the count matrix
+To explore a count matrix, it is often instructive to look at it as a heatmap. Below we show how to produce such a heatmap for various transformations of the data.
+
+```{r}
+library(pheatmap)
+dds <- estimateSizeFactors(dds)
+ntd = normTransform(dds)
+select <- order(rowMeans(counts(dds,normalized=TRUE)),
+                decreasing=TRUE)[1:20]
+df <- as.data.frame(colData(dds)[,c("condition","type")])
+pheatmap(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+`normTransform` is just log2(normalized(counts(dds)) + 1)
+
+
+```{r}
+pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+
+
+
+```{r}
+pheatmap(assay(rld)[select,], cluster_rows=FALSE, show_rownames=FALSE,
+         cluster_cols=FALSE, annotation_col=df)
+```
+
+## Sample distances
+### The importance of distances
+High-dimensional data are complex and impossible to visualize in raw form. They represent thousands of dimensions, but we can only visualize 2-3.
+
+All clustering and classification of samples and/or genes involves combining or identifying objects that are close or similar. Distances or similarities are mathematical representations of what we mean by close or similar. The choice of distance is important and varies for different subject areas and types of data.
+
+See: http://master.bioconductor.org/help/course-materials/2002/Summer02Course/Distance/distance.pdf
+
+### Distances for exploratory RNA-seq data analysis
+A useful first step in an RNA-seq analysis is often to assess overall similarity between samples: Which samples are similar to each other, which are different? Does this fit to the expectation from the experiment's design?
+
+We use the R function dist to calculate the "Euclidean distance" between samples; the Euclidean distance is simply the higher-dimensional analogue of the human-measurable distance between points in 2 or 3 dimensions. To ensure we have a roughly equal contribution from all genes, we calculate it from the rlog-transformed data. We need to transpose the matrix of values using t, because the dist function expects the different samples to be rows of its argument, and different dimensions (here, genes) to be columns.
+
+## Heatmap of the sample-to-sample distances
+Another use of the transformed data is sample clustering. Here, we apply the dist function to the transpose of the transformed count matrix to get sample-to-sample distances.
+
+```{r}
+sampleDists <- dist(t(assay(vsd)))
+
+sampleDists
+```
+
+A heatmap of this distance matrix gives us an overview over similarities and dissimilarities between samples. We have to provide a hierarchical clustering hc to the heatmap function based on the sample distances, or else the heatmap function would calculate a clustering based on the distances between the rows/columns of the distance matrix.
+
+```{r}
+library(RColorBrewer)
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(vsd$condition, vsd$type, sep="-")
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+```
+
+Hierarchical clustering based on correlation
+
+### Extract the rlog matrix from the object
+```{r}
+rld_mat <- assay(rld)   
+```
+
+Then we need to compute the pairwise correlation values for samples. We can do this using the cor() function:
+
+### Compute pairwise correlation values
+```{r}
+rld_cor <- cor(rld_mat)    ## cor() is a base R function
+
+head(rld_cor)   ## check the output of cor(), make note of the rownames and colnames
+```
+
+
+
+And now to plot the correlation values as a heatmap:
+
+Plot heatmap
+```{r}
+pheatmap(rld_cor)
+```
+
+
+Overall, we observe pretty high correlations across the board ( > 0.999) suggesting no outlying sample(s). Also, similar to the PCA plot you see the samples clustering together by sample group. Together, these plots suggest to us that the data are of good quality and we have the green light to proceed to differential expression analysis.
+
+NOTE: The pheatmap function has a number of different arguments that we can alter from default values to enhance the aesthetics of the plot. If you are curious and want to explore more, try running the code below. How does your plot change? Take a look through the help pages (?pheatmap) and identify what each of the added arguments is contributing to the plot.
+
+```{r}
+
+heat.colors <- brewer.pal(6, "Blues")
+pheatmap(rld_cor, color = heat.colors, border_color=NA, fontsize = 10, 
+			fontsize_row = 10, height=20)
+```
+
+Curious on all of the available color palettes offered by the RColorBrewer package? Try typing in your console display.brewer.all() and see what happens!
+
+### Principal components analysis (PCA)
+Related to the distance matrix is the PCA plot, which shows the samples in the 2D plane spanned by their first two principal components. This type of plot is useful for visualizing the overall effect of experimental covariates and batch effects.
+
+DESeq2 has a built-in function for plotting PCA plots, that uses ggplot2 under the hood. This is great because it saves us having to type out lines of code and having to fiddle with the different ggplot2 layers. In addition, it takes the rlog object as an input directly, hence saving us the trouble of extracting the relevant information from it.
+
+The function plotPCA() requires two arguments as input: an rlog object and the intgroup (the column in our metadata that we are interested in).
+
+### Plot PCA 
+
+rld
+```{r}
+plotPCA(rld, intgroup="condition")
+```
+vsd
+```{r}
+plotPCA(vsd, intgroup=c("condition"))
+```
+condition + type
+```{r}
+plotPCA(vsd, intgroup=c("condition", "type"))
+```
+type
+```{r}
+plotPCA(vsd, intgroup=c( "type"))
+```
+
+
+It is also possible to customize the PCA plot using the ggplot function.
+
+```{r}
+pcaData <- plotPCA(vsd, intgroup=c("condition", "type"), returnData=TRUE)
+
+
+```
+
+Let's look at the data returned by plotPCA:
+
+```{r}
+pcaData
+```
+
+```{r}
+str(pcaData)
+attributes(pcaData)
+```
+
+```{r}
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+```
+
+
+```{r}
+library(ggplot2)
+ggplot(pcaData, aes(PC1, PC2, color=condition, shape=type)) +
+  geom_point(size=3) +
+  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+  coord_fixed()
+```
+
 
 ### Note on factor levels
 By default, R will choose a reference level for factors based on alphabetical order. Then, if you never tell the DESeq2 functions which level you want to compare against (e.g. which level represents the control group), the comparisons will be based on the alphabetical order of the levels. There are two solutions: you can either explicitly tell results which comparison to make using the contrast argument (this will be shown later), or you can explicitly set the factors levels. In order to see the change of reference levels reflected in the results names, you need to either run DESeq or nbinomWaldTest/nbinomLRT after the re-leveling operation. Setting the factor levels can be done in two ways, either using factor:
@@ -269,7 +488,7 @@ plotMA(resLFC, ylim=c(-2,2))
 
 After calling plotMA, one can use the function identify to interactively detect the row number of individual genes by clicking on the plot. One can then recover the gene identifiers by saving the resulting indices:
 
-```{r}
+```{r eval=FALSE}
 plotMA(res, ylim=c(-2,2))
 idx <- identify(res$baseMean, res$log2FoldChange)
 rownames(res)[idx]
@@ -331,7 +550,7 @@ d <- plotCounts(dds, gene=which.min(res$padj), intgroup="condition",
 This returns the raw counts for the data point in question.
 
 ```{r}
-library("ggplot2")
+
 ggplot(d, aes(x=condition, y=count,col=condition)) + 
   geom_point(position=position_jitter(w=0.1,h=0)) + 
   scale_y_log10(breaks=c(500,1000,1500)) 
@@ -417,226 +636,8 @@ table(abs(resMFType$log2FoldChange)>2&resMFType$padj < 0.05)
 
 If the variable is continuous or an interaction term (see section on interactions) then the results can be extracted using the name argument to results, where the name is one of elements returned by resultsNames(dds).
 
-### Quality assessment and exploratory analysis using DESeq2
 
-**Transform normalized counts using the rlog transformation**
-To improve the distances/clustering for the PCA and heirarchical clustering visualization methods, we need to moderate the variance across the mean by applying the rlog transformation to the normalized counts.
-
-The rlog transformation of the normalized counts is only necessary for these visualization methods during this quality assessment. We will not be using these tranformed counts downstream.
-
-### Transform counts for data visualization
-```{r}
-rld <- rlog(dds, blind=TRUE)
-vsd <- vst(dds, blind = TRUE)
-```
-
-The blind=TRUE argument results in a transformation unbiased to sample condition information. When performing quality assessment, it is important to include this option. The DESeq2 vignette has more details.
-
-The rlog function returns a DESeqTransform object, another type of DESeq-specific object. The reason you don’t just get a matrix of transformed values is because all of the parameters (i.e. size factors) that went into computing the rlog transform are stored in that object. We use this object to plot the PCA and heirarchical clustering figures for quality assessment.
-
-NOTE: The rlog() funtion can be a bit slow when you have e.g. > 20 samples. In these situations the vst() function is much faster and performs a similar transformation appropriate for use with plotPCA(). It’s typically just a few seconds with vst() due to optimizations and the nature of the transformation. log2 transformation of normalized counts (+1 to avoid taking the log of zero) can also be used.
-### Boxplots of transformed distributions
-Boxplots of the count distributions in each sample are a good way to check quality and to understand the effects these transformations have at the level of individual subjects.
-
-In R's boxplots, points classified as outliers are shown on the plots as circles. Here, neither the log2 nor the rld transformations include any outliers, while the vsd transformations do have outliers at the upper end of the distributions. These points are classified as outliers because the vsd method compresses lower end points more substantially, as can be seen on the scatter plot above - the actual magnitude of these points does not significantly exceed the magnitude seen with the other transformations.
-
-```{r}
-library(vsn)
-par(mfrow=c(1,3))
-ddsESF <- estimateSizeFactors(dds)
-rld <- rlog(dds, blind = FALSE)
-vsd <- vst(dds, blind = FALSE)
-boxplot(log2(assay(ddsESF)+1), las=2, main="log2(x+1)")
-boxplot(assay(rld), las=2, main="rld")
-boxplot(assay(vsd), las=2, main="vsd")
-
-```
-
-
-@@@@@@@@@@@
-
-
-## Blind dispersion estimation
-The two functions, vst and rlog have an argument blind, for whether the transformation should be blind to the sample information specified by the design formula. When blind equals TRUE (the default), the functions will re-estimate the dispersions using only an intercept. This setting should be used in order to compare samples in a manner wholly unbiased by the information about experimental groups, for example to perform sample QA (quality assurance) as demonstrated below.
-
-However, blind dispersion estimation is not the appropriate choice if one expects that many or the majority of genes (rows) will have large differences in counts which are explainable by the experimental design, and one wishes to transform the data for downstream analysis. In this case, using blind dispersion estimation will lead to large estimates of dispersion, as it attributes differences due to experimental design as unwanted noise, and will result in overly shrinking the transformed values towards each other. By setting blind to FALSE, the dispersions already estimated will be used to perform transformations, or if not present, they will be estimated using the current design formula. Note that only the fitted dispersion estimates from mean-dispersion trend line are used in the transformation (the global dependence of dispersion on mean for the entire experiment). So setting blind to FALSE is still for the most part not using the information about which samples were in which experimental group in applying the transformation.
-
-## Extracting transformed values
-These transformation functions return an object of class DESeqTransform which is a subclass of RangedSummarizedExperiment. For ~20 samples, running on a newly created DESeqDataSet, rlog may take 30 seconds, while vst takes less than 1 second. The running times are shorter when using blind=FALSE and if the function DESeq has already been run, because then it is not necessary to re-estimate the dispersion values. The assay function is used to extract the matrix of normalized values.
-
-
-## Variance stabilizing transformation
-Above, we used a parametric fit for the dispersion. In this case, the closed-form expression for the variance stabilizing transformation is used by the vst function. If a local fit is used (option fitType="locfit" to estimateDispersions) a numerical integration is used instead. The transformed data should be approximated variance stabilized and also includes correction for size factors or normalization factors. The transformed data is on the log2 scale for large counts.
-
-## Data quality assessment by sample clustering and visualization
-Data quality assessment and quality control (i.e. the removal of insufficiently good data) are essential steps of any data analysis. These steps should typically be performed very early in the analysis of a new data set, preceding or in parallel to the differential expression testing.
-
-We define the term quality as fitness for purpose. Our purpose is the detection of differentially expressed genes, and we are looking in particular for samples whose experimental treatment suffered from an anormality that renders the data points obtained from these particular samples detrimental to our purpose.
-
-## Heatmap of the count matrix
-To explore a count matrix, it is often instructive to look at it as a heatmap. Below we show how to produce such a heatmap for various transformations of the data.
-
-```{r}
-library("pheatmap")
-ntd = normTransform(dds)
-select <- order(rowMeans(counts(dds,normalized=TRUE)),
-                decreasing=TRUE)[1:20]
-df <- as.data.frame(colData(dds)[,c("condition","type")])
-pheatmap(assay(ntd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
-         cluster_cols=FALSE, annotation_col=df)
-```
-`normTransform` is just log2(normalized(counts(dds)) + 1)
-
-
-```{r}
-pheatmap(assay(vsd)[select,], cluster_rows=FALSE, show_rownames=FALSE,
-         cluster_cols=FALSE, annotation_col=df)
-```
-
-
-
-```{r}
-pheatmap(assay(rld)[select,], cluster_rows=FALSE, show_rownames=FALSE,
-         cluster_cols=FALSE, annotation_col=df)
-```
-
-## Sample distances
-### The importance of distances
-High-dimensional data are complex and impossible to visualize in raw form. They represent thousands of dimensions, but we can only visualize 2-3.
-
-All clustering and classification of samples and/or genes involves combining or identifying objects that are close or similar. Distances or similarities are mathematical representations of what we mean by close or similar. The choice of distance is important and varies for different subject areas and types of data.
-
-See: http://master.bioconductor.org/help/course-materials/2002/Summer02Course/Distance/distance.pdf
-
-### Distances for exploratory RNA-seq data analysis
-A useful first step in an RNA-seq analysis is often to assess overall similarity between samples: Which samples are similar to each other, which are different? Does this fit to the expectation from the experiment's design?
-
-We use the R function dist to calculate the "Euclidean distance" between samples; the Euclidean distance is simply the higher-dimensional analogue of the human-measurable distance between points in 2 or 3 dimensions. To ensure we have a roughly equal contribution from all genes, we calculate it from the rlog-transformed data. We need to transpose the matrix of values using t, because the dist function expects the different samples to be rows of its argument, and different dimensions (here, genes) to be columns.
-
-## Heatmap of the sample-to-sample distances
-Another use of the transformed data is sample clustering. Here, we apply the dist function to the transpose of the transformed count matrix to get sample-to-sample distances.
-
-```{r}
-sampleDists <- dist(t(assay(vsd)))
-
-sampleDists
-```
-
-A heatmap of this distance matrix gives us an overview over similarities and dissimilarities between samples. We have to provide a hierarchical clustering hc to the heatmap function based on the sample distances, or else the heatmap function would calculate a clustering based on the distances between the rows/columns of the distance matrix.
-
-```{r}
-library("RColorBrewer")
-sampleDistMatrix <- as.matrix(sampleDists)
-rownames(sampleDistMatrix) <- paste(vsd$condition, vsd$type, sep="-")
-colnames(sampleDistMatrix) <- NULL
-colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
-pheatmap(sampleDistMatrix,
-         clustering_distance_rows=sampleDists,
-         clustering_distance_cols=sampleDists,
-         col=colors)
-```
-
-Hierarchical clustering based on correlation
-
-### Extract the rlog matrix from the object
-```{r}
-rld_mat <- assay(rld)   
-```
-
-Then we need to compute the pairwise correlation values for samples. We can do this using the cor() function:
-
-### Compute pairwise correlation values
-```{r}
-rld_cor <- cor(rld_mat)    ## cor() is a base R function
-
-head(rld_cor)   ## check the output of cor(), make note of the rownames and colnames
-```
-
-
-
-And now to plot the correlation values as a heatmap:
-
-Plot heatmap
-```{r}
-pheatmap(rld_cor)
-```
-
-
-Overall, we observe pretty high correlations across the board ( > 0.999) suggesting no outlying sample(s). Also, similar to the PCA plot you see the samples clustering together by sample group. Together, these plots suggest to us that the data are of good quality and we have the green light to proceed to differential expression analysis.
-
-NOTE: The pheatmap function has a number of different arguments that we can alter from default values to enhance the aesthetics of the plot. If you are curious and want to explore more, try running the code below. How does your plot change? Take a look through the help pages (?pheatmap) and identify what each of the added arguments is contributing to the plot.
-
-```{r}
-library(RColorBrewer)
-heat.colors <- brewer.pal(6, "Blues")
-pheatmap(rld_cor, color = heat.colors, border_color=NA, fontsize = 10, 
-			fontsize_row = 10, height=20)
-```
-
-Curious on all of the available color palettes offered by the RColorBrewer package? Try typing in your console display.brewer.all() and see what happens!
-
-
-
-### Principal components analysis (PCA)
-Related to the distance matrix is the PCA plot, which shows the samples in the 2D plane spanned by their first two principal components. This type of plot is useful for visualizing the overall effect of experimental covariates and batch effects.
-
-DESeq2 has a built-in function for plotting PCA plots, that uses ggplot2 under the hood. This is great because it saves us having to type out lines of code and having to fiddle with the different ggplot2 layers. In addition, it takes the rlog object as an input directly, hence saving us the trouble of extracting the relevant information from it.
-
-The function plotPCA() requires two arguments as input: an rlog object and the intgroup (the column in our metadata that we are interested in).
-
-### Plot PCA 
-
-rld
-```{r}
-plotPCA(rld, intgroup="condition")
-```
-vsd
-```{r}
-plotPCA(vsd, intgroup=c("condition"))
-```
-condition + type
-```{r}
-plotPCA(vsd, intgroup=c("condition", "type"))
-```
-type
-```{r}
-plotPCA(vsd, intgroup=c( "type"))
-```
-
-
-It is also possible to customize the PCA plot using the ggplot function.
-
-```{r}
-pcaData <- plotPCA(vsd, intgroup=c("condition", "type"), returnData=TRUE)
-
-
-```
-
-Let's look at the data returned by plotPCA:
-
-```{r}
-pcaData
-```
-
-```{r}
-str(pcaData)
-attributes(pcaData)
-```
-
-```{r}
-percentVar <- round(100 * attr(pcaData, "percentVar"))
-```
-
-
-```{r}
-ggplot(pcaData, aes(PC1, PC2, color=condition, shape=type)) +
-  geom_point(size=3) +
-  xlab(paste0("PC1: ",percentVar[1],"% variance")) +
-  ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
-  coord_fixed()
-```
-
-## Likelihood ratio test
+## Hypothesis testing: Likelihood ratio test (LRT)
 DESeq2 offers two kinds of hypothesis tests: the Wald test, where we use the estimated standard error of a log2 fold change to test if it is equal to zero, and the likelihood ratio test (LRT). The LRT examines two models for the counts, a full model with a certain number of terms and a reduced model, in which some of the terms of the full model are removed. The test determines if the increased likelihood of the data using the extra terms in the full model is more than expected if those extra terms are truly zero.
 
 The LRT is therefore useful for testing multiple terms at once, for example testing 3 or more levels of a factor at once, or all interactions between two variables. The LRT for count data is conceptually similar to an analysis of variance (ANOVA) calculation in linear regression, except that in the case of the Negative Binomial GLM, we use an analysis of deviance (ANODEV), where the deviance captures the difference in likelihood between a full and a reduced model.
@@ -647,13 +648,121 @@ The likelihood ratio test can be performed by specifying test="LRT" when using t
 dds <- DESeq(dds, test="LRT", reduced=~batch)
 res <- results(dds)
 ```
-The LRT is very confusing to me. 
+
+How does this compare to the Wald test?
+The Wald test (default) is a test of hypothesis usually performed on parameters that have been estimated by maximum likelihood. It only estimates one model per gene and evaluates the null hypothesis that LFC == 0.
+
+The Likelihood Ratio Test is also performed on parameters that have been estimated by maximum likelihood. For this test two models are estimated per gene; the fit of one model is compared to the fit of the other model.
+
+$$LR = -2ln(\frac{L(m1)}{L(m2)})$$
+where m1 is the reduced model (i.e the design formula with your main effect term removed)
+and m2 is the full model (i.e. the full design formula your provided when creating your dds object`)
+
+It is shown that LR follows a chi-squared distribution, and this can be used to calculate and associated p-value.
+
+Here, we are evaluating the null hypothesis that the full model fits just as well as the reduced model. If we reject the null hypothesis, this suggests that there is a significant amount of variation explained by our main effect, therefore the gene is differentially expressed across the different levels. DESeq2 implements the LRT by using an Analysis of Deviance (ANODEV) to compare the two model fits.
+
+To use the LRT, we use the DESeq() function but this time adding two arguments:
+
+specifying that we want to use the LRT test
+the ‘reduced’ model
+
+The full model was specified previously with the `design = ~ condition`:
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = cts,
+       colData = coldata,design = ~ condition)
+```
+
+So the reduced model in this case would look like this:
+# Likelihood ratio test
+```{r}
+dds_lrt <- DESeq(dds, test="LRT", reduced = ~ 1)
+```
+
+Since our ‘full’ model only has one factor (sampletype), the ‘reduced’ model is just the intercept (~ 1).
+
+Generally, this test will result in a larger number of genes than the individual pair-wise comparisons. While the LRT is a test of significance for differences of any level of the factor, **one should not expect it to be exactly equal to the union of sets of genes using Wald tests (although we do expect a majority overlap)**.
+
+Let’s take a look at the results table:
+
+# Extract results
+```{r}
+res_LRT <- results(dds_lrt)
+```
+
+You will find that similar columns are reported for the LRT test. **One thing to note is, even though there are fold changes present they are not directly associated with the actual hypothesis test**. Thus, when filtering significant genes from the LRT we use only the FDR as our threshold. How many genes are significant at padj < 0.05?
+
+Create a tibble for LRT results
+```{r}
+library(dplyr)
+res_LRT_tb <- res_LRT %>%
+  data.frame() 
+```
+
+
+Subset to return genes with padj < 0.05
+```{r}
+sigLRT_genes <- res_LRT_tb %>% 
+  filter(padj < 0.05)
+```
+
+
+Get number of significant genes
+
+
+Compare to numbers we had from Wald test
+```{r}
+nrow(res[res$padj<0.05,])
+nrow(sigLRT_genes)
+```
+
+
+How many genes from the Wald test are contained in the LRT gene set? 
+
+**The number of significant genes observed from the LRT is quite high. We are unable to set a fold change criteria here since the statistic is not generated from any one pairwise comparison. This list includes genes that can be changing in any number of combinations across factor levels. It is advisable to instead increase the stringency on our criteria and lower the FDR threshold, such as padj 0.001.**
+
+!!! This is entirely confusing to me, if any of you can understand it, please enliten me. I at first thought that it would tell you if your model was fitting better than the reduced model, but that doesn't appear to be what it is doing. I would suggest if you wanted to test that that you would then instead just retest your model using the individual Wald tests, which SHOULD be directly associated with the actual hypothesis test and where the log2 fold changes should ring true, unlike the LRT test.
+
+You could do this for the multifactorial design for example, which is better because it has more variables:
+
+
+```{r}
+ddsMF <- dds
+design(ddsMF) <- formula(~ type + condition)
+ddsMF <- DESeq(ddsMF)
+resultsNames(ddsMF)
+resMF <- results(ddsMF, name = "condition_untreated_vs_treated")
+
+```
+
+Again, we access the results using the results function.
+```{r}
+dds_lrt <- DESeq(ddsMF, test="LRT", reduced = ~type)
+resultsNames(ddsMF)
+resultsNames(dds_lrt)
+
+dnew <- ddsMF
+design(dnew) <- formula(~type + condition + type:condition)
+dnew <- DESeq(dnew)
+resultsNames(dnew)
+rtype <- results(dnew, name =  "type_single.read_vs_paired.end")
+rtreat <- results(dnew, name =   "condition_untreated_vs_treated" )
+rinter <- results(dnew, name =  "typesingle.read.conditionuntreated" ) 
+
+summary(rtype)
+summary(rtreat)
+summary(rinter)
+summary(resMF)
+summary(resMFType)
+summary(res)
+```
+I still don't quite understand why these numbers aren't additive, they should be. But in anycase, it is comforting to see that there aren't any interactions between sequencing type and condition...
 
 ## Session info
 ```{r}
 sessionInfo()
 ```
-
 
 ## References
 Ahlmann-Eltze, Constantin, and Wolfgang Huber. 2020. “glmGamPoi: Fitting Gamma-Poisson Generalized Linear Models on Single Cell Count Data.” Bioinformatics, December. https://doi.org/10.1093/bioinformatics/btaa1009.

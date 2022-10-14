@@ -1,9 +1,3 @@
----
-output:
-  html_document: default
-  pdf_document: default
----
-
 # Gene Set Enrichment Analysis
 
 ```{r setup, include=FALSE}
@@ -29,7 +23,7 @@ library(org.Hs.eg.db)})
 
 The .Rmd file for this chapter can be
 found
-[here](https://github.com/gurinina/omic_sciences/blob/main/16-GOenrichment.Rmd).
+[here](https://github.com/gurinina/omic_sciences/blob/main/21-GO-enrichment.Rmd).
 To begin learning about GO set
 enrichment analysis and the different
 methods that can be utililized to preform
@@ -418,9 +412,10 @@ NCI, and REACTOME.
 The to run fgsea:
 
 ```{r run fgsea}
-fgseaRes = fgseaSimple(pathways = hGOBP.gmt,stats=ranks,nperm=1000,maxSize = 200,minSize = 15)
+fgseaRes = fgsea::fgseaSimple(pathways = hGOBP.gmt,stats=ranks,nperm=1000,maxSize = 200,minSize = 15)
 ```
 
+Some enrichment plots:
 ```{r plot}
 topPathwaysUp <- fgseaRes[ES > 0][head(order(pval), n=5), pathway]
 topPathwaysDown <- fgseaRes[ES < 0][head(order(pval), n=5), pathway]
@@ -571,7 +566,7 @@ hx = pairwise_termsim(ego, semData = sapGO)
 emapplot(hx, showCategory = 15)
 ```
 We can also look at athe negative enrichment, or the repressed end:
-```{r nego}
+```{r nego, cache=TRUE}
 nego <- clusterProfiler::enrichGO(
         gene  = names(ranks)[13711:15211],
         OrgDb = "org.Hs.eg.db",
@@ -627,7 +622,7 @@ based on the input fitness threshold cutoff set by `sig`, typically = 1.
 
 Just like for fgsea, we need a rank file, that is how we use ygene here:
 
-```{r gse}
+```{r gse, cache=TRUE}
 library(GOenrichment)
 dfsig = compSCORE(sampleFitdata,coln = 1, sig = 1)
 head(dfsig)
@@ -993,7 +988,7 @@ are combined into a much broader annotation. We can look
 at how well that does by downloading the slim annotations from
 Biomart.
 
-```{r biomaRt}
+```{r biomaRt, cache=TRUE}
 
 library(biomaRt)
 
@@ -1156,6 +1151,7 @@ names(yanno)
 
 
 ```
+
 So right away we want to filter for "BP",biological process,
 and we probably want to get the TERMs for the go ids. One
 way to do that is to use the annotate package.
@@ -1174,6 +1170,7 @@ wna=which(is.na(yanno$term))
 u=unique(yanno$GOALL[wna])
 u[1:5]
 ```
+
 If you look these terms up in the go ontology website
 [amigo](http://amigo.geneontology.org/amigo/landing) you'll find
 that most of them are obsolete and have been retired. So these
@@ -1195,7 +1192,7 @@ Nearly 100 annotations/gene! But they are likely not evenly
 distributed. Rather you have some genes with many terms, and
 some with very few.
 
-LEt's look at the evidence codes.
+Let's look at the evidence codes.
 
 ```{r}
 yanno = yanno[-wna,]
@@ -1232,6 +1229,7 @@ length(i)/length(lbp)
 length(i)/length(lanno[wlanno])
 table(lanno[wlanno][i]==lbp[i])/sum(table(lanno[wlanno][i]==lbp[i]))
 ```
+
 About 85% of the GO geneSet downloaded six months ago and 
 about 60% of the March 2022 SGD GO geneSet overlaps the
 intersection of the two datasets. But there is a further discrepancy
@@ -1358,8 +1356,8 @@ bp_input = yGOBP.gmt
 goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
       mat = sampleFitdata, coln = 1, sig = 1, bp_input = bp_input,go_input = go_input)
 ```
-Lets look at what is returned.
 
+Lets look at what is returned.
 
 There is an enrichInfo data.frame, and an edgeMat.
 enrichInfo has all the enriched terms, their FDR scores, overlapping genes, etc.
@@ -1374,6 +1372,8 @@ goresp$enrichInfo[3,]
 
 goresp$edgeMat[1,]
 ```
+
+
 Ok. Before we get back into that I just
 want to go over what GO enrichment does.
 So for a GO enrichment with a
@@ -1520,6 +1520,7 @@ int = intersect(arg,gene)
 x = length(int)
 x
 ```
+
 Before we go on here, I can't help but notice that the `sampleFitdata` has
 a more recent version of gene names than my gmt files does. So I'm going to
 cheat a little here for the ARGININE geneset to my favor and 
@@ -1533,6 +1534,7 @@ rownames(sampleFitdata)[g] = "ARG5,6"
 goresp$enrichInfo[1:3,1:10]
 
 ```
+
 This correction is more to point out an example of why it's important
 to keep geneSets updated. In this case, I know for a fact that none of the
 current geneSets we've used in the yeast datasets so far (gseGO,enrichGO) have
@@ -1545,6 +1547,7 @@ In fact I can check that by typing:
 ```{r}
 org.Sc.sgd_dbInfo()
 ```
+
 And I can see that the last update was in March. The yeast GMT file I generarted
 was in January -- that's 6 months ago, so time for me to update that file...
 
@@ -1560,6 +1563,7 @@ bp_input = yGOBP.gmt
 goresp = runGORESP(fdrThresh = 0.2,curr_exp = colnames(sampleFitdata)[1], 
       mat = sampleFitdata, coln = 1, sig = 1, bp_input = bp_input,go_input = go_input)
 ```
+
 And them `compSCORE`:
 
 ```{r}
@@ -1648,6 +1652,7 @@ contingency.table[2, 1] <- m - x
 contingency.table[2, 2] <- n - (k - x) ## Number of non-marked genes in the selection
 contingency.table
 ```
+
 From here we can do a fisher's test
 ```{r}
 fish = fisher.test(contingency.table , alternative = "greater")
@@ -1715,6 +1720,7 @@ hresp = GOenrichment::runGORESP(fdrThresh = 0.05,mat=mat,
     maxSetSize = 200)
 intersect(fposgsea$pathway[1:20],hresp$enrichInfo$term[1:20])
 ```
+
 Looks familiar right? That's because we used the same
 geneSets.
 
@@ -1772,6 +1778,7 @@ Lets do the same for the human results:
 vis = visSetup(hresp$enrichInfo,hresp$edgeMat)
 runNetwork(vis$nodes,vis$edges)
 ```
+
 The map is very busy, but interestingly you can see 
 that there is a major cluster. The major node in this
 cluster is defined by HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION,
@@ -1803,6 +1810,7 @@ intersect(fnegsea$pathway[1:20],hresp$enrichInfo$term[1:20])
 vis = visSetup(hresp$enrichInfo,hresp$edgeMat)
 runNetwork(vis$nodes,vis$edges)
 ```
+
 It's diffficult to see what's in the cluster. But it
 is in the data:
 
@@ -1865,6 +1873,7 @@ calcOverGOcoeff= function(select_fun = overlapcoeff,res, cutoff = 0.6, padj = "p
     
 }
 ```
+
 Use the hresp enrichInfo and plug it into this revised function:
 ```{r newhresp}
 
@@ -1887,6 +1896,7 @@ v = visSetup(newhresp,newedge)
 
 runNetwork(v$nodes,v$edges)
 ```
+
 So we could play those parameters, to get something
 pretty. You could also imagine modifying runGORESP such that
 it doesn't rely on a significance cutoff and instead

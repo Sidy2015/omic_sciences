@@ -1,21 +1,28 @@
-# RNA-seq gene-level analysis
+# RNAseq-DESeq Part III
 
 ```{r, echo=FALSE}
 library(knitr)
 ```
 
-http://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
-https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html
-The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/10-RNA-seq_DESeq2.RMD). RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
+The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/18-RNAseq-DESeq2_PartIII.Rmd). RNA-seq is a valuable experiment for quantifying both the types and the amount of RNA molecules in a sample. We've covered the
+basic idea of the protocol in lectures, but some early references for RNA-seq include [Mortazavi (2008)](#foot) and [Marioni (2008)](#foot).
 
-In this lab, we will focus on comparing the expression levels of genes across different samples, by counting the number of reads which overlap the exons of genes defined by a known annotation. As described in the lecture, this analysis sets aside the task of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. One advantage of looking at these matrices of counts is that we can use statistical distributions to model how the variance of counts will change when the counts are low vs high. We will explore the relationship of the variance of counts to the mean later in this lab.
+In this lab, we will focus on comparing the expression levels of genes across different samples, by counting the number of reads which overlap the exons of genes defined by a known annotation. As described in the lecture, this analysis sets aside the task
+of estimating the different kinds of RNA molecules, and the different isoforms for genes with multiple isoforms. One advantage of looking at these matrices of counts is that we can use statistical distributions to model how the variance of counts will
+change when the counts are low vs high. We will explore the relationship of the variance of counts to the mean later in this lab.
 
 ## Counting reads in genes
 
-In this lab we will examine 8 samples from the airway package, which are from the paper by [Himes et al](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057123/): "RNA-seq Transcriptome Profiling Identifies CRISPLD2 as a Glucocorticoid Responsive Gene that Modulates Cytokine Function in Airway Smooth Muscle Cells".
+In this lab we will examine 8 samples from the airway package, which are from the paper by [Himes et al](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057123/): "RNA-seq Transcriptome Profiling Identifies CRISPLD2 as a Glucocorticoid Responsive Gene that
+Modulates Cytokine Function in Airway Smooth Muscle Cells".
 
-This lab will focus on a summarized version of an RNA-seq experiment: a count matrix, which has genes along the rows and samples along the columns. The values in the matrix are the number of reads which could be uniquely aligned to the exons of a given gene for a given sample. As we have seen how to make a count matrix from BAM files, here we will use a pre-made count matrix, to avoid downloading the multi-gigabyte BAM files containing the aligned reads. A new pipeline for building count matrices, which skips the alignment step, is to use fast pseudoaligners such as Sailfish, Salmon and kallisto, followed by the [tximport](http://bioconductor.org/packages/tximport) package. See the package vignette for more details. Here, we will continue with the read counting pipeline.
+This lab will focus on a summarized version of an RNA-seq experiment: a count matrix, which has genes along the rows and samples along the columns. The values in the matrix are the number of reads which could be uniquely aligned to the exons of a given
+gene for a given sample. As we have seen how to make a count matrix from BAM files, here we will use a pre-made count matrix, to avoid downloading the multi-gigabyte BAM files containing the aligned reads. A new pipeline for building count matrices, which
+skips the alignment step, is to use fast pseudoaligners such as Sailfish, Salmon and kallisto, followed by the [tximport](http://bioconductor.org/packages/tximport) package. See the package vignette for more details. Here, we will continue with the read
+counting pipeline.
 
+
+![](figure/deseq_workflow_full_2018.png) 
 
 ```{r messages=FALSE}
 
@@ -59,7 +66,8 @@ library(rafalib)
 mypar()
 ```
 
-Note that, on the un-transformed scale, the high count genes have high variance. That is, in the following scatter plot, the points start out in a tight cone and then fan out toward the top right. This is a general property of counts generated from sampling processes, that the variance typically increases with the expected value. We will explore different scaling and transformations options below.
+Note that, on the un-transformed scale, the high count genes have high variance. That is, in the following scatter plot, the points start out in a tight cone and then fan out toward the top right. This is a general property of counts generated from
+sampling processes, that the variance typically increases with the expected value. We will explore different scaling and transformations options below.
 
 ```{r}
 plot(assay(airway)[,1:2], cex=.1)
@@ -67,9 +75,11 @@ plot(assay(airway)[,1:2], cex=.1)
 
 ### Creating a DESeqDataSet object
 
-We will use the `DESeq2` package to normalize the sample for sequencing depth. The *DESeqDataSet* object is just an extension of the *SummarizedExperiment* object, with a few changes. The matrix in `assay` is now accessed with `counts` and the elements of this matrix are required to be non-negative integers (0,1,2,...).
+We will use the `DESeq2` package to normalize the sample for sequencing depth. The *DESeqDataSet* object is just an extension of the *SummarizedExperiment* object, with a few changes. The matrix in `assay` is now accessed with `counts` and the elements of
+this matrix are required to be non-negative integers (0,1,2,...).
 
-We need to specify an experimental *design* here, for later use in differential analysis. The design starts with the tilde symbol `~`, which means, model the counts (log2 scale) using the following formula. Following the tilde, the variables are columns of the `colData`, and the `+` indicates that for differential expression analysis we want to compare levels of `dex` while controlling for the `cell` differences.
+We need to specify an experimental *design* here, for later use in differential analysis. The design starts with the tilde symbol `~`, which means, model the counts (log2 scale) using the following formula. Following the tilde, the variables are columns of
+the `colData`, and the `+` indicates that for differential expression analysis we want to compare levels of `dex` while controlling for the `cell` differences.
 
 ```{r}
 library(DESeq2)
@@ -140,14 +150,16 @@ plot(log.norm.counts[,1:2], cex=.1)
 
 ### Stabilizing count variance
 
-Now we will use a more sophisticated transformation, which is similar to the variance stablizing normalization method taught in Week 3 of Course 4: Introduction to Bioconductor. It uses the variance model for count data to shrink together the log-transformed counts for genes with very low counts. For genes with medium and high counts, the `rlog` is very close to `log2`. For further details, see the section in the DESeq2 [paper](#foot). 
+To improve the distances/clustering for the PCA and heirarchical clustering visualization methods, we need to moderate the variance across the mean. We will use a more sophisticated transformation, the rlog transformation, which uses the variance model for
+count data to shrink together the log-transformed counts for genes with very low counts. For genes with medium and high counts, the `rlog` is very close to `log2`. For further details, see the section in the DESeq2 [paper](#foot).
 
 ```{r}
 rld <- rlog(dds)
 
 ```
 
-Another transformation for stabilizing variance in the *DESeq2* package is `varianceStabilizingTransformation`. These two tranformations are similar, the *rlog* might perform a bit better when the size factors vary widely, and the *varianceStabilizingTransformation* is much faster when there are many samples.
+Another transformation for stabilizing variance in the *DESeq2* package is `varianceStabilizingTransformation` (*vst*). These two tranformations are similar, the *rlog* might perform a bit better when the size factors vary widely, and the
+*varianceStabilizingTransformation* is much faster when there are many samples.
 
 ```{r}
 vsd <- varianceStabilizingTransformation(dds)
@@ -175,7 +187,9 @@ df$transformation <- factor(df$transformation, levels=lvls)
 ggplot(df, aes(x = x, y = y)) + geom_hex(bins = 80) +
   coord_fixed() + facet_grid( . ~ transformation)  + theme_bw()
 ```
-We can examine the standard deviation of rows over the mean for the *log plus pseudocount* and the *rlog*. Note that the genes with high variance for the *log* come from the genes with lowest mean. If these genes were included in a distance calculation, the high variance at the low count range might overwhelm the signal at the higher count range.
+
+We can examine the standard deviation of rows over the mean for the *log plus pseudocount* and the *rlog*. Note that the genes with high variance for the *log* come from the genes with lowest mean. If these genes were included in a distance calculation,
+the high variance at the low count range might overwhelm the signal at the higher count range.
 
 ```{r}
 library(vsn)
@@ -234,27 +248,44 @@ plot(hclust(dist(t(log.norm.counts))), labels=colData(dds)$dex)
 plot(hclust(dist(t(assay(rld)))), labels=colData(rld)$dex)
 ```
 
-## Differential gene expression
+### Modeling raw counts with the negative binomial distribution
 
-### Modeling raw counts with normalization
+Count data is often modeled using the binomial distribution, which can give you the probability of getting a number of heads upon tossing a coin a number of times. However, not all count data can be fit with the binomial distribution. The binomial is based
+on discrete events and used in situations when you have a certain number of cases.
 
-We will now perform *differential gene expression* on the counts, to try to find genes in which the differences in expected counts across samples due to the condition of interest rises above the biological and technical variance we observe. 
+When the number of cases is very large (i.e. people who buy lottery tickets), but the probability of an event is very small (probability of winning), the Poisson distribution is used to model these types of count data. The Poisson is similar to the
+binomial, but is based on continuous events. Details provided by Rafael Irizarry in the EdX class.
 
-We will use an overdispersed Poisson distribution -- called the negative binomial -- to model the *raw counts* in the count matrix. The model will include the *size factors* into account to adjust for sequencing depth. The formula will look like:
+With RNA-Seq data, a very large number of RNAs are represented and the probability of pulling out a particular transcript is very small. Thus, it would be an appropriate situation to use the Poisson distribution. However, a unique property of this
+distribution is that the mean == variance. Realistically, with RNA-Seq data there is always some biological variation present across the replicates (within a sample class). Genes with larger average expression levels will tend to have larger observed
+variances across replicates.
+
+If the proportions of mRNA stayed exactly constant between the biological replicates for each sample class, we could expect Poisson distribution (where mean == variance). But this doesn't happen in practice, and so the Poisson distribution is only
+considered appropriate for a single biological sample.
+
+The model that fits best, given this type of variability between replicates, is the Negative Binomial (NB) model. Essentially, the NB model is a good approximation for data where the mean \< variance, as is the case with RNA-Seq count data.
+
+We use an overdispersed Poisson distribution -- called the negative binomial -- to model the *raw counts* in the count matrix. The model will include the *size factors* into account to adjust for sequencing depth. The formula will look like:
 
 $$ K_{ij} \sim \text{NB}(s_{ij} q_{ij}, \alpha_i ) $$
 
-where $K_{ij}$ is a single raw count in our count table, $s_{ij}$ is a size factor or more generally a normalization factor, $q_{ij}$ is proportional to gene expression (what we want to model with our design variables), and $\alpha_i$ is a *dispersion parameter*.
+where $K_{ij}$ is a single raw count in our count table, $s_{ij}$ is a size factor or more generally a normalization factor, $q_{ij}$ is proportional to gene expression (what we want to model with our design variables), and $\alpha_i$ is a *dispersion
+parameter*.
 
-Why bother modeling *raw counts*, rather than dividing out the sequencing depth and working with the normalized counts? In other words, why put the $s_{ij}$ on the right side of the equation above, rather than dividing out on the left side and modeling $K_{ij} / s_{ij}$. The reason is that, with the raw count, we have knowledge about the link between the expected value and its variance. So we prefer the first equation below to the second equation, because with the first equation, we have some additional information about the variance of the quantity on the left hand side.
+Why bother modeling *raw counts*, rather than dividing out the sequencing depth and working with the normalized counts? In other words, why put the $s_{ij}$ on the right side of the equation above, rather than dividing out on the left side and modeling
+$K_{ij} / s_{ij}$, the normalized counts? The reason is that, with the raw count, we have knowledge about the link between the expected value and its variance. So we prefer the first equation below to the second equation, because with the first equation,
+we have some additional information about the variance of the quantity on the left hand side.
 
 $$ K_{ij} \sim \text{NB}(\mu_{ij} = s_{ij} q_{ij} ) $$
 
 $$ \frac{K_{ij}}{s_{ij}} \sim \mathcal{L}(\mu_{ij} = q_{ij}) $$
 
-When we sample cDNA fragments from a pool in a sequencing library, we can model the count of cDNA fragments which originated from a given gene with a binomial distribution, with a certain probability of picking a fragment for that gene which relates to factors such as the expression of that gene (the abundance of mRNA in the original population of cells), its length and technical factors in the production of the library. When we have many genes, and the rate for each gene is low, while the total number of fragments is high, we know that the Poisson is a good model for the binomial. And for the binomial and the Poisson, there is an explicit link between on observed count and its expected variance.
+When we sample cDNA fragments from a pool in a sequencing library, we can model the count of cDNA fragments which originated from a given gene with a binomial distribution, with a certain probability of picking a fragment for that gene which relates to
+factors such as the expression of that gene (the abundance of mRNA in the original population of cells), its length and technical factors in the production of the library. When we have many genes, and the rate for each gene is low, while the total number
+of fragments is high, we know that the Poisson is a good model for the binomial. And for the binomial and the Poisson, there is an explicit link between on observed count and its expected variance.
 
-Below is an example of what happens when we divide or multiply a raw count. Here we show three distributions which all have the expected value of 100, although they have different variances. The first is a raw count with mean 100, the second and third are raw counts with mean 1000 and 10, which were then scaled by 1/10 and 10, respectively. 
+Below is an example of what happens when we divide or multiply a raw count. Here we show three distributions which all have the expected value of 100, although they have different variances. The first is a raw count with mean 100, the second and third are
+raw counts with mean 1000 and 10, which were then scaled by 1/10 and 10, respectively.
 
 ```{r}
 mypar(3,1)
@@ -265,11 +296,13 @@ hist(rpois(n,1000)/10,main="",xlab="",breaks=brks,col="black")
 hist(rpois(n,10)*10,main="",xlab="",breaks=brks,col="black")
 ```
 
-So, when we scale a raw count, we break the implicit link between the mean and the variance. This is not necessarily a problem, if we have 100s of samples over which to observe within-group variance, however RNA-seq samples can often have only 3 samples per group, in which case, we can get a benefit of information from using raw counts, and incorporating normalization factors on the right side of the equation above.
+So, when we scale a raw count, we break the implicit link between the mean and the variance. This is not necessarily a problem, if we have 100s of samples over which to observe within-group variance, however RNA-seq samples can often have only 3 samples
+per group, in which case, we can get a benefit of information from using raw counts, and incorporating normalization factors on the right side of the equation above.
 
 ### Counts across biological replicates and over-dispersion
 
-For the negative binomial, the variance parameter is called *disperison*, and it links the mean value with the expected variance. The reason we see more dispersion than in a Poisson is mostly due to changes in the proportions of genes across biological replicates -- which we would expect due to natural differences in gene expression. 
+For the negative binomial, the variance parameter is called *disperison*, and it links the mean value with the expected variance. The reason we see more dispersion than in a Poisson is mostly due to changes in the proportions of genes across biological
+replicates -- which we would expect due to natural differences in gene expression.
 
 ```{r}
 mypar(3,1)
@@ -293,18 +326,182 @@ sqrt(v)/mu
 sqrt(v - mu)/mu
 sqrt(disp)
 ```
+![](figure/DESeq2_workflow_2018.png)
+## Differential gene expression
 
-A number of methods for assessing differential gene expression from RNA-seq counts use the negative binomial distribution to make probabilistic statements about the differences seen in an experiment. A few such methods are *edgeR*, *DESeq2*, and *DSS*. Other methods, such as *limma+voom* find other ways to explicitly model the mean of log counts and the observed variance of log counts. A very incomplete list of statistical methods for RNA-seq differential expression is provided in the [footnotes](#foot).
 
-*DESeq2* performs a similar step to *limma* as discussed in PH525x Course 3, in using the variance of all the genes to improve the variance estimate for each individual gene. In addition, *DESeq2* shrinks the unreliable fold changes from genes with low counts, which will be seen in the resulting MA-plot.
 
-### Experimental design and running DESeq2
 
-Remember, we had created the *DESeqDataSet* object earlier using the following line of code (or alternatively using *DESeqDataSetFromMatrix*)
+![](figure/de_workflow_salmon.png) 
+
+We will now perform *differential gene expression* on the counts, to try to find genes in which the differences in expected counts across samples due to the condition of interest
+rises above the biological and technical variance we observe.
+
+To get our differential expression results from our raw count data, we only need to run 2 lines of code!
+
+First we create a DESeqDataSet as we did in the 'Count normalization' lesson and specify the object which contains our raw counts, the metadata variable, and provide our design formula:
+
+## Create DESeq2Dataset object
 
 ```{r}
 dds <- DESeqDataSet(airway, design= ~ cell + dex)
 ```
+
+Then, to run the actual differential expression analysis, we use a single call to the function DESeq().
+
+## Run analysis
+
+dds \<- DESeq(dds) By re-assigning the results of the function back to the same variable name (dds), we can fill in the slots of our DESeqDataSet object.
+
+Everything from normalization to linear modeling was carried out by the use of a single function! This function will print out a message for the various steps it performs:
+
+estimating size factors estimating dispersions gene-wise dispersion estimates mean-dispersion relationship final dispersion estimates fitting model and testing
+
+NOTE: There are individual functions available in DESeq2 that would allow us to carry out each step in the workflow in a step-wise manner, rather than a single call. We demonstrated one example when generating size factors to create a normalized matrix. By
+calling DESeq(), the individual functions for each step are run for you.
+
+With the 2 lines of code above, we just completed the workflow for the differential gene expression analysis with DESeq2. The steps in the analysis are output below:
+
+We will be taking a detailed look at each of these steps to better understand how DESeq2 is performing the statistical analysis and what metrics we should examine to explore the quality of our analysis.
+
+## Step 1: Estimate size factors
+
+The first step in the differential expression analysis is to estimate the size factors, which is exactly what we already did to normalize the raw counts.
+
+DESeq2 will automatically estimate the size factors when performing the differential expression analysis. However, if you have already generated the size factors using estimateSizeFactors(), as we did earlier, then DESeq2 will use these values.
+
+To normalize the count data, DESeq2 calculates size factors for each sample using the median of ratios method discussed previously in the 'Count normalization' lesson.
+
+Examining the size factors Let's take a quick look at size factor values we have for each sample:
+
+```{r}
+sizeFactors(dds)
+```
+
+Take a look at the total number of reads for each sample:
+
+Total number of raw counts per sample
+
+```{r}
+colSums(counts(dds))
+```
+
+How do the numbers correlate with the size factor?
+
+Now take a look at the total depth after normalization using:
+
+## Total number of normalized counts per sample
+
+```{r}
+dds = estimateSizeFactors(dds)
+colSums(counts(dds, normalized=T))
+```
+
+How do the values across samples compare with the total counts taken for each sample?
+
+## Step 2: Estimate gene-wise dispersion
+
+The next step in the differential expression analysis is the estimation of gene-wise dispersions. Before we get into the details, we should have a good idea about what dispersion is referring to in DESeq2.
+
+**What is dispersion?**
+
+Dispersion is a measure of spread or variability in the data. Variance, standard deviation, IQR, among other measures, can all be used to measure dispersion. However, DESeq2 uses a specific measure of dispersion (α) related to the mean (μ) and variance of
+the data: Var = μ + α\*μ\^2. For genes with moderate to high count values, the square root of dispersion will be equal to the coefficient of variation (Var / μ). So 0.01 dispersion means 10% variation around the mean expected across biological replicates.
+
+**What does the DESeq2 dispersion represent?**
+
+The DESeq2 dispersion estimates are inversely related to the mean and directly related to variance. Based on this relationship, the dispersion is higher for small mean counts and lower for large mean counts. The dispersion estimates for genes with the same
+mean will differ only based on their variance. Therefore, the dispersion estimates reflect the variance in gene expression for a given mean value.
+
+The plot of mean versus variance in count data below shows the variance in gene expression increases with the mean expression (each black dot is a gene). Notice that the relationship between mean and variance is linear on the log scale, and for higher
+means, we could predict the variance relatively accurately given the mean. However, for low mean counts, the variance estimates have a much larger spread; therefore, the dispersion estimates will differ much more between genes with small means.
+
+To determine differentially expressed genes, we need to identify genes that have significantly different mean expression between groups given the variation within the groups (between replicates).
+
+The variation within group (between replicates) needs to account for the fact that variance increases with the mean expression, as shown in the plot below (each black dot is a gene).
+
+To accurately identify DE genes, DESeq2 needs to account for the relationship between the variance and mean. We don't want all of our DE genes to be genes with low counts because the variance is lower for lowly expressed genes.
+
+Instead of using variance as the measure of variation in the data (since variance correlates with gene expression level), it uses a measure of variation called dispersion, which accounts for a gene's variance and mean expression level. Dispersion is
+calculated by:
+
+$$Var = μ + α*μ^2$$
+
+where α represents the dispersion (Var = variance, and μ = mean) giving the relationship:
+
+|                           | Effect on dispersion |
+|---------------------------|----------------------|
+| Variance increases        | Dispersion increases |
+| Mean expression increases | Dispersion decreases |
+
+For genes with moderate to high count values, the square root of dispersion will be equal to the coefficient of variation (Var / μ). So 0.01 dispersion means 10% variation around the mean expected across biological replicates. The dispersion estimates for
+genes with the same mean will differ only based on their variance. Therefore, the dispersion estimates reflect the variance in gene expression for a given mean value (given as black dots in image below).
+
+![](figure/deseq_mean_vs_variance.png)
+
+How does the dispersion relate to our model?
+
+To accurately model sequencing counts, we need to generate accurate estimates of within-group variation (variation between replicates of the same sample group) for each gene. With only a few (3-6) replicates per group, the estimates of variation for each
+gene are often unreliable (due to the large differences in dispersion for genes with similar means).
+
+To address this problem, DESeq2 shares information across genes to generate more accurate estimates of variation based on the mean expression level of the gene using a method called 'shrinkage'. DESeq2 assumes that genes with similar expression levels have
+similar dispersion.
+
+Estimating the dispersion for each gene separately:
+
+DESeq2 estimates the dispersion for each gene based on the gene's expression level (mean counts of replicates) and variance.
+
+## Step 3: Fit curve to gene-wise dispersion estimates
+
+The next step in the workflow is to fit a curve to the gene-wise dispersion estimates. The idea behind fitting a curve to the data is that different genes will have different scales of biological variability, but, across all genes, there will be a
+distribution of reasonable estimates of dispersion.
+
+This curve is displayed as a red line in the figure below, which plots the estimate for the expected dispersion value for genes of a given expression strength. Each black dot is a gene with an associated mean expression level and maximum likelihood
+estimation (MLE) of the dispersion (Step 1).
+
+![](figure/deseq_dispersion1.png)
+
+## Step 4: Shrink gene-wise dispersion estimates toward the values predicted by the curve
+
+The next step in the workflow is to shrink the gene-wise dispersion estimates toward the expected dispersion values.
+
+The curve allows for more accurate identification of differentially expressed genes when sample sizes are small, and the strength of the shrinkage for each gene depends on :
+
+how close gene dispersions are from the curve sample size (more samples = less shrinkage) This shrinkage method is particularly important to reduce false positives in the differential expression analysis. Genes with low dispersion estimates are shrunken
+towards the curve, and the more accurate, higher shrunken values are output for fitting of the model and differential expression testing.
+
+Dispersion estimates that are slightly above the curve are also shrunk toward the curve for better dispersion estimation; however, genes with extremely high dispersion values are not. This is due to the likelihood that the gene does not follow the modeling
+assumptions and has higher variability than others for biological or technical reasons [1]. Shrinking the values toward the curve could result in false positives, so these values are not shrunken. These genes are shown surrounded by blue circles below.
+
+![](figure/deseq_dispersion2.png) This is a good plot to examine to ensure your data is a good fit for the DESeq2 model. You expect your data to generally scatter around the curve, with the dispersion decreasing with increasing mean expression levels. If
+you see a cloud or different shapes, then you might want to explore your data more to see if you have contamination (mitochondrial, etc.) or outlier samples. Note how much shrinkage you get across the whole range of means in the plotDispEsts() plot for any
+experiment with low degrees of freedom.
+
+Examples of worrisome dispersion plots are shown below:
+
+![](figure/bad_dispersion1.png) ![](figure/bad_dispersion2.png) DE analysis: exploring the dispersion estimates and assessing model fit Let's take a look at the dispersion estimates for our data:
+
+## Plot dispersion estimates
+
+```{r}
+dds <- DESeqDataSet(airway, design= ~ cell + dex)
+dds <- estimateSizeFactors(dds)
+dds <- estimateDispersions(dds)
+plotDispEsts(dds)
+```
+
+Since we have a small sample size, for many genes we see quite a bit of shrinkage. Do you think our data are a good fit for the model?
+
+![](figure/mydispersions.png) A number of methods for assessing differential gene expression from RNA-seq counts use the negative binomial distribution to make probabilistic statements about the differences seen in an experiment. A few such methods are
+*edgeR*, *DESeq2*, and *DSS*. Other methods, such as *limma+voom* find other ways to explicitly model the mean of log counts and the observed variance of log counts. A very incomplete list of statistical methods for RNA-seq differential expression is
+provided in the [footnotes](#foot).
+
+*DESeq2* performs a similar step to *limma* as discussed in PH525x Course 3, in using the variance of all the genes to improve the variance estimate for each individual gene. In addition, *DESeq2* shrinks the unreliable fold changes from genes with low
+counts, which will be seen in the resulting MA-plot.
+
+### Experimental design and running DESeq2
+
+Remember, we had created the *DESeqDataSet* object earlier using the following line of code (or alternatively using *DESeqDataSetFromMatrix*)
 
 First, we setup the `design` of the experiment, so that differences will be considered across time and protocol variables. We can read and if necessary reset the design using the following code.
 
@@ -313,8 +510,8 @@ design(dds)
 design(dds) <- ~ cell + dex
 ```
 
-The last variable in the design is used by default for building results tables (although arguments to `results` can be used to customize the results table), and we make sure the "control" or "untreated" level is the first level, such that log fold changes will be treated over control, and not control over treated.
-
+The last variable in the design is used by default for building results tables (although arguments to `results` can be used to customize the results table), and we make sure the "control" or "untreated" level is the first level, such that log fold changes
+will be treated over control, and not control over treated.
 
 ```{r}
 levels(dds$dex)
@@ -326,6 +523,7 @@ The following line runs the *DESeq2* model. After this step, we can build a resu
 
 ```{r}
 dds <- DESeq(dds)
+
 res <- results(dds)
 ```
 
@@ -371,16 +569,18 @@ hist(res$pvalue[res$baseMean > 1],
      col="grey", border="white", xlab="", ylab="", main="")
 ```
 
-
 ### Alternative shrinkage estimators
-The moderated log fold changes proposed by Love, Huber, and Anders (2014) use a normal prior distribution, centered on zero and with a scale that is fit to the data. The shrunken log fold changes are useful for ranking and visualization, without the need for arbitrary filters on low count genes. The normal prior can sometimes produce too strong of shrinkage for certain datasets. In DESeq2 version 1.18, we include two additional adaptive shrinkage estimators, available via the type argument of lfcShrink. For more details, see ?lfcShrink
+
+The moderated log fold changes proposed by Love, Huber, and Anders (2014) use a normal prior distribution, centered on zero and with a scale that is fit to the data. The shrunken log fold changes are useful for ranking and visualization, without the need
+for arbitrary filters on low count genes. The normal prior can sometimes produce too strong of shrinkage for certain datasets. In DESeq2 version 1.18, we include two additional adaptive shrinkage estimators, available via the type argument of lfcShrink.
+For more details, see ?lfcShrink
 
 The options for type are:
 
 apeglm is the adaptive t prior shrinkage estimator from the apeglm package (Zhu, Ibrahim, and Love 2018). As of version 1.28.0, it is the default estimator.
 
-ashr is the adaptive shrinkage estimator from the ashr package (Stephens 2016). Here DESeq2 uses the ashr option to fit a mixture of Normal distributions to form the prior, with method="shrinkage".
-normal is the the original DESeq2 shrinkage estimator, an adaptive Normal distribution as prior.
+ashr is the adaptive shrinkage estimator from the ashr package (Stephens 2016). Here DESeq2 uses the ashr option to fit a mixture of Normal distributions to form the prior, with method="shrinkage". normal is the the original DESeq2 shrinkage estimator, an
+adaptive Normal distribution as prior.
 
 If the shrinkage estimator apeglm is used in published research, please cite:
 
@@ -390,7 +590,7 @@ If the shrinkage estimator ashr is used in published research, please cite:
 
 Stephens, M. (2016) False discovery rates: a new deal. Biostatistics, 18:2. 10.1093/biostatistics/kxw041
 
-In the LFC shrinkage code above, we specified coef="dex_trt_vs_untrt". We can also just specify the coefficient by the order that it appears in resultsNames(dds), in this case coef=5. 
+In the LFC shrinkage code above, we specified coef="dex_trt_vs_untrt". We can also just specify the coefficient by the order that it appears in resultsNames(dds), in this case coef=5.
 
 ```{r}
 
@@ -398,6 +598,7 @@ resultsNames(dds)
 ```
 
 For more details explaining how the shrinkage estimators differ, and what kinds of designs, contrasts and output is provided by each, see the extended section on shrinkage estimators.
+
 ```{r}
 
 resLFC <- lfcShrink(dds, coef="dex_trt_vs_untrt" , type="apeglm")
@@ -420,7 +621,10 @@ head(resSort)
 ```
 
 ### Plot counts
-It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is plotCounts, which normalizes counts by the estimated size factors (or normalization factors if these were used) and adds a pseudocount of 1/2 to allow for log scale plotting. The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can select the gene to plot by rowname or by numeric index.
+
+It can also be useful to examine the counts of reads for a single gene across the groups. A simple function for making this plot is plotCounts, which normalizes counts by the estimated size factors (or normalization factors if these were used) and adds a
+pseudocount of 1/2 to allow for log scale plotting. The counts are grouped by the variables in intgroup, where more than one variable can be specified. Here we specify the gene which had the smallest p value from the results table created above. You can
+select the gene to plot by rowname or by numeric index.
 
 ```{r}
 plotCounts(dds, gene=which.min(res$padj), intgroup="dex")
@@ -438,6 +642,7 @@ ggplot(d, aes(x=dex, y=count,col=dex)) +
 ```
 
 Examine the counts for the top gene, sorting by p-value:
+
 ```{r}
 plotCounts(dds, gene=which.min(resLFC$padj), intgroup="dex")
 ```
@@ -460,6 +665,7 @@ ggplot(data, aes(x=dex, y=count, col=cell, group=cell)) +
 ```
 
 ### A heatmap of the top genes:
+
 ```{r}
 library(pheatmap)
 topgenes <- head(rownames(resSort),20)
@@ -490,10 +696,11 @@ The `contrast` argument allows users to specify what results table should be bui
 ```{r}
 results(dds, contrast=c("cell","N61311","N052611"))
 ```
-88888888888888888888888888888888888888888888888888
-### Surrogate variable analysis for RNA-seq
 
-If we suppose that we didn't know about the different cell-lines in the experiment, but noticed some structure in the counts, we could use surrograte variable analysis (SVA) to detect this hidden structure (see PH525x Course 3 for details on the algorithm).
+88888888888888888888888888888888888888888888888888 \### Surrogate variable analysis for RNA-seq
+
+If we suppose that we didn't know about the different cell-lines in the experiment, but noticed some structure in the counts, we could use surrograte variable analysis (SVA) to detect this hidden structure (see PH525x Course 3 for details on the
+algorithm).
 
 ```{r}
 library(sva)
@@ -522,22 +729,24 @@ dds.sva <- DESeq(dds.sva)
 ```
 
 ### More information on results columns
+
 Information about which variables and tests were used can be found by calling the function mcols on the results object.
 
 ```{r}
 mcols(res)$description
 ```
 
-For a particular gene, a log2 fold change of -1 for condition treated vs untreated means that the treatment induces a multiplicative change in observed gene expression level of 2−1=0.5 compared to the untreated condition. If the variable of interest is continuous-valued, then the reported log2 fold change is per unit of change of that variable.
+For a particular gene, a log2 fold change of -1 for condition treated vs untreated means that the treatment induces a multiplicative change in observed gene expression level of 2−1=0.5 compared to the untreated condition. If the variable of interest is
+continuous-valued, then the reported log2 fold change is per unit of change of that variable.
 
 Note on p-values set to NA: some values in the results table can be set to NA for one of the following reasons:
 
 If within a row, all samples have zero counts, the baseMean column will be zero, and the log2 fold change estimates, p value and adjusted p value will all be set to NA.
 
-If a row contains a sample with an extreme count outlier then the p value and adjusted p value will be set to NA. These outlier counts are detected by Cook’s distance. Customization of this outlier filtering and description of functionality for replacement of outlier counts and refitting is described below
+If a row contains a sample with an extreme count outlier then the p value and adjusted p value will be set to NA. These outlier counts are detected by Cook's distance. Customization of this outlier filtering and description of functionality for replacement
+of outlier counts and refitting is described below
 
 If a row is filtered by automatic independent filtering, for having a low mean normalized count, then only the adjusted p value will be set to NA. Description and customization of independent filtering is described below
-
 
 ### Session info
 
@@ -549,19 +758,17 @@ sessionInfo()
 
 ### RNA-seq introductory papers
 
-Mortazavi A, Williams BA, McCue K, Schaeffer L, Wold B., "Mapping and quantifying mammalian transcriptomes by RNA-seq", Nat Methods. 2008.
-<http://www.nature.com/nmeth/journal/v5/n7/full/nmeth.1226.html>
+Mortazavi A, Williams BA, McCue K, Schaeffer L, Wold B., "Mapping and quantifying mammalian transcriptomes by RNA-seq", Nat Methods. 2008. <http://www.nature.com/nmeth/journal/v5/n7/full/nmeth.1226.html>
 
 John C. Marioni, Christopher E. Mason, Shrikant M. Mane, Matthew Stephens, and Yoav Gilad, "RNA-seq: An assessment of technical reproducibility and comparison with gene expression arrays" Genome Res. 2008.
 <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2527709/>
 
-Trapnell C, Williams BA, Pertea G, Mortazavi AM, Kwan G, van Baren MJ, Salzberg SL, Wold B, Pachter L.,  "Transcript assembly and quantification by RNA-seq reveals unannotated transcripts and isoform switching during cell differentiation", Nature Biotechnology, 2010.
-<http://www.nature.com/nbt/journal/v28/n5/full/nbt.1621.html>
+Trapnell C, Williams BA, Pertea G, Mortazavi AM, Kwan G, van Baren MJ, Salzberg SL, Wold B, Pachter L., "Transcript assembly and quantification by RNA-seq reveals unannotated transcripts and isoform switching during cell differentiation", Nature
+Biotechnology, 2010. <http://www.nature.com/nbt/journal/v28/n5/full/nbt.1621.html>
 
 ### ReCount
 
-Frazee AC, Langmead B, Leek JT. "ReCount: a multi-experiment resource of analysis-ready RNA-seq gene count datasets". BMC Bioinformatics 12:449
-<http://www.ncbi.nlm.nih.gov/pubmed/22087737>
+Frazee AC, Langmead B, Leek JT. "ReCount: a multi-experiment resource of analysis-ready RNA-seq gene count datasets". BMC Bioinformatics 12:449 <http://www.ncbi.nlm.nih.gov/pubmed/22087737>
 
 The following sections give just a few examples of the many RNA-seq differential expression software packages:
 
@@ -569,46 +776,36 @@ The following sections give just a few examples of the many RNA-seq differential
 
 The following methods are available on Bioconductor:
 
-- **DESeq2**
+-   **DESeq2**
 
-Michael I Love, Simon Anders, Wolfgang Huber, "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2" Genome Biology 2014.
-<http://genomebiology.com/2014/15/12/550>
+Michael I Love, Simon Anders, Wolfgang Huber, "Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2" Genome Biology 2014. <http://genomebiology.com/2014/15/12/550>
 
-- **edgeR**
+-   **edgeR**
 
-Mark D. Robinson, Davis J. McCarthy, and Gordon K. Smyth, "edgeR: a Bioconductor package for differential expression analysis of digital gene expression data" Bioinformatics 2010.
-<http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/>
+Mark D. Robinson, Davis J. McCarthy, and Gordon K. Smyth, "edgeR: a Bioconductor package for differential expression analysis of digital gene expression data" Bioinformatics 2010. <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/>
 
-- **DSS**
+-   **DSS**
 
-Hao Wu, Chi Wang, Zhijin Wu, "A new shrinkage estimator for dispersion improves differential expression detection in RNA-seq data" Biostatistics 2013.
-<http://biostatistics.oxfordjournals.org/content/14/2/232>
+Hao Wu, Chi Wang, Zhijin Wu, "A new shrinkage estimator for dispersion improves differential expression detection in RNA-seq data" Biostatistics 2013. <http://biostatistics.oxfordjournals.org/content/14/2/232>
 
 ### Variance-mean modeling followed by linear model
 
-- **limma-voom** in the *limma* Bioconductor package. Limma also contains gene-set testing methods (see ROAST for example in the Reference Manual)
+-   **limma-voom** in the *limma* Bioconductor package. Limma also contains gene-set testing methods (see ROAST for example in the Reference Manual)
 
-Charity W Law, Yunshun Chen, Wei Shi and Gordon K Smyth, "voom: precision weights unlock linear model analysis tools for RNA-seq read counts", Genome Biology. 2014.
-<http://genomebiology.com/2014/15/2/R29>
+Charity W Law, Yunshun Chen, Wei Shi and Gordon K Smyth, "voom: precision weights unlock linear model analysis tools for RNA-seq read counts", Genome Biology. 2014. <http://genomebiology.com/2014/15/2/R29>
 
 ### Resampling-based methods
 
-- **SAMseq** in the `samr` package on CRAN
+-   **SAMseq** in the `samr` package on CRAN
 
-Jun Li and Robert Tibshirani, "Finding consistent patterns: A nonparametric approach for identifying differential expression in RNA-seq data", Stat Methods Med Res. 2013.
-<http://smm.sagepub.com/content/22/5/519.short>
+Jun Li and Robert Tibshirani, "Finding consistent patterns: A nonparametric approach for identifying differential expression in RNA-seq data", Stat Methods Med Res. 2013. <http://smm.sagepub.com/content/22/5/519.short>
 
 ### Incorporating isoform-abundance
 
-- **Cuffdiff** (the latest version is `Cuffdiff2`) with `cummeRbund` the accompanying Bioconductor visualization package.
+-   **Cuffdiff** (the latest version is `Cuffdiff2`) with `cummeRbund` the accompanying Bioconductor visualization package.
 
-Trapnell C, Hendrickson DG, Sauvageau M, Goff L, Rinn JL, Pachter L., "Differential analysis of gene regulation at transcript resolution with RNA-seq" Nat Biotechnol. 2013.
-<http://www.ncbi.nlm.nih.gov/pubmed/23222703>
+Trapnell C, Hendrickson DG, Sauvageau M, Goff L, Rinn JL, Pachter L., "Differential analysis of gene regulation at transcript resolution with RNA-seq" Nat Biotechnol. 2013. <http://www.ncbi.nlm.nih.gov/pubmed/23222703>
 
-- **BitSeq** (Bioconductor)
+-   **BitSeq** (Bioconductor)
 
-Peter Glaus, Antti Honkela, and Magnus Rattray, "Identifying differentially expressed transcripts from RNA-seq data with biological variation", Bioinformatics. 2012.
-<http://bioinformatics.oxfordjournals.org/content/28/13/1721>
-
-
-
+Peter Glaus, Antti Honkela, and Magnus Rattray, "Identifying differentially expressed transcripts from RNA-seq data with biological variation", Bioinformatics. 2012. <http://bioinformatics.oxfordjournals.org/content/28/13/1721>

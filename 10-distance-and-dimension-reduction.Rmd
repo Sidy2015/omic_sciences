@@ -7,7 +7,7 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 35), tidy = TRUE)
 ```
 Introduction
 
-The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/06-distance-and-dimension-reduction.Rmd). The concept of distance is quite intuitive. For example, when we cluster animals into subgroups, we are implicitly defining a distance that permits us to say what animals are "close" to each other.
+The Rmd for this file can be found [here](https://github.com/gurinina/omic_sciences/blob/main/10-distance-and-dimension-reduction.Rmd). The concept of distance is quite intuitive. For example, when we cluster animals into subgroups, we are implicitly defining a distance that permits us to say what animals are "close" to each other.
 
 ![Clustering of animals.](figure/animals.png)
 

@@ -69,16 +69,11 @@ Step 1: creates a pseudo-reference sample (row-wise geometric mean)
 For each gene, a pseudo-reference sample is created that is equal to the geometric mean across all samples.
 
 ```{r}
+library(DT)
 library(kableExtra)
 d = data.frame(gene = c("gene_1","gene_2","gene_..."),sample_A = c(1489,22,"---"),sample_B = c(906,13,"---"), `pseudo-reference sample` = c("sqrt(1489 * 906) = 1161.5","sqrt(22 * 13) = 17.7","---"),stringsAsFactors = FALSE)
 
-
-kable(d, caption = 'Pseudo-referance sample') %>%
-   kable_styling(full_width = FALSE, 
-                 latex_options = c('hold_position', 'striped','scale_down'),
-                 position = "center",
-                 font_size = 12)
-
+DT::datatable(d)
 
 ```
 
@@ -89,11 +84,7 @@ For every gene in a sample, the ratios (sample/ref) are calculated (as shown bel
 
 d2 = data.frame(gene = c("gene_1","gene_2","gene_3","gene_4","gene_5","gene_..."),sample_A = c(1489,22,739,76,521,"---"),sample_B = c(906,13,410,42,1196,"---"), `pseudo-reference.sample` = c(1161.5,16.9,570.2,56.5,883.7,"---"),`ratio of sample_A/ref` = c("1489/1161.5 = 1.28","22/16.9 = 1.30","793/570.2 = 1.39","56.5 = 1.35","521/883.7 = 0.590","---"),`ratio of sample_B` = c("906/1161.5 = 0.78","13/16.9 = 0.77","410/570.2 = 0.72","56.5 = 1.35","1196/883.7 = 1.35","---"),stringsAsFactors = FALSE)
 
-kable(d2, caption = 'ratio of each sample to the reference') %>%
-   kable_styling(full_width = FALSE, 
-                 latex_options = c('hold_position', 'striped','scale_down'),
-                 position = "center",
-                 font_size = 12)
+DT::datatable(d2, caption = 'ratio of each sample to the reference') 
 
 
 ```
@@ -139,11 +130,8 @@ Normalized Counts
 ```{r}
 d3 = data.frame(gene = c("gene_1","gene_2","gene_..."),sample_A = c("1489 / 1.3 = 1145.39","22 / 1.3 = 16.92","---"),sample_B = c("906 / 0.77 = 1176.62","13 / 0.77 = 16.88","---") ,stringsAsFactors = FALSE)
 
-kable(d3, caption = 'Normalized Counts') %>%
-   kable_styling(full_width = FALSE, 
-                 latex_options = c('hold_position', 'striped','scale_down'),
-                 position = "center",
-                 font_size = 12)
+DT::datatable(d3, caption = 'Normalized Counts')
+ 
 
 ```
 
@@ -204,7 +192,7 @@ Bioconductor software packages often define and use a custom class within R for 
 
 Let’s start by creating the DESeqDataSet object and then we can talk a bit more about what is stored inside it. To create the object we will need the count matrix and the experimental design table as inputs. We will also need to specify a design formula. The design formula specifies the column(s) in the experimental design table and how they should be used in the analysis. For this tutorial, we only have one column of interest, that is ~ infected. This column has two factor levels i.e. mock (not inoculated) and Pseudomonas syringae_ DC3000 (inoculated). This column tells DESeq2 that for each gene we want to evaluate gene expression change with respect to these two different factor levels.
 ```{r}
-suppressPackageStartupMessages(library(DESeq2)) # to load DESeq2 and suppress the long startup message
+library(DESeq2) 
 
 # Creation of the DESeqDataSet object
 dds <- DESeqDataSetFromMatrix(countData = counts, 
@@ -307,18 +295,12 @@ You can see that each sample gene count median (black horizontal bars) is more a
 
 ## 2.4 Home-made DESeq normalization function
 ```{r}
-
-library(DESeq2)
 dir <- system.file("extdata", package="airway", mustWork=TRUE)
-library(airway)
 data(airway)
 dds <- DESeqDataSet(airway, design= ~ cell + dex)
 
-
-
 dds = estimateSizeFactors(dds)
 counts = counts(dds)
-
 
 mygeommean  = function(x) x = exp(mean(log(x)))
 
