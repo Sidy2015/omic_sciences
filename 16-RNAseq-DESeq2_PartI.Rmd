@@ -46,9 +46,7 @@ We then import the gene counting values and call it raw_counts. The gene names h
 Import the gene raw counts.
 
 ```{r}
-raw_counts <- read.csv("raw_counts.csv", header = T, 
-                       file = stringsAsFactors = F)%>% 
-                       column_to_rownames("Geneid")  
+raw_counts <- read.csv("raw_counts.csv", header = T, stringsAsFactors = F) %>% column_to_rownames("Geneid")
 ```   
 
 Reorder counts columns according to the complete list of samples.
@@ -61,7 +59,7 @@ We will now filter both the raw_counts and xp_design objects to keep a one-facto
 
 The corresponding code is available below.
 
-#2 Filter count file accordingly (to keep only samples present in the filtered xp_design file)
+Filter count file accordingly (to keep only samples present in the filtered xp_design file)
 
 ```{r}
 raw_counts_filtered = raw_counts[, colnames(raw_counts) 
@@ -118,7 +116,7 @@ dds <- DESeq(dds)
 res <- results(dds)
 ```
 
-## Have a peek at the DESeqResults object
+### Have a peek at the DESeqResults object
 
 ```{r}
 res
@@ -229,7 +227,8 @@ hist(all_genes_results$pvalue, col="grey", main = "Non-adjusted p-value distribu
 
 As you can see, the distribution of p-values was already quite similar suggesting that a good proportion of the tests have a significant p-value (inferior to = 0.01 for instance). This suggests that a good proportion of these will be true positives (genes truly differentially regulated).
 
-### Extracting the table of differential genes Ok, here's the moment you've been waiting for. How can I extract a nicely filtered final table of differential genes? Here it is!
+### Extracting the table of differential genes 
+OK, here's the moment you've been waiting for. How can I extract a nicely filtered final table of differential genes? Here it is!
 
 ```{r}
 diff_genes = all_genes_results %>% 
@@ -282,7 +281,8 @@ Load the library if not done yet.
 library("EnhancedVolcano")
 ```
 
-# The main function is named after the package
+The main function is named after the package
+
 Default volcano plot:
 ```{r}
 EnhancedVolcano(toptable = resLFC,# use shrunken log2 fold change as noise associated with low count genes is removed 
@@ -315,8 +315,6 @@ EnhancedVolcano(toptable = resLFC,
                   'Pass both p-value & Log2 fold change')
                 )
 ```
-
-
 
 Once more for fun:
 ```{r}
@@ -496,7 +494,7 @@ counts_normalised_only_diff_genes %>%
 
 If you re-run the code for the first heatmap with a log2 transformation, you will get a simple way to display different gene count levels. We add `+ 1` to account for genes with count values equal to 0.
 
-Second version:
+### Second version:
 ```{r}
 pheatmap(log2(counts_normalised_only_diff_genes + 1), 
      cluster_rows = FALSE, 
@@ -640,7 +638,7 @@ pheatmap(counts_scaled_filtered,
          main = "Clustering with ward method")
 ```
 
-Final heatmap
+### Final heatmap
 
 Challenge (if time allows) Q9: Can you can generate a heatmap from differential genes with a fold change higher than 4 (positive) ?
 ```{r answer9, eval= FALSE }
@@ -654,7 +652,9 @@ Cluster genes and samples
 ```
 
 
-**Bonus: MA plots** We don't cover MA plots in this lesson but if you are interested, you can have a look at it here.
+### Bonus: MA plots
+
+We don't cover MA plots in this lesson but if you are interested, you can have a look at it here.
 
 The MA plot originally comes from microarray studies that compared two conditions. From the DESeq2 vignette:
 
